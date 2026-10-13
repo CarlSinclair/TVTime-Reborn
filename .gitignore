@@ -1,0 +1,12 @@
+/tvt
+/dev/
+/data/
+*.env
+!*.env.example
+*.db
+*.db-shm
+*.db-wal
+*.log
+*.pem
+*.key
+coverage.out

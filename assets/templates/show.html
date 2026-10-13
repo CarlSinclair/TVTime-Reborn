@@ -1,0 +1,49 @@
+{{define "content"}}
+{{with .Data.Show}}
+<section class="show-head">
+  <img class="poster" src="{{img "w342" .PosterPath}}" alt="">
+  <div class="show-info">
+    <h1>{{.Name}} {{if year .FirstAirDate}}<small>({{year .FirstAirDate}})</small>{{end}}</h1>
+    <p class="meta">
+      {{if .Status}}<span>{{.Status}}</span>{{end}}
+      {{if .Networks}}<span>{{.Networks}}</span>{{end}}
+      {{if .Genres}}<span>{{join ($.Genres .Genres) ", "}}</span>{{end}}
+      {{if gt .VoteCount 0}}<span>&#9733; {{stars .VoteAverage}}</span>{{end}}
+      {{if gt .Runtime 0}}<span>{{$.T "show.runtime" .Runtime}}</span>{{end}}
+    </p>
+    <p>{{if .Overview}}{{.Overview}}{{else}}<span class="muted">{{$.T "show.no_overview"}}</span>{{end}}</p>
+    <div class="actions" data-tmdb="{{.TMDBID}}">
+      {{if $.User}}
+        {{if $.Data.Follow}}
+        <select data-follow-status aria-label="{{$.T "show.status"}}">
+          <option value="watching" {{if eq $.Data.Follow.Status "watching"}}selected{{end}}>{{$.T "status.watching"}}</option>
+          <option value="plan" {{if eq $.Data.Follow.Status "plan"}}selected{{end}}>{{$.T "status.plan"}}</option>
+          <option value="completed" {{if eq $.Data.Follow.Status "completed"}}selected{{end}}>{{$.T "status.completed"}}</option>
+          <option value="paused" {{if eq $.Data.Follow.Status "paused"}}selected{{end}}>{{$.T "status.paused"}}</option>
+          <option value="dropped" {{if eq $.Data.Follow.Status "dropped"}}selected{{end}}>{{$.T "status.dropped"}}</option>
+        </select>
+        <button class="btn ghost" type="button" data-favorite="{{if $.Data.Follow.Favorite}}1{{else}}0{{end}}" aria-pressed="{{if $.Data.Follow.Favorite}}true{{else}}false{{end}}">&#9829; {{$.T "show.favorite"}}</button>
+        <button class="btn ghost" type="button" data-unfollow>{{$.T "show.unfollow"}}</button>
+        {{else}}
+        <button class="btn" type="button" data-follow>{{$.T "show.follow"}}</button>
+        {{end}}
+      {{else}}
+        <a class="btn" href="/login">{{$.T "show.login_to_follow"}}</a>
+      {{end}}
+    </div>
+    {{if and $.User $.Data.Follow}}
+    <p class="progress-line"><progress max="{{$.Data.Progress.Aired}}" value="{{$.Data.Progress.Watched}}"></progress> {{$.T "show.progress" $.Data.Progress.Watched $.Data.Progress.Aired}}</p>
+    {{end}}
+    {{if .SyncError}}<p class="notice error">{{$.T "show.sync_error"}}</p>{{end}}
+  </div>
+</section>
+{{end}}
+<section>
+  <h2>{{.T "show.seasons"}}</h2>
+  <div class="season-links">
+    {{range .Data.Seasons}}
+    <a class="chip" href="/show/{{$.Data.Show.TMDBID}}/season/{{.SeasonNumber}}">{{if eq .SeasonNumber 0}}{{$.T "show.specials"}}{{else}}{{$.T "show.season" .SeasonNumber}}{{end}} <small>{{.EpisodeCount}}</small></a>
+    {{end}}
+  </div>
+</section>
+{{end}}

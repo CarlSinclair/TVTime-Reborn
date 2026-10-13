@@ -1,0 +1,498 @@
+{
+  "nav": {
+    "home": "홈",
+    "shows": "내 드라마",
+    "calendar": "캘린더",
+    "search": "검색",
+    "search_placeholder": "드라마 검색",
+    "settings": "설정",
+    "theme": "테마 전환",
+    "language": "언어",
+    "notifications": "알림"
+  },
+  "auth": {
+    "login": "로그인",
+    "register": "회원가입",
+    "logout": "로그아웃",
+    "email": "이메일",
+    "password": "비밀번호",
+    "username": "사용자 이름",
+    "username_hint": "영문, 숫자, 밑줄 3~20자",
+    "password_hint": "8자 이상",
+    "forgot": "비밀번호를 잊으셨나요?",
+    "forgot_sent": "해당 이메일에 계정이 있다면 재설정 링크를 보냈습니다.",
+    "send_link": "링크 보내기",
+    "magic_link": "이메일로 로그인 링크 받기",
+    "magic_sent": "해당 이메일에 계정이 있다면 로그인 링크를 보냈습니다.",
+    "have_account": "이미 계정이 있어요",
+    "verify_banner": "댓글을 작성하려면 이메일을 인증해 주세요.",
+    "resend_verify": "이메일 다시 보내기",
+    "passkey_login": "패스키로 로그인",
+    "telegram_login": "Telegram으로 계속"
+  },
+  "token": {
+    "login": {
+      "title": "로그인",
+      "text": "버튼을 눌러 로그인을 완료하세요."
+    },
+    "reset": {
+      "title": "새 비밀번호 설정",
+      "text": "계정의 새 비밀번호를 입력하세요."
+    },
+    "verify": {
+      "title": "이메일 인증",
+      "text": "버튼을 눌러 이메일 주소를 확인하세요."
+    },
+    "continue": "계속"
+  },
+  "home": {
+    "hero_title": "보고 있는 모든 드라마를 기록하세요",
+    "hero_text": "새 에피소드를 놓치지 않고, 본 작품을 표시하고, 다른 팬들과 이야기를 나눠 보세요.",
+    "up_next": "다음에 볼 작품",
+    "up_next_empty": "모두 시청하셨어요. 드라마를 팔로우하고 다음에 볼 작품을 찾아보세요.",
+    "remaining": "남은 에피소드: %d",
+    "last_aired": "가장 최근 방영된 에피소드",
+    "trending": "이번 주 인기",
+    "no_metadata": "메타데이터 서비스가 설정되지 않아 작품 데이터를 아직 사용할 수 없습니다."
+  },
+  "stats": {
+    "shows": "작품",
+    "episodes": "시청한 에피소드",
+    "time": "시청 시간"
+  },
+  "search": {
+    "none": "드라마를 찾지 못했습니다.",
+    "prompt": "검색창에 작품 이름을 입력하세요."
+  },
+  "show": {
+    "runtime": "%d분",
+    "no_overview": "줄거리가 없습니다.",
+    "status": "상태",
+    "favorite": "즐겨찾기",
+    "unfollow": "팔로우 취소",
+    "follow": "팔로우",
+    "login_to_follow": "로그인하고 팔로우",
+    "progress": "%d / %d 시청",
+    "sync_error": "이 작품의 마지막 데이터 갱신에 실패했습니다. 일부 정보가 오래되었을 수 있습니다.",
+    "seasons": "시즌",
+    "specials": "스페셜",
+    "season": "시즌 %d"
+  },
+  "status": {
+    "watching": "시청 중",
+    "plan": "볼 예정",
+    "completed": "완료",
+    "paused": "일시 중지",
+    "dropped": "중단",
+    "all": "전체"
+  },
+  "season": {
+    "mark_all": "시즌 전체 시청 표시",
+    "unmark_all": "시즌 시청 표시 해제"
+  },
+  "ep": {
+    "tba": "미정",
+    "mark_watched": "시청 완료로 표시",
+    "watched": "시청함",
+    "mark_upto": "여기까지 모두 시청 표시",
+    "your_rating": "내 평점"
+  },
+  "comments": {
+    "title": "댓글",
+    "placeholder": "생각을 나눠 보세요",
+    "mark_spoiler": "스포일러가 포함되어 있어요",
+    "post": "등록",
+    "verify_needed": "토론에 참여하려면 이메일을 인증해 주세요.",
+    "login_needed": "로그인하고 토론에 참여하세요",
+    "load_more": "댓글 더 보기"
+  },
+  "myshows": {
+    "empty": "아직 팔로우한 드라마가 없습니다."
+  },
+  "calendar": {
+    "today": "오늘",
+    "empty": "이 기간에 방영되는 팔로우 작품이 없습니다."
+  },
+  "settings": {
+    "password": "비밀번호 변경",
+    "current_password": "현재 비밀번호",
+    "new_password": "새 비밀번호",
+    "save": "저장",
+    "password_changed": "비밀번호를 변경했습니다.",
+    "blocked": "차단한 사용자",
+    "unblock": "차단 해제",
+    "blocked_none": "차단한 사용자가 없습니다.",
+    "data": "내 데이터",
+    "export": "내 데이터 다운로드",
+    "delete": "계정 삭제",
+    "delete_warning": "계정, 시청 기록, 댓글이 영구적으로 삭제됩니다.",
+    "delete_confirm": "계정을 영구적으로 삭제할까요?",
+    "add_email": "이메일 추가",
+    "add_email_hint": "이메일 알림과 비밀번호 복구를 위해 이메일을 추가하세요.",
+    "copy": "복사",
+    "delete_type_username": "확인을 위해 사용자 이름(%s)을 입력하세요",
+    "done": "완료",
+    "email_added": "받은편지함에서 이메일을 인증해 주세요.",
+    "logout_everywhere": "모든 기기에서 로그아웃",
+    "preferences": "환경설정",
+    "recovery_left": "남은 복구 코드: %d.",
+    "recovery_regen": "새 복구 코드 생성",
+    "recovery_regen_label": "복구 코드를 교체하려면 현재 코드를 입력하세요",
+    "recovery_save": "이 복구 코드를 안전한 곳에 보관하세요. 각 코드는 한 번만 사용할 수 있으며 다시 표시되지 않습니다.",
+    "saved": "저장했습니다.",
+    "sessions": "세션",
+    "tab_account": "계정",
+    "tab_notifications": "알림",
+    "tab_profile": "프로필",
+    "telegram_linked": "Telegram이 계정에 연결되었습니다.",
+    "telegram_linked_as": "연결된 Telegram 로그인:",
+    "telegram_login": "Telegram 로그인",
+    "telegram_login_hint": "Telegram을 연결하면 한 번의 탭으로 로그인할 수 있습니다.",
+    "telegram_unavailable": "이 서버에는 Telegram이 설정되어 있지 않습니다.",
+    "telegram_unlink": "Telegram 로그인 연결 해제",
+    "timezone": "시간대",
+    "timezone_detect": "내 기기 시간대 사용",
+    "twofa": "2단계 인증",
+    "twofa_confirm": "확인 후 켜기",
+    "twofa_disable": "2단계 인증 끄기",
+    "twofa_enable": "2단계 인증 설정",
+    "twofa_hint": "인증 앱의 코드로 계정을 보호하세요.",
+    "twofa_off": "2단계 인증을 껐습니다.",
+    "twofa_on": "2단계 인증이 켜져 있습니다.",
+    "twofa_secret": "스캔할 수 없나요? 이 키를 입력하세요:",
+    "passkeys": "패스키",
+    "passkeys_hint": "비밀번호 대신 지문, 얼굴 또는 기기 PIN으로 로그인하세요. 2단계 인증이 켜져 있으면 해당 코드는 계속 입력해야 합니다.",
+    "passkey_add": "패스키 추가",
+    "passkey_name": "이름 (선택)",
+    "passkey_none": "아직 패스키가 없습니다.",
+    "passkey_unnamed": "패스키",
+    "passkey_added_on": "추가일 %s",
+    "passkey_last_used": "마지막 사용 %s",
+    "passkey_never": "사용한 적 없음",
+    "passkey_remove": "삭제",
+    "telegram_link_btn": "내 Telegram 계정 연결"
+  },
+  "footer": {
+    "tmdb": "작품 데이터와 이미지 제공:",
+    "unofficial": "%s은(는) 독립 프로젝트이며 TMDB와 제휴 관계가 아닙니다.",
+    "tvmaze": "에피소드 방영 시각 제공:",
+    "privacy": "개인정보",
+    "source": "소스 코드 (AGPL-3.0)"
+  },
+  "admin": {
+    "reports": "신고",
+    "reporters": "신고 수: %d",
+    "view": "보기",
+    "dismiss": "기각",
+    "delete": "댓글 삭제",
+    "ban": "사용자 차단(정지)",
+    "none": "처리할 신고가 없습니다."
+  },
+  "offline": {
+    "title": "오프라인 상태입니다",
+    "text": "연결이 없으면 이 페이지를 볼 수 없습니다."
+  },
+  "err": {
+    "title": "문제가 발생했습니다",
+    "bad_request": "잘못된 요청입니다.",
+    "login_required": "먼저 로그인해 주세요.",
+    "forbidden": "이 작업을 수행할 권한이 없습니다.",
+    "not_found": "찾을 수 없습니다.",
+    "rate_limited": "시도 횟수가 너무 많습니다. 잠시 후 다시 시도해 주세요.",
+    "verify_email": "먼저 이메일 주소를 인증해 주세요.",
+    "mail_unavailable": "지금은 이메일을 보낼 수 없습니다. 나중에 다시 시도해 주세요.",
+    "metadata_unavailable": "작품 데이터 서비스가 응답하지 않습니다. 나중에 다시 시도해 주세요.",
+    "internal": "서버에서 문제가 발생했습니다. 다시 시도해 주세요.",
+    "metadata_not_configured": "작품 데이터 서비스가 설정되지 않았습니다.",
+    "invalid_email": "올바른 이메일 주소를 입력하세요.",
+    "invalid_username": "사용자 이름은 영문, 숫자, 밑줄 3~20자여야 합니다.",
+    "weak_password": "비밀번호는 8~72자여야 합니다.",
+    "email_taken": "이미 등록된 이메일입니다.",
+    "username_taken": "이미 사용 중인 사용자 이름입니다.",
+    "bad_credentials": "이메일 또는 비밀번호가 올바르지 않습니다.",
+    "banned": "이 계정은 정지되었습니다.",
+    "link_invalid": "이 링크는 유효하지 않거나 만료되었습니다.",
+    "comment_invalid": "댓글은 1~2000자여야 합니다.",
+    "already_reported": "이미 신고하셨습니다.",
+    "own_comment": "내 댓글에는 이 작업을 할 수 없습니다.",
+    "confirm_username": "확인을 위해 사용자 이름을 입력하세요.",
+    "image_invalid": "이 이미지는 사용할 수 없습니다. 6MB 이하의 JPEG, PNG, GIF, WebP를 사용하세요.",
+    "invalid_timezone": "올바른 시간대를 선택하세요.",
+    "last_login_method": "Telegram 로그인을 해제하기 전에 비밀번호를 설정하거나 인증된 이메일을 추가하세요.",
+    "mfa_bad_code": "코드가 올바르지 않습니다.",
+    "mfa_expired": "로그인 세션이 만료되었습니다. 다시 로그인해 주세요.",
+    "notify_no_email": "이메일 알림을 받으려면 인증된 이메일 주소가 필요합니다.",
+    "notify_no_push": "푸시가 켜진 기기가 없습니다. 먼저 이 기기에서 켜 주세요.",
+    "notify_no_telegram": "Telegram 알림이 연결되어 있지 않습니다.",
+    "notify_test_failed": "테스트 알림을 전달하지 못했습니다. 서버 로그를 확인하세요.",
+    "profile_too_long": "표시 이름은 40자, 소개는 500자까지 가능합니다.",
+    "telegram_failed": "Telegram 로그인에 실패했습니다. 다시 시도해 주세요.",
+    "telegram_send_failed": "Telegram이 메시지를 받지 않았습니다. 다시 시도해 주세요.",
+    "telegram_start_bot": "먼저 Telegram에서 봇을 열고 시작을 누른 뒤 다시 시도하세요.",
+    "telegram_taken": "이 Telegram 계정은 이미 다른 사용자와 연결되어 있습니다.",
+    "telegram_unavailable": "지금은 Telegram을 사용할 수 없습니다.",
+    "passkey_failed": "패스키 확인에 실패했습니다. 다시 시도해 주세요.",
+    "passkey_expired": "패스키 요청이 만료되었습니다. 다시 시도해 주세요.",
+    "passkey_last_method": "마지막 패스키를 삭제하기 전에 로그인 방법을 하나 이상 남겨 두세요. 비밀번호를 설정하거나, 이메일을 인증하거나, Telegram을 연결하세요.",
+    "invalid_timing": "7일 이내의 오프셋과 올바른 시각을 선택하세요."
+  },
+  "mail": {
+    "login": {
+      "subject": "%s 로그인 링크",
+      "body": "이 링크로 %s에 로그인하세요. 30분 후 만료되며 한 번만 사용할 수 있습니다:\n\n%s\n\n요청하지 않으셨다면 이 이메일을 무시하세요."
+    },
+    "reset": {
+      "subject": "%s 비밀번호 재설정",
+      "body": "이 링크로 %s의 새 비밀번호를 설정하세요. 30분 후 만료되며 한 번만 사용할 수 있습니다:\n\n%s\n\n요청하지 않으셨다면 이 이메일을 무시하세요."
+    },
+    "verify": {
+      "subject": "%s 이메일 인증",
+      "body": "%s에 오신 것을 환영합니다. 아래 링크로 이메일 주소를 확인해 주세요(30분 후 만료):\n\n%s\n\n가입하지 않으셨다면 이 이메일을 무시하세요."
+    },
+    "button_open": "열기",
+    "footer": "{app}의 알림 설정에 따라 이 메일을 받으셨습니다."
+  },
+  "js": {
+    "network_error": "네트워크 오류입니다. 다시 시도해 주세요.",
+    "mail_failed": "인증 이메일을 보내지 못했습니다. 메일이 정상화되면 다시 보내기 버튼을 사용하세요.",
+    "verify_sent": "인증 이메일을 보냈습니다.",
+    "marked_many": "시청 완료로 표시됨: %d",
+    "saved": "저장했습니다.",
+    "comments_empty": "아직 댓글이 없습니다. 첫 댓글을 남겨 보세요.",
+    "reported": "신고해 주셔서 감사합니다.",
+    "report_reason": "이 댓글을 신고하는 이유가 무엇인가요?",
+    "mark_spoiler": "스포일러가 포함되어 있어요",
+    "save": "저장",
+    "cancel": "취소",
+    "post_reply": "답글 등록",
+    "deleted_comment": "삭제된 댓글",
+    "edited": "수정됨",
+    "spoiler_label": "스포일러일 수 있음",
+    "spoiler_tag": "스포일러",
+    "reply": "답글",
+    "edit": "수정",
+    "delete": "삭제",
+    "delete_confirm": "삭제할까요? 되돌릴 수 없습니다.",
+    "report_not_spoiler": "스포일러 아님",
+    "report_spoiler": "스포일러",
+    "report_abuse": "신고",
+    "block": "사용자 차단",
+    "block_confirm": "이 사용자를 차단할까요? 서로의 댓글이 보이지 않게 됩니다.",
+    "admin_delete": "제거",
+    "ban_confirm": "이 사용자를 정지할까요?",
+    "copied": "복사했습니다.",
+    "copy_failed": "복사하지 못했습니다. 텍스트를 선택해 직접 복사하세요.",
+    "notif_empty": "아직 알림이 없습니다.",
+    "push_denied": "알림 권한이 허용되지 않았습니다.",
+    "push_enabled": "이 기기에서 푸시 알림을 켰습니다.",
+    "push_unsupported": "이 브라우저는 푸시 알림을 지원하지 않습니다. iPhone에서는 먼저 앱을 홈 화면에 추가하세요.",
+    "show": "보기",
+    "telegram_unlink_confirm": "Telegram을 로그인 방법에서 제거할까요?",
+    "test_sent": "테스트 알림을 보냈습니다.",
+    "passkey_unsupported": "이 브라우저는 패스키를 지원하지 않습니다.",
+    "passkey_cancelled": "패스키 요청이 취소되었습니다.",
+    "passkey_added": "패스키를 추가했습니다.",
+    "passkey_remove_confirm": "이 패스키를 삭제할까요?",
+    "invalid_timing": "올바른 숫자를 입력하세요.",
+    "telegram_failed": "Telegram 로그인이 취소되었거나 차단되었습니다. 다시 시도해 주세요.",
+    "telegram_open": "Telegram 열기"
+  },
+  "genre": {
+    "action_adventure": "액션 & 어드벤처",
+    "animation": "애니메이션",
+    "comedy": "코미디",
+    "crime": "범죄",
+    "documentary": "다큐멘터리",
+    "drama": "드라마",
+    "family": "가족",
+    "kids": "어린이",
+    "mystery": "미스터리",
+    "news": "뉴스",
+    "reality": "리얼리티",
+    "sci_fi_fantasy": "SF & 판타지",
+    "soap": "연속극",
+    "talk": "토크쇼",
+    "war_politics": "전쟁 & 정치",
+    "western": "서부극"
+  },
+  "mfa": {
+    "code": "인증 코드",
+    "recovery_hint": "기기를 분실하셨나요? 대신 복구 코드를 입력하세요.",
+    "text": "인증 앱의 6자리 코드를 입력하세요.",
+    "title": "2단계 인증"
+  },
+  "notif": {
+    "abuse_report": {
+      "body": "{user} 님이 댓글을 신고했습니다. 검토 대기열에서 확인하세요.",
+      "title": "새 댓글 신고"
+    },
+    "always": "(항상 켜짐)",
+    "cat": {
+      "episodes": "새 에피소드",
+      "moderation": "검토",
+      "security": "보안",
+      "social": "답글",
+      "system": "시스템"
+    },
+    "categories": "알림 받을 항목",
+    "ch": {
+      "email": "이메일",
+      "in_app": "앱 내",
+      "push": "푸시",
+      "telegram": "Telegram"
+    },
+    "channels": "채널",
+    "comment_reply": {
+      "body": "{excerpt}",
+      "title": "{user} 님이 내 댓글에 답글을 남겼습니다"
+    },
+    "email_needs_verified": "이메일 알림은 계정에 인증된 이메일 주소가 있어야 합니다.",
+    "empty": "아직 알림이 없습니다.",
+    "episode_aired": {
+      "body": "{code} {name}이(가) 공개되었습니다.",
+      "title": "새 에피소드: {show}"
+    },
+    "mark_all": "모두 읽음으로 표시",
+    "newer": "최신",
+    "older": "이전",
+    "password_changed": {
+      "body": "비밀번호가 변경되었습니다. 본인이 아니라면 즉시 계정을 보호하세요.",
+      "title": "비밀번호 변경됨"
+    },
+    "push_devices": "푸시가 켜진 기기: %d",
+    "push_disable": "이 기기에서 푸시 끄기",
+    "push_enable": "이 기기에서 푸시 켜기",
+    "push_hint": "앱을 닫아도 이 기기에서 알림을 받을 수 있습니다.",
+    "push_title": "푸시 알림",
+    "telegram_connect": "Telegram 연결",
+    "telegram_connected": "Telegram 알림이 연결되어 있습니다.",
+    "telegram_disconnect": "연결 해제",
+    "telegram_dropped": {
+      "body": "봇이 더 이상 메시지를 보낼 수 없어 Telegram 알림이 꺼졌습니다. 설정에서 다시 연결하세요.",
+      "title": "Telegram 연결 해제됨"
+    },
+    "telegram_hint": "Telegram에서 봇을 열고 시작을 눌러 연결하세요.",
+    "telegram_linked": {
+      "body": "Telegram이 로그인 방법으로 계정에 연결되었습니다.",
+      "title": "Telegram 연결됨"
+    },
+    "telegram_oneclick": "내 Telegram 로그인 사용",
+    "telegram_title": "Telegram 알림",
+    "telegram_waiting": "Telegram에서 시작을 누르기를 기다리는 중...",
+    "test": {
+      "body": "이 메시지가 보인다면 이 채널은 정상입니다.",
+      "title": "테스트 알림"
+    },
+    "test_hint": "각 채널로 테스트를 보내 정상 작동하는지 확인하세요.",
+    "test_title": "채널 테스트",
+    "twofa_disabled": {
+      "body": "계정의 2단계 인증이 꺼졌습니다.",
+      "title": "2단계 인증 꺼짐"
+    },
+    "twofa_enabled": {
+      "body": "계정의 2단계 인증이 켜졌습니다.",
+      "title": "2단계 인증 켜짐"
+    },
+    "view_all": "모두 보기",
+    "passkey_added": {
+      "title": "패스키 추가됨",
+      "body": "계정에 새 패스키가 추가되었습니다. 본인이 아니라면 즉시 계정을 보호하세요."
+    },
+    "timing_title": "에피소드 알림 시점",
+    "timing_hint": "에피소드의 정확한 방영 시각을 알 수 있으면(TVmaze, 예비로 Trakt) 알림이 그 시각을 사용합니다. 날짜만 알 수 있으면 해당 날짜 정오(내 시간대)를 기준으로 계산합니다.",
+    "timing_when": "알림 받을 시점",
+    "timing_before30": "30분 전",
+    "timing_release": "방영 시",
+    "timing_after60": "1시간 후",
+    "timing_nextday": "다음 날",
+    "timing_custom": "직접 설정",
+    "timing_custom_label": "오프셋 (음수는 이전)",
+    "timing_unit": "단위",
+    "timing_unit_min": "분",
+    "timing_unit_hour": "시간",
+    "timing_unit_day": "일"
+  },
+  "profile": {
+    "bio": "소개",
+    "display_name": "표시 이름",
+    "edit": "프로필 수정",
+    "fav_shows": "좋아하는 드라마",
+    "genres": "선호 장르",
+    "joined": "가입일 %s",
+    "lifetime": "전체",
+    "month": "최근 30일",
+    "private": "비공개 프로필입니다.",
+    "public": "공개 프로필",
+    "public_hint": "끄면 통계와 즐겨찾기를 나만 볼 수 있습니다.",
+    "recent": "최근 시청",
+    "remove": "삭제",
+    "today": "오늘",
+    "upload_avatar": "사진 업로드",
+    "upload_banner": "배너 업로드",
+    "upload_hint": "JPEG, PNG, GIF, WebP (최대 6MB).",
+    "view_public": "내 공개 프로필 보기",
+    "watch_time": "시청 시간",
+    "week": "최근 7일"
+  },
+  "tg": {
+    "error": "문제가 발생했습니다. 다시 시도해 주세요.",
+    "help": "명령어: /start 로 연결 상태 확인, /stop 으로 알림 끄기.",
+    "link_invalid": "이 링크는 유효하지 않거나 만료되었습니다. 앱 설정에서 새로 만드세요.",
+    "linked": "연결되었습니다. 이제 알림이 여기로 전달됩니다.",
+    "private_only": "개인 채팅으로 말을 걸어 주세요.",
+    "status_linked": "이 채팅은 계정에 연결되어 있습니다.",
+    "status_unlinked": "이 채팅은 아직 연결되지 않았습니다. 앱 설정의 알림에서 Telegram 연결을 누르세요.",
+    "stopped": "이 채팅의 알림을 껐습니다."
+  },
+  "privacy": {
+    "title": "개인정보 처리방침",
+    "updated": "최종 업데이트: %s",
+    "intro": "이 방침은 {app}이(가) 사용자에 대해 무엇을 저장하고 누가 관여하는지 설명합니다. {app}은(는) 오픈소스 소프트웨어이며 이 사이트는 {operator}이(가) 운영합니다. 여기의 내용은 법률 자문이 아닙니다.",
+    "operator_default": "이 사이트를 운영하는 사람",
+    "contact_none": "연락처는 사이트 또는 소스 코드 저장소에 있습니다.",
+    "data": {
+      "title": "저장되는 정보",
+      "body": "계정(사용자 이름, 추가한 경우 이메일 주소, 설정한 경우 해시된 비밀번호, 표시 이름, 소개, 프로필 이미지, 언어, 시간대), Telegram을 사용하는 경우 Telegram ID와 핸들, 패스키의 공개 키, 팔로우한 드라마·시청 및 평점 기록, 댓글·신고·차단, 알림 설정·알림·푸시 구독."
+    },
+    "signin": {
+      "title": "로그인 및 보안 데이터",
+      "body": "세션은 쿠키와 해시된 갱신 토큰을 사용합니다. 2단계 인증 비밀 키는 암호화하여, 복구 코드는 해시로 저장합니다. IP 주소는 요청 제한을 위해 메모리에서만 사용되며 로그에 기록되지 않습니다. 보안 로그에는 국가 코드만 남습니다."
+    },
+    "cookies": {
+      "title": "쿠키와 로컬 저장소",
+      "body": "필수 쿠키만 사용합니다: 로그인 세션, CSRF 보호, 언어, 짧은 수명의 보안 확인. 테마 선택은 브라우저 로컬 저장소에 보관됩니다. 분석, 광고, 추적 스크립트는 없습니다."
+    },
+    "third": {
+      "title": "관련된 다른 서비스",
+      "body": "드라마 데이터는 TMDB와 TVmaze, 선택적으로 Trakt에서 가져옵니다. 이 요청은 서버가 보내며 사용자에 관한 정보는 전송하지 않습니다. 이미지는 서버가 한 번 가져와 이 사이트 또는 운영자가 관리하는 스토리지에서 제공하므로, 브라우저가 해당 서비스에 접속하지 않습니다. Telegram을 선택하면 Telegram이 로그인과 사용자에게 전송되는 알림을 받습니다. 그 스크립트는 Telegram 버튼을 누를 때만 로드됩니다. 푸시 알림은 브라우저 제공업체의 푸시 서비스를 거칩니다. 이메일은 운영자의 메일 제공업체를 거칩니다."
+    },
+    "public": {
+      "title": "다른 사람에게 보이는 정보",
+      "body": "사용자 이름, 표시 이름, 소개, 프로필 이미지는 공개됩니다. 통계, 즐겨찾기, 최근 시청한 드라마는 프로필을 비공개로 하지 않는 한 공개됩니다. 댓글은 모두에게 보이며 이름이 표시됩니다. 서로 차단한 사용자는 상대의 댓글을 볼 수 없습니다."
+    },
+    "use": {
+      "title": "사용 방법",
+      "body": "서비스 운영에만 사용합니다: 진행 상황 표시, 선택한 알림 전송, 댓글 스레드 제공, 악용 방지. 데이터는 판매되지 않으며 광고나 프로파일링에 사용되지 않습니다."
+    },
+    "retention": {
+      "title": "보관 기간",
+      "body": "삭제할 때까지 보관됩니다. 계정을 삭제하면 계정, 기록, 댓글, 알림, 업로드한 이미지가 영구적으로 삭제됩니다. 삭제된 댓글은 즉시 내용이 지워집니다. 알림은 90일 후 삭제됩니다. 운영자의 백업에는 짧은 기간 동안 사본이 남을 수 있습니다."
+    },
+    "rights": {
+      "title": "사용자의 선택",
+      "body": "설정에서 데이터를 내려받고, 프로필을 수정하거나 삭제하고, 알림 채널을 끄고, 계정을 삭제할 수 있습니다. GDPR 같은 법률에 따라 운영자에게 데이터 열람, 정정, 삭제를 요청할 수도 있습니다."
+    },
+    "children": {
+      "title": "아동",
+      "body": "이 서비스는 만 13세 미만(또는 거주 국가의 최소 연령 미만) 아동을 대상으로 하지 않으며 해당 데이터를 의도적으로 수집하지 않습니다."
+    },
+    "changes": {
+      "title": "변경",
+      "body": "이 방침이 바뀌면 새 버전이 날짜와 함께 이 페이지에 게시됩니다. 번역본 간에 차이가 있으면 영어본이 우선합니다."
+    },
+    "contact": {
+      "title": "문의",
+      "body": "운영자: {operator}. {contact}"
+    }
+  }
+}

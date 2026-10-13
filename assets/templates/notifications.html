@@ -1,0 +1,25 @@
+{{define "content"}}
+<div class="page-head">
+  <h1>{{.T "nav.notifications"}}</h1>
+  <a class="btn ghost small" href="/settings?tab=notifications">{{.T "nav.settings"}}</a>
+</div>
+{{if .Data.Items}}
+<ul class="notif-list">
+  {{range .Data.Items}}
+  <li class="notif {{if not .Read}}unread{{end}}">
+    <a href="{{.Open}}">
+      <strong>{{.Title}}</strong>
+      {{if .Body}}<span>{{.Body}}</span>{{end}}
+      <time datetime="{{.CreatedAt}}" data-ts="{{.CreatedAt}}">{{.CreatedAt}}</time>
+    </a>
+  </li>
+  {{end}}
+</ul>
+<nav class="pager">
+  {{if .Data.HasPrev}}<a class="chip" href="/notifications?page={{.Data.Prev}}"><span class="arr-l" aria-hidden="true"></span> {{.T "notif.newer"}}</a>{{else}}<span></span>{{end}}
+  {{if .Data.HasNext}}<a class="chip" href="/notifications?page={{.Data.Next}}">{{.T "notif.older"}} <span class="arr-r" aria-hidden="true"></span></a>{{end}}
+</nav>
+{{else}}
+<p class="muted">{{.T "notif.empty"}}</p>
+{{end}}
+{{end}}

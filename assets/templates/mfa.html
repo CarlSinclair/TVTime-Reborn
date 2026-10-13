@@ -1,0 +1,12 @@
+{{define "content"}}
+<section class="auth-card">
+  <h1>{{.T "mfa.title"}}</h1>
+  <p>{{.T "mfa.text"}}</p>
+  <form class="stack" data-api="/api/auth/2fa">
+    <label>{{.T "mfa.code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="20" required autofocus></label>
+    <p class="muted">{{.T "mfa.recovery_hint"}}</p>
+    <p class="form-error" role="alert" hidden></p>
+    <button class="btn" type="submit">{{.T "token.continue"}}</button>
+  </form>
+</section>
+{{end}}

@@ -1,0 +1,236 @@
+package telegram
+
+import (
+	"bytes"
+	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+)
+
+var (
+	ErrNotConfigured = errors.New("telegram bot is not configured")
+	ErrBotBlocked    = errors.New("telegram: bot was blocked by the user or the chat is gone")
+	ErrBadLogin      = errors.New("telegram login data is invalid or expired")
+)
+
+const apiBase = "https://api.telegram.org"
+
+type Bot struct {
+	Token    string
+	Username string
+	Secret   string
+	API      string
+	http     *http.Client
+
+	seenMu sync.Mutex
+	seen   map[string]time.Time
+}
+
+func New(token, username, webhookSecret string) *Bot {
+	return &Bot{
+		Token: strings.TrimSpace(token), Username: strings.TrimPrefix(strings.TrimSpace(username), "@"), Secret: webhookSecret,
+		API: apiBase, http: &http.Client{Timeout: 15 * time.Second}, seen: map[string]time.Time{},
+	}
+}
+
+func (b *Bot) Configured() bool { return b != nil && b.Token != "" && b.Username != "" }
+
+func (b *Bot) BotID() string {
+	if i := strings.IndexByte(b.Token, ':'); i > 0 {
+		return b.Token[:i]
+	}
+	return ""
+}
+
+func (b *Bot) DeepLink(startToken string) string {
+	return "https://t.me/" + b.Username + "?start=" + url.QueryEscape(startToken)
+}
+
+type LoginData struct {
+	ID        int64
+	Username  string
+	FirstName string
+	LastName  string
+	AuthDate  time.Time
+}
+
+func (l LoginData) DisplayName() string {
+	return strings.TrimSpace(l.FirstName + " " + l.LastName)
+}
+
+// VerifyLogin checks a Telegram Login Widget payload: the HMAC over the sorted
+// fields keyed by SHA-256(bot token), a freshness window, and a replay cache so
+// the same signed payload cannot be redeemed twice inside that window.
+func (b *Bot) VerifyLogin(vals url.Values) (LoginData, error) {
+	var out LoginData
+	if !b.Configured() {
+		return out, ErrNotConfigured
+	}
+	got := strings.TrimSpace(vals.Get("hash"))
+	if got == "" {
+		return out, ErrBadLogin
+	}
+	keys := make([]string, 0, len(vals))
+	for k := range vals {
+		if k == "hash" || k == "" || k == "action" {
+			continue
+		}
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, k := range keys {
+		parts = append(parts, k+"="+vals.Get(k))
+	}
+	secret := sha256.Sum256([]byte(b.Token))
+	mac := hmac.New(sha256.New, secret[:])
+	mac.Write([]byte(strings.Join(parts, "\n")))
+	want := hex.EncodeToString(mac.Sum(nil))
+	if subtle.ConstantTimeCompare([]byte(want), []byte(strings.ToLower(got))) != 1 {
+		return out, ErrBadLogin
+	}
+	ad, err := strconv.ParseInt(vals.Get("auth_date"), 10, 64)
+	if err != nil || ad == 0 {
+		return out, ErrBadLogin
+	}
+	out.AuthDate = time.Unix(ad, 0)
+	if time.Since(out.AuthDate) > time.Hour || out.AuthDate.After(time.Now().Add(5*time.Minute)) {
+		return out, ErrBadLogin
+	}
+	id, err := strconv.ParseInt(vals.Get("id"), 10, 64)
+	if err != nil || id <= 0 {
+		return out, ErrBadLogin
+	}
+	b.seenMu.Lock()
+	defer b.seenMu.Unlock()
+	now := time.Now()
+	for k, t := range b.seen {
+		if now.Sub(t) > 2*time.Hour {
+			delete(b.seen, k)
+		}
+	}
+	if _, dup := b.seen[want]; dup {
+		return out, ErrBadLogin
+	}
+	b.seen[want] = now
+	out.ID, out.Username, out.FirstName, out.LastName = id, vals.Get("username"), vals.Get("first_name"), vals.Get("last_name")
+	return out, nil
+}
+
+func (b *Bot) VerifyWebhook(r *http.Request) bool {
+	if b.Secret == "" {
+		return false
+	}
+	got := r.Header.Get("X-Telegram-Bot-Api-Secret-Token")
+	return subtle.ConstantTimeCompare([]byte(got), []byte(b.Secret)) == 1
+}
+
+type apiResponse struct {
+	OK          bool   `json:"ok"`
+	ErrorCode   int    `json:"error_code"`
+	Description string `json:"description"`
+}
+
+func (b *Bot) call(ctx context.Context, method string, payload any) error {
+	if !b.Configured() {
+		return ErrNotConfigured
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("telegram %s marshal: %w", method, err)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, b.API+"/bot"+b.Token+"/"+method, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("telegram %s request: %w", method, err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := b.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("telegram %s: %w", method, scrub(err, b.Token))
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	var out apiResponse
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return fmt.Errorf("telegram %s: bad response status %d", method, resp.StatusCode)
+	}
+	if !out.OK {
+		if out.ErrorCode == http.StatusForbidden || (out.ErrorCode == http.StatusBadRequest && strings.Contains(out.Description, "chat not found")) {
+			return fmt.Errorf("%w: %s", ErrBotBlocked, out.Description)
+		}
+		return fmt.Errorf("telegram %s: %d %s", method, out.ErrorCode, out.Description)
+	}
+	return nil
+}
+
+func scrub(err error, token string) error {
+	if token == "" {
+		return err
+	}
+	return errors.New(strings.ReplaceAll(err.Error(), token, "<token>"))
+}
+
+func (b *Bot) SendMessage(ctx context.Context, chatID, text string) error {
+	if len(text) > 4000 {
+		text = text[:4000]
+	}
+	return b.call(ctx, "sendMessage", map[string]any{"chat_id": chatID, "text": text, "disable_web_page_preview": true})
+}
+
+func (b *Bot) SetWebhook(ctx context.Context, webhookURL string) error {
+	return b.call(ctx, "setWebhook", map[string]any{
+		"url": webhookURL, "secret_token": b.Secret, "allowed_updates": []string{"message"}, "drop_pending_updates": false,
+	})
+}
+
+type Update struct {
+	UpdateID int64    `json:"update_id"`
+	Message  *Message `json:"message"`
+}
+
+type Message struct {
+	MessageID int64  `json:"message_id"`
+	Text      string `json:"text"`
+	Chat      Chat   `json:"chat"`
+	From      *User  `json:"from"`
+}
+
+type Chat struct {
+	ID   int64  `json:"id"`
+	Type string `json:"type"`
+}
+
+type User struct {
+	ID           int64  `json:"id"`
+	Username     string `json:"username"`
+	LanguageCode string `json:"language_code"`
+}
+
+// ParseCommand splits "/start abc" or "/start@MyBot abc" into command and arg.
+func ParseCommand(text string) (cmd, arg string) {
+	fields := strings.Fields(strings.TrimSpace(text))
+	if len(fields) == 0 || !strings.HasPrefix(fields[0], "/") {
+		return "", ""
+	}
+	cmd = fields[0]
+	if i := strings.IndexByte(cmd, '@'); i >= 0 {
+		cmd = cmd[:i]
+	}
+	if len(fields) > 1 {
+		arg = fields[1]
+	}
+	return strings.ToLower(cmd), arg
+}

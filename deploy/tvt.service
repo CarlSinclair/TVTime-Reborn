@@ -1,0 +1,32 @@
+[Unit]
+Description=TVT (TV show tracker)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=tvt
+Group=tvt
+WorkingDirectory=/var/www/html/tvt
+EnvironmentFile=/var/www/html/tvt/tvt.env
+ExecStart=/var/www/html/tvt/tvt
+Restart=on-failure
+RestartSec=3
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallFilter=@system-service
+ReadWritePaths=/var/www/html/tvt/data
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

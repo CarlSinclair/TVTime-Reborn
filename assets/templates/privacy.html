@@ -1,0 +1,13 @@
+{{define "content"}}
+<article class="legal">
+  <h1>{{.T "privacy.title"}}</h1>
+  <p class="muted">{{.T "privacy.updated" .Data.Updated}}</p>
+  <p>{{.TN "privacy.intro" "app" .AppName "operator" .Data.Operator}}</p>
+  {{range .Data.Sections}}
+  <section>
+    <h2>{{$.T (printf "privacy.%s.title" .)}}</h2>
+    <p>{{if eq . "contact"}}{{$.TN "privacy.contact.body" "operator" $.Data.Operator "contact" $.Data.Contact}}{{else}}{{$.T (printf "privacy.%s.body" .)}}{{end}}</p>
+  </section>
+  {{end}}
+</article>
+{{end}}

@@ -1,0 +1,70 @@
+name: build & deploy
+
+# Runs only for the owner's repository, only on a push to main whose commit
+# message contains [deploy], or when started by hand. Pull requests (including
+# ones from forks) never run this workflow and never see its secrets.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-tvt
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      github.repository_owner == 'CarlSinclair' &&
+      (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[deploy]'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: vet
+        env:
+          CGO_ENABLED: "0"
+        run: go vet ./...
+
+      - name: test
+        env:
+          CGO_ENABLED: "0"
+        run: go test -count=1 ./...
+
+      - name: build
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          go build -trimpath -ldflags "-s -w -X tvt/logger.Version=${GITHUB_RUN_NUMBER}" -o tvt .
+          file tvt
+
+      - name: deploy over ssh
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY"     > ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          tar -czf tvt.tar.gz tvt
+          SHA=$(sha256sum tvt.tar.gz | cut -d' ' -f1)
+          echo "shipping tvt.tar.gz sha256=$SHA bytes=$(stat -c%s tvt.tar.gz)"
+          ssh -i ~/.ssh/id_ed25519 -p "$DEPLOY_PORT" \
+            -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=20 \
+            "deploy@$DEPLOY_HOST" "tvt $SHA" < tvt.tar.gz
+          shred -u ~/.ssh/id_ed25519 || rm -f ~/.ssh/id_ed25519

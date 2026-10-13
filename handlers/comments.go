@@ -1,0 +1,333 @@
+package handlers
+
+import (
+	"errors"
+	"net/http"
+	"strconv"
+	"strings"
+	"unicode"
+	"unicode/utf8"
+
+	"tvt/auth"
+	"tvt/logger"
+	"tvt/store"
+)
+
+func cleanBody(s string) (string, bool) {
+	s = strings.ReplaceAll(strings.TrimSpace(s), "\r\n", "\n")
+	if s == "" || utf8.RuneCountInString(s) > store.MaxCommentLen || !utf8.ValidString(s) {
+		return "", false
+	}
+	for _, r := range s {
+		if unicode.IsControl(r) && r != '\n' && r != '\t' {
+			return "", false
+		}
+	}
+	return s, true
+}
+
+type commentJSON struct {
+	ID        int64           `json:"id"`
+	User      string          `json:"user"`
+	Name      string          `json:"name"`
+	Body      string          `json:"body"`
+	Spoiler   bool            `json:"spoiler"`
+	ParentID  int64           `json:"parent_id"`
+	CreatedAt string          `json:"created_at"`
+	Edited    bool            `json:"edited"`
+	Deleted   bool            `json:"deleted"`
+	Mine      bool            `json:"mine"`
+	Reported  map[string]bool `json:"reported"`
+}
+
+const commentPage = 20
+
+func (a *App) targetOf(r *http.Request) (store.Target, error) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil || id <= 0 {
+		return store.Target{}, errNotFound
+	}
+	return store.EpisodeTarget(id), nil
+}
+
+func (a *App) targetLink(t store.Target) string { return "/episode/" + itoa(t.ID) }
+
+func (a *App) viewerWatched(t store.Target, uid int64) (bool, error) {
+	if uid == 0 {
+		return false, nil
+	}
+	ep, err := a.Store.Episode(t.ID, uid)
+	if err != nil {
+		return false, err
+	}
+	return ep.Watched, nil
+}
+
+func (a *App) apiListComments() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		t, err := a.targetOf(r)
+		if err != nil {
+			a.fail(w, r, err)
+			return
+		}
+		var uid int64
+		if u := auth.UserFrom(r.Context()); u != nil {
+			uid = u.ID
+		}
+		watched, err := a.viewerWatched(t, uid)
+		if err != nil {
+			if errors.Is(err, store.ErrNotFound) {
+				a.fail(w, r, errNotFound)
+			} else {
+				a.fail(w, r, err)
+			}
+			return
+		}
+		offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
+		if offset < 0 {
+			offset = 0
+		}
+		list, more, err := a.Store.Comments(t, uid, commentPage, offset)
+		if err != nil {
+			a.fail(w, r, err)
+			return
+		}
+		total, err := a.Store.CountComments(t)
+		if err != nil {
+			a.fail(w, r, err)
+			return
+		}
+		out := make([]commentJSON, 0, len(list))
+		for _, c := range list {
+			name := c.DisplayName
+			if name == "" {
+				name = c.Username
+			}
+			out = append(out, commentJSON{
+				ID: c.ID, User: c.Username, Name: name, Body: c.Body, Spoiler: c.IsSpoiler(), ParentID: c.ParentID,
+				CreatedAt: c.CreatedAt, Edited: c.EditedAt != "", Deleted: c.Deleted, Mine: uid != 0 && c.UserID == uid, Reported: c.MyReports,
+			})
+		}
+		a.okJSON(w, map[string]any{"comments": out, "total": total, "viewer_watched": watched, "more": more, "next_offset": offset + commentPage})
+	}
+}
+
+func (a *App) apiAddComment() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		u, err := a.needVerified(r)
+		if err != nil {
+			a.fail(w, r, err)
+			return
+		}
+		t, err := a.targetOf(r)
+		if err != nil {
+			a.fail(w, r, err)
+			return
+		}
+		var in struct {
+			Body     string
+			Spoiler  bool
+			ParentID int64 `json:"parent_id"`
+		}
+		if err := decode(r, &in); err != nil {
+			a.fail(w, r, err)
+			return
+		}
+		body, ok := cleanBody(in.Body)
+		if !ok {
+			a.fail(w, r, apiErr{http.StatusBadRequest, "err.comment_invalid"})
+			return
+		}
+		if err := a.allow(a.commentLimit, "c:"+strconv.FormatInt(u.ID, 10)); err != nil {
+			a.fail(w, r, err)
+			return
+		}
+		cid, err := a.Store.AddComment(u.ID, t, in.ParentID, body, in.Spoiler)
+		if err != nil {
+			if errors.Is(err, store.ErrNotFound) {
+				a.fail(w, r, errNotFound)
+			} else {
+				a.fail(w, r, err)
+			}
+			return
+		}
+		if in.ParentID != 0 {
+			a.notifyReply(u, t, in.ParentID, body)
+		}
+		a.okJSON(w, map[string]any{"id": cid})
+	}
+}
+
+func (a *App) notifyReply(author *store.User, t store.Target, parentID int64, body string) {
+	parent, err := a.Store.CommentByID(parentID)
+	if err != nil {
+		logger.Error("NOTIFY reply parent comment=%d: %v", parentID, err)
+		return
+	}
+	if parent.UserID == author.ID {
+		return
+	}
+	blocked, err := a.Store.BlockedEither(author.ID, parent.UserID)
+	if err != nil {
+		logger.Error("NOTIFY reply block check: %v", err)
+		return
+	}
+	if blocked {
+		return
+	}
+	a.Notif.Send(parent.UserID, "comment_reply", a.targetLink(t), map[string]any{"user": author.Name(), "excerpt": truncate(body, 90)})
+}
+
+func (a *App) commentID(w http.ResponseWriter, r *http.Request) (int64, bool) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		a.fail(w, r, errNotFound)
+		return 0, false
+	}
+	return id, true
+}
+
+func (a *App) apiEditComment(w http.ResponseWriter, r *http.Request) {
+	u, err := a.needVerified(r)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	id, ok := a.commentID(w, r)
+	if !ok {
+		return
+	}
+	var in struct {
+		Body    string
+		Spoiler bool
+	}
+	if err := decode(r, &in); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	body, ok := cleanBody(in.Body)
+	if !ok {
+		a.fail(w, r, apiErr{http.StatusBadRequest, "err.comment_invalid"})
+		return
+	}
+	if err := a.Store.EditComment(u.ID, id, body, in.Spoiler); err != nil {
+		if errors.Is(err, store.ErrForbidden) {
+			a.fail(w, r, errForbidden)
+		} else {
+			a.fail(w, r, err)
+		}
+		return
+	}
+	a.okJSON(w, nil)
+}
+
+func (a *App) apiDeleteComment(w http.ResponseWriter, r *http.Request) {
+	u, err := a.needUser(r)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	id, ok := a.commentID(w, r)
+	if !ok {
+		return
+	}
+	if err := a.Store.DeleteComment(u.ID, false, id); err != nil {
+		if errors.Is(err, store.ErrForbidden) {
+			a.fail(w, r, errForbidden)
+		} else {
+			a.fail(w, r, err)
+		}
+		return
+	}
+	a.okJSON(w, nil)
+}
+
+func (a *App) apiReportComment(w http.ResponseWriter, r *http.Request) {
+	u, err := a.needUser(r)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	id, ok := a.commentID(w, r)
+	if !ok {
+		return
+	}
+	var in struct{ Kind, Reason string }
+	if err := decode(r, &in); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	if in.Kind != "spoiler" && in.Kind != "not_spoiler" && in.Kind != "abuse" {
+		a.fail(w, r, errBadRequest)
+		return
+	}
+	in.Reason = strings.TrimSpace(in.Reason)
+	if utf8.RuneCountInString(in.Reason) > 300 {
+		in.Reason = string([]rune(in.Reason)[:300])
+	}
+	if err := a.allow(a.reportLimit, "r:"+strconv.FormatInt(u.ID, 10)); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	err = a.Store.ReportComment(u.ID, id, in.Kind, in.Reason)
+	switch {
+	case err == nil:
+		logger.Info("REPORT comment=%d kind=%s by uid=%d", id, in.Kind, u.ID)
+		if in.Kind == "abuse" {
+			a.Notif.SendToAdmins("abuse_report", "/admin/reports", map[string]any{"user": u.Name()})
+		}
+		a.okJSON(w, nil)
+	case errors.Is(err, store.ErrNotFound):
+		a.fail(w, r, errNotFound)
+	case errors.Is(err, store.ErrAlreadyReported):
+		a.fail(w, r, apiErr{http.StatusConflict, "err.already_reported"})
+	case errors.Is(err, store.ErrSelfReport):
+		a.fail(w, r, apiErr{http.StatusBadRequest, "err.own_comment"})
+	default:
+		a.fail(w, r, err)
+	}
+}
+
+func (a *App) apiBlockAuthor(w http.ResponseWriter, r *http.Request) {
+	u, err := a.needUser(r)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	id, ok := a.commentID(w, r)
+	if !ok {
+		return
+	}
+	switch err := a.Store.BlockByComment(u.ID, id); {
+	case err == nil:
+		a.okJSON(w, nil)
+	case errors.Is(err, store.ErrNotFound):
+		a.fail(w, r, errNotFound)
+	case errors.Is(err, store.ErrSelfReport):
+		a.fail(w, r, apiErr{http.StatusBadRequest, "err.own_comment"})
+	default:
+		a.fail(w, r, err)
+	}
+}
+
+func (a *App) apiUnblock(w http.ResponseWriter, r *http.Request) {
+	u, err := a.needUser(r)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	var in struct{ Username string }
+	if err := decode(r, &in); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	if err := a.Store.Unblock(u.ID, in.Username); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			a.fail(w, r, errNotFound)
+		} else {
+			a.fail(w, r, err)
+		}
+		return
+	}
+	a.okJSON(w, nil)
+}

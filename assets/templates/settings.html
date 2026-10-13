@@ -1,0 +1,291 @@
+{{define "content"}}
+<h1>{{.T "nav.settings"}}</h1>
+<div class="tabs" role="tablist">
+  <a class="tab {{if eq .Data.Tab "account"}}active{{end}}" href="/settings?tab=account">{{.T "settings.tab_account"}}</a>
+  <a class="tab {{if eq .Data.Tab "profile"}}active{{end}}" href="/settings?tab=profile">{{.T "settings.tab_profile"}}</a>
+  <a class="tab {{if eq .Data.Tab "notifications"}}active{{end}}" href="/settings?tab=notifications">{{.T "settings.tab_notifications"}}</a>
+</div>
+{{if .Data.Flash}}<p class="notice">{{.T "settings.telegram_linked"}}</p>{{end}}
+{{if .Data.FlashError}}<p class="notice error">{{.T (printf "err.%s" .Data.FlashError)}}</p>{{end}}
+
+{{if eq .Data.Tab "account"}}
+<section class="panel">
+  <h2>{{.User.Name}}</h2>
+  <p class="muted">{{if .User.Email}}{{.User.Email}}{{else}}@{{.User.Username}}{{end}}</p>
+</section>
+
+<section class="panel">
+  <h2>{{.T "settings.preferences"}}</h2>
+  <div class="stack">
+    <label>{{.T "nav.language"}}
+      <select id="settings-lang">
+        {{range .Langs}}<option value="{{.}}" {{if eq . $.Lang}}selected{{end}}>{{$.LangName .}}</option>{{end}}
+      </select>
+    </label>
+    <label>{{.T "settings.timezone"}}
+      <select id="settings-tz" data-current="{{.User.Timezone}}">
+        {{range .Data.Timezones}}<option value="{{.}}" {{if eq . $.User.Timezone}}selected{{end}}>{{.}}</option>{{end}}
+      </select>
+    </label>
+    <p><button class="btn ghost small" type="button" id="tz-detect">{{.T "settings.timezone_detect"}}</button></p>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>{{.T "settings.password"}}</h2>
+  <form class="stack" data-api="/api/account/password" data-success="{{.T "settings.password_changed"}}">
+    {{if .User.HasPassword}}<label>{{.T "settings.current_password"}}<input type="password" name="current" autocomplete="current-password" required></label>{{end}}
+    <label>{{.T "settings.new_password"}}<input type="password" name="new" autocomplete="new-password" minlength="8" maxlength="72" required></label>
+    <p class="form-error" role="alert" hidden></p>
+    <button class="btn" type="submit">{{.T "settings.save"}}</button>
+  </form>
+</section>
+
+{{if not .User.Email}}
+<section class="panel">
+  <h2>{{.T "settings.add_email"}}</h2>
+  <p class="muted">{{.T "settings.add_email_hint"}}</p>
+  <form class="stack" data-api="/api/account/email" data-success="{{.T "settings.email_added"}}">
+    <label>{{.T "auth.email"}}<input type="email" name="email" autocomplete="email" required></label>
+    <p class="form-error" role="alert" hidden></p>
+    <button class="btn" type="submit">{{.T "settings.add_email"}}</button>
+  </form>
+</section>
+{{end}}
+
+<section class="panel" id="twofa">
+  <h2>{{.T "settings.twofa"}}</h2>
+  {{if .User.TOTPEnabled}}
+  <p class="notice">{{.T "settings.twofa_on"}} {{.T "settings.recovery_left" .Data.RecoveryLeft}}</p>
+  <form class="stack" data-api="/api/account/2fa/disable" data-success="{{.T "settings.twofa_off"}}" data-reload="1">
+    {{if .User.HasPassword}}<label>{{.T "auth.password"}}<input type="password" name="password" autocomplete="current-password" required></label>{{end}}
+    <label>{{.T "mfa.code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>
+    <p class="form-error" role="alert" hidden></p>
+    <button class="btn danger" type="submit">{{.T "settings.twofa_disable"}}</button>
+  </form>
+  <form class="stack" data-api="/api/account/2fa/recovery" data-recovery="1">
+    <label>{{.T "settings.recovery_regen_label"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>
+    <p class="form-error" role="alert" hidden></p>
+    <button class="btn ghost" type="submit">{{.T "settings.recovery_regen"}}</button>
+  </form>
+  {{else}}
+  <p class="muted">{{.T "settings.twofa_hint"}}</p>
+  <button class="btn" type="button" id="twofa-start">{{.T "settings.twofa_enable"}}</button>
+  <div id="twofa-setup" hidden>
+    <img id="twofa-qr" class="qr" alt="">
+    <p class="muted">{{.T "settings.twofa_secret"}} <code id="twofa-secret"></code></p>
+    <form class="stack" id="twofa-confirm">
+      <label>{{.T "mfa.code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>
+      <p class="form-error" role="alert" hidden></p>
+      <button class="btn" type="submit">{{.T "settings.twofa_confirm"}}</button>
+    </form>
+  </div>
+  {{end}}
+  <div id="recovery-box" hidden>
+    <p class="notice">{{.T "settings.recovery_save"}}</p>
+    <pre id="recovery-codes" class="codes"></pre>
+    <p><button class="btn ghost small" type="button" id="recovery-copy">{{.T "settings.copy"}}</button> <button class="btn small" type="button" id="recovery-done">{{.T "settings.done"}}</button></p>
+  </div>
+</section>
+
+{{if .PasskeysEnabled}}
+<section class="panel" id="passkey-box">
+  <h2>{{.T "settings.passkeys"}}</h2>
+  <p class="muted">{{.T "settings.passkeys_hint"}}</p>
+  {{if .Data.Passkeys}}
+  <ul class="blocked">
+    {{range .Data.Passkeys}}
+    <li>
+      <span>{{if .Name}}{{.Name}}{{else}}{{$.T "settings.passkey_unnamed"}}{{end}}<br><small class="muted">{{$.T "settings.passkey_added_on" (slice .CreatedAt 0 10)}} &middot; {{if .LastUsed}}{{$.T "settings.passkey_last_used" (slice .LastUsed 0 10)}}{{else}}{{$.T "settings.passkey_never"}}{{end}}</small></span>
+      <button class="btn ghost small" type="button" data-passkey-delete="{{.ID}}">{{$.T "settings.passkey_remove"}}</button>
+    </li>
+    {{end}}
+  </ul>
+  {{else}}<p class="muted">{{.T "settings.passkey_none"}}</p>{{end}}
+  <div class="actions">
+    <input type="text" id="passkey-name" maxlength="40" placeholder="{{.T "settings.passkey_name"}}" aria-label="{{.T "settings.passkey_name"}}">
+    <button class="btn" type="button" id="passkey-add">{{.T "settings.passkey_add"}}</button>
+  </div>
+</section>
+{{end}}
+
+<section class="panel" id="telegram-login">
+  <h2>{{.T "settings.telegram_login"}}</h2>
+  {{if .TelegramBot}}
+    {{if .User.TelegramID}}
+    <p>{{.T "settings.telegram_linked_as"}} {{if .User.TelegramUsername}}@{{.User.TelegramUsername}}{{else}}ID {{.User.TelegramID}}{{end}}</p>
+    <p><button class="btn ghost" type="button" data-telegram-unlink>{{.T "settings.telegram_unlink"}}</button></p>
+    {{else}}
+    <p class="muted">{{.T "settings.telegram_login_hint"}}</p>
+    {{template "telegram_widget" (dict "BotID" .TelegramBotID "Label" (.T "settings.telegram_link_btn") "Action" "link")}}
+    {{end}}
+  {{else}}
+  <p class="muted">{{.T "settings.telegram_unavailable"}}</p>
+  {{end}}
+</section>
+
+<section class="panel">
+  <h2>{{.T "settings.sessions"}}</h2>
+  <p><button class="btn ghost" type="button" data-logout-everywhere>{{.T "settings.logout_everywhere"}}</button></p>
+</section>
+
+<section class="panel">
+  <h2>{{.T "settings.blocked"}}</h2>
+  {{if .Data.Blocked}}
+  <ul class="blocked">
+    {{range .Data.Blocked}}<li><span>{{.}}</span> <button class="btn ghost small" type="button" data-unblock="{{.}}">{{$.T "settings.unblock"}}</button></li>{{end}}
+  </ul>
+  {{else}}<p class="muted">{{.T "settings.blocked_none"}}</p>{{end}}
+</section>
+
+<section class="panel">
+  <h2>{{.T "settings.data"}}</h2>
+  <p><a class="btn ghost" href="/api/account/export" download>{{.T "settings.export"}}</a></p>
+</section>
+
+<section class="panel danger">
+  <h2>{{.T "settings.delete"}}</h2>
+  <p class="muted">{{.T "settings.delete_warning"}}</p>
+  <form class="stack" data-api="/api/account/delete" data-confirm="{{.T "settings.delete_confirm"}}">
+    {{if .User.HasPassword}}
+    <label>{{.T "auth.password"}}<input type="password" name="password" autocomplete="current-password" required></label>
+    {{else}}
+    <label>{{.T "settings.delete_type_username" .User.Username}}<input type="text" name="confirm" autocomplete="off" required></label>
+    {{end}}
+    <p class="form-error" role="alert" hidden></p>
+    <button class="btn danger" type="submit">{{.T "settings.delete"}}</button>
+  </form>
+</section>
+
+{{else if eq .Data.Tab "profile"}}
+<section class="panel">
+  <div class="profile-edit-banner">
+    {{if .User.BannerPath}}<img id="banner-preview" class="banner-img" src="{{banner .User.BannerPath}}" alt="">{{else}}<img id="banner-preview" class="banner-img" src="" alt="" hidden><div class="banner-img placeholder" id="banner-placeholder"></div>{{end}}
+  </div>
+  <div class="upload-row">
+    <label class="btn ghost small">{{.T "profile.upload_banner"}}<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-upload="banners" hidden></label>
+    <button class="btn ghost small" type="button" data-remove-media="banners">{{.T "profile.remove"}}</button>
+  </div>
+  <div class="avatar-row">
+    {{if .User.AvatarPath}}<img id="avatar-preview" class="avatar lg" src="{{avatar .User.AvatarPath}}" alt="">{{else}}<span id="avatar-fallback" class="avatar lg fallback">{{initial .User.Name}}</span><img id="avatar-preview" class="avatar lg" src="" alt="" hidden>{{end}}
+    <div class="upload-row">
+      <label class="btn ghost small">{{.T "profile.upload_avatar"}}<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-upload="avatars" hidden></label>
+      <button class="btn ghost small" type="button" data-remove-media="avatars">{{.T "profile.remove"}}</button>
+    </div>
+  </div>
+  <p class="muted">{{.T "profile.upload_hint"}}</p>
+</section>
+<section class="panel">
+  <form class="stack" data-api="/api/profile" data-success="{{.T "settings.saved"}}">
+    <label>{{.T "profile.display_name"}}<input type="text" name="display_name" maxlength="40" value="{{.User.DisplayName}}" placeholder="{{.User.Username}}"></label>
+    <label>{{.T "profile.bio"}}<textarea name="bio" rows="4" maxlength="500">{{.User.Bio}}</textarea></label>
+    <label class="check"><input type="checkbox" name="public" {{if .User.ProfilePublic}}checked{{end}}> {{.T "profile.public"}}</label>
+    <p class="muted">{{.T "profile.public_hint"}}</p>
+    <p class="form-error" role="alert" hidden></p>
+    <button class="btn" type="submit">{{.T "settings.save"}}</button>
+  </form>
+  <p><a href="/u/{{.User.Username}}">{{.T "profile.view_public"}}</a></p>
+</section>
+
+{{else}}
+<section class="panel">
+  <h2>{{.T "notif.channels"}}</h2>
+  <div class="stack">
+    <label class="check"><input type="checkbox" data-master="in_app" {{if .User.NotifyInApp}}checked{{end}}> {{.T "notif.ch.in_app"}}</label>
+    <label class="check"><input type="checkbox" data-master="push" {{if .User.NotifyPush}}checked{{end}}> {{.T "notif.ch.push"}}</label>
+    <label class="check"><input type="checkbox" data-master="email" {{if .User.NotifyEmail}}checked{{end}}> {{.T "notif.ch.email"}}</label>
+    <label class="check"><input type="checkbox" data-master="telegram" {{if .User.NotifyTelegram}}checked{{end}}> {{.T "notif.ch.telegram"}}</label>
+  </div>
+</section>
+
+<section class="panel" id="timing-box" data-offset="{{.User.NotifyOffsetMin}}">
+  <h2>{{.T "notif.timing_title"}}</h2>
+  <p class="muted">{{.T "notif.timing_hint"}}</p>
+  <div class="stack">
+    <label>{{.T "notif.timing_when"}}
+      <select id="timing-preset">
+        <option value="-30" {{if eq .User.NotifyOffsetMin -30}}selected{{end}}>{{.T "notif.timing_before30"}}</option>
+        <option value="0" {{if eq .User.NotifyOffsetMin 0}}selected{{end}}>{{.T "notif.timing_release"}}</option>
+        <option value="60" {{if eq .User.NotifyOffsetMin 60}}selected{{end}}>{{.T "notif.timing_after60"}}</option>
+        <option value="1440" {{if eq .User.NotifyOffsetMin 1440}}selected{{end}}>{{.T "notif.timing_nextday"}}</option>
+        <option value="custom" {{if and (ne .User.NotifyOffsetMin -30) (ne .User.NotifyOffsetMin 0) (ne .User.NotifyOffsetMin 60) (ne .User.NotifyOffsetMin 1440)}}selected{{end}}>{{.T "notif.timing_custom"}}</option>
+      </select>
+    </label>
+    <div class="custom-offset" id="timing-custom" hidden>
+      <label>{{.T "notif.timing_custom_label"}}
+        <input type="number" id="timing-value" step="1" value="0">
+      </label>
+      <select id="timing-unit" aria-label="{{.T "notif.timing_unit"}}">
+        <option value="1">{{.T "notif.timing_unit_min"}}</option>
+        <option value="60">{{.T "notif.timing_unit_hour"}}</option>
+        <option value="1440">{{.T "notif.timing_unit_day"}}</option>
+      </select>
+    </div>
+    <p class="form-error" role="alert" id="timing-error" hidden></p>
+    <p><button class="btn" type="button" id="timing-save">{{.T "settings.save"}}</button></p>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>{{.T "notif.categories"}}</h2>
+  <div class="table-wrap">
+  <table class="matrix">
+    <thead><tr><th></th><th>{{.T "notif.ch.in_app"}}</th><th>{{.T "notif.ch.push"}}</th><th>{{.T "notif.ch.email"}}</th><th>{{.T "notif.ch.telegram"}}</th></tr></thead>
+    <tbody>
+      {{range .Data.Prefs}}
+      <tr>
+        <th scope="row">{{$.T .LabelKey}}{{if .Security}} <small class="muted">{{$.T "notif.always"}}</small>{{end}}</th>
+        <td><input type="checkbox" data-cat="{{.ID}}" data-ch="in_app" {{if .Pref.InApp}}checked{{end}} {{if .Security}}disabled{{end}}></td>
+        <td><input type="checkbox" data-cat="{{.ID}}" data-ch="push" {{if .Pref.Push}}checked{{end}}></td>
+        <td><input type="checkbox" data-cat="{{.ID}}" data-ch="email" {{if .Pref.Email}}checked{{end}} {{if .Security}}disabled{{end}}></td>
+        <td><input type="checkbox" data-cat="{{.ID}}" data-ch="telegram" {{if .Pref.Telegram}}checked{{end}}></td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+  <p><button class="btn" type="button" id="notif-save">{{.T "settings.save"}}</button></p>
+</section>
+
+<section class="panel">
+  <h2>{{.T "notif.test_title"}}</h2>
+  <p class="muted">{{.T "notif.test_hint"}}</p>
+  <p class="actions">
+    <button class="btn ghost small" type="button" data-test-channel="in_app">{{.T "notif.ch.in_app"}}</button>
+    <button class="btn ghost small" type="button" data-test-channel="push">{{.T "notif.ch.push"}}</button>
+    <button class="btn ghost small" type="button" data-test-channel="email">{{.T "notif.ch.email"}}</button>
+    <button class="btn ghost small" type="button" data-test-channel="telegram">{{.T "notif.ch.telegram"}}</button>
+  </p>
+</section>
+
+<section class="panel" id="push-box">
+  <h2>{{.T "notif.push_title"}}</h2>
+  <p class="muted">{{.T "notif.push_hint"}}</p>
+  <p id="push-count" class="muted">{{.T "notif.push_devices" .Data.PushDevices}}</p>
+  <p class="actions">
+    <button class="btn" type="button" id="push-enable">{{.T "notif.push_enable"}}</button>
+    <button class="btn ghost" type="button" id="push-disable" hidden>{{.T "notif.push_disable"}}</button>
+  </p>
+</section>
+
+<section class="panel" id="telegram-box">
+  <h2>{{.T "notif.telegram_title"}}</h2>
+  {{if .Data.TelegramReady}}
+    {{if .User.TelegramChatID}}
+    <p class="notice">{{.T "notif.telegram_connected"}}</p>
+    <p><button class="btn ghost" type="button" data-telegram-unlink-chat>{{.T "notif.telegram_disconnect"}}</button></p>
+    {{else}}
+    <p class="muted">{{.T "notif.telegram_hint"}}</p>
+    <p class="actions">
+      <button class="btn" type="button" id="telegram-connect">{{.T "notif.telegram_connect"}}</button>
+      {{if .User.TelegramID}}<button class="btn ghost" type="button" id="telegram-dm">{{.T "notif.telegram_oneclick"}}</button>{{end}}
+    </p>
+    <p id="telegram-waiting" class="muted" hidden>{{.T "notif.telegram_waiting"}}</p>
+    {{end}}
+  {{else}}
+  <p class="muted">{{.T "settings.telegram_unavailable"}}</p>
+  {{end}}
+  {{if not .Data.EmailReady}}<p class="muted">{{.T "notif.email_needs_verified"}}</p>{{end}}
+</section>
+{{end}}
+{{end}}

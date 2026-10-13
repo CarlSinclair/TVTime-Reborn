@@ -1,0 +1,7 @@
+{{define "card"}}
+<a class="card" href="{{.Href}}">
+  <img loading="lazy" src="{{img "w342" .Poster}}" alt="">
+  <span class="card-title">{{.Title}}</span>
+  {{if .Sub}}<span class="card-sub">{{.Sub}}</span>{{end}}
+</a>
+{{end}}

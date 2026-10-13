@@ -1,0 +1,61 @@
+{{define "content"}}
+{{with .Data.Profile}}
+<section class="profile-card">
+  {{if and (not $.Data.Private) .BannerPath}}<img class="banner-img" src="{{banner .BannerPath}}" alt="">{{else}}<div class="banner-img placeholder"></div>{{end}}
+  <div class="profile-head">
+    {{if .AvatarPath}}<img class="avatar xl" src="{{avatar .AvatarPath}}" alt="">{{else}}<span class="avatar xl fallback">{{initial .Name}}</span>{{end}}
+    <div>
+      <h1>{{.Name}}</h1>
+      <p class="muted">@{{.Username}} &middot; {{$.T "profile.joined" (slice .CreatedAt 0 10)}}</p>
+    </div>
+    {{if $.Data.IsOwn}}<a class="btn ghost small push-end" href="/settings?tab=profile">{{$.T "profile.edit"}}</a>{{end}}
+  </div>
+  {{if $.Data.Private}}
+  <p class="notice">{{$.T "profile.private"}}</p>
+  {{else}}
+  {{if .Bio}}<p class="bio">{{.Bio}}</p>{{end}}
+  {{end}}
+</section>
+{{if not $.Data.Private}}
+<section>
+  <h2>{{$.T "profile.watch_time"}}</h2>
+  <div class="stats four">
+    <div><strong>{{hours $.Data.Stats.Lifetime}}</strong><span>{{$.T "profile.lifetime"}}</span></div>
+    <div><strong>{{hours $.Data.Stats.Today}}</strong><span>{{$.T "profile.today"}}</span></div>
+    <div><strong>{{hours $.Data.Stats.Week}}</strong><span>{{$.T "profile.week"}}</span></div>
+    <div><strong>{{hours $.Data.Stats.Month}}</strong><span>{{$.T "profile.month"}}</span></div>
+  </div>
+  <p class="muted">{{$.T "stats.episodes"}}: {{$.Data.Stats.Episodes}}</p>
+</section>
+{{if $.Data.Genres}}
+<section>
+  <h2>{{$.T "profile.genres"}}</h2>
+  <div class="season-links">
+    {{range $.Data.Genres}}<span class="chip">{{$.Genre .Name}} <small>{{hours .Minutes}}</small></span>{{end}}
+  </div>
+</section>
+{{end}}
+{{if $.Data.FavShows}}
+<section>
+  <h2>{{$.T "profile.fav_shows"}}</h2>
+  <div class="grid">
+    {{range $.Data.FavShows}}{{template "card" (dict "Href" (printf "/show/%d" .TMDBID) "Poster" .PosterPath "Title" .Name "Sub" (year .FirstAirDate))}}{{end}}
+  </div>
+</section>
+{{end}}
+{{if $.Data.Recent}}
+<section>
+  <h2>{{$.T "profile.recent"}}</h2>
+  <ul class="cal-list">
+    {{range $.Data.Recent}}
+    <li>
+      <img loading="lazy" src="{{img "w92" .PosterPath}}" alt="">
+      <a href="/episode/{{.Episode.ID}}"><strong>{{.ShowName}}</strong> {{code .Episode.SeasonNumber .Episode.EpisodeNumber}} {{.Episode.Name}}</a>
+    </li>
+    {{end}}
+  </ul>
+</section>
+{{end}}
+{{end}}
+{{end}}
+{{end}}

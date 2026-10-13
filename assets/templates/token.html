@@ -1,0 +1,14 @@
+{{define "content"}}
+<section class="auth-card">
+  <h1>{{.T (printf "token.%s.title" .Data.Purpose)}}</h1>
+  <p>{{.T (printf "token.%s.text" .Data.Purpose)}}</p>
+  <form class="stack" data-api="/api/auth/{{if eq .Data.Purpose "login"}}magic{{else if eq .Data.Purpose "reset"}}reset{{else}}verify{{end}}/consume">
+    <input type="hidden" name="token" value="{{.Data.Token}}">
+    {{if eq .Data.Purpose "reset"}}
+    <label>{{.T "settings.new_password"}}<input type="password" name="password" autocomplete="new-password" minlength="8" maxlength="72" required></label>
+    {{end}}
+    <p class="form-error" role="alert" hidden></p>
+    <button class="btn" type="submit">{{.T "token.continue"}}</button>
+  </form>
+</section>
+{{end}}

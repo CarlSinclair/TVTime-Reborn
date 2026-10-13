@@ -1,0 +1,16 @@
+# Replace example.com. TVT listens on 127.0.0.1:9911 by default.
+example.com {
+	encode zstd gzip
+
+	request_body {
+		max_size 8MB
+	}
+
+	reverse_proxy 127.0.0.1:9911 {
+		header_up Host {host}
+		header_up X-Forwarded-Proto https
+		header_up X-Forwarded-For {remote_host}
+		# live notification stream: do not buffer
+		flush_interval -1
+	}
+}

@@ -1,0 +1,32 @@
+{{define "content"}}
+<p class="crumbs"><a href="/show/{{.Data.Show.TMDBID}}">{{.Data.Show.Name}}</a></p>
+<h1>{{if eq .Data.Season 0}}{{.T "show.specials"}}{{else}}{{.T "show.season" .Data.Season}}{{end}}</h1>
+<div class="season-links">
+  {{range .Data.Seasons}}
+  <a class="chip" href="/show/{{$.Data.Show.TMDBID}}/season/{{.SeasonNumber}}" {{if eq .SeasonNumber $.Data.Season}}aria-current="page"{{end}}>{{if eq .SeasonNumber 0}}{{$.T "show.specials"}}{{else}}{{.SeasonNumber}}{{end}}</a>
+  {{end}}
+</div>
+{{if .User}}
+<p class="actions" data-tmdb="{{.Data.Show.TMDBID}}" data-season="{{.Data.Season}}">
+  <button class="btn ghost small" type="button" data-season-watch="1">{{.T "season.mark_all"}}</button>
+  <button class="btn ghost small" type="button" data-season-watch="0">{{.T "season.unmark_all"}}</button>
+</p>
+{{end}}
+<ol class="episodes">
+  {{range .Data.Episodes}}
+  <li class="episode-row">
+    <a href="/episode/{{.ID}}"><img loading="lazy" src="{{img "w300" .StillPath}}" alt=""></a>
+    <div class="ep-body">
+      <a class="ep-title" href="/episode/{{.ID}}"><span class="code">{{code .SeasonNumber .EpisodeNumber}}</span> {{.Name}}</a>
+      <small class="muted">{{if .AirDate}}{{.AirDate}}{{else}}{{$.T "ep.tba"}}{{end}}{{if gt .VoteCount 0}} &middot; &#9733; {{stars .VoteAverage}}{{end}}</small>
+      <p class="ep-overview">{{truncate .Overview 180}}</p>
+    </div>
+    {{if $.User}}
+      {{if aired .AirDate}}
+      <button class="watch-btn" type="button" data-watch="{{.ID}}" data-state="{{if .Watched}}1{{else}}0{{end}}" aria-pressed="{{if .Watched}}true{{else}}false{{end}}" aria-label="{{$.T "ep.mark_watched"}}">&#10003;</button>
+      {{end}}
+    {{end}}
+  </li>
+  {{end}}
+</ol>
+{{end}}

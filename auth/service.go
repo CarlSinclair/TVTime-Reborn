@@ -1,0 +1,360 @@
+package auth
+
+import (
+	"crypto/rand"
+	"crypto/sha256"
+	"database/sql"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
+	"tvt/logger"
+	"tvt/store"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
+)
+
+const (
+	AccessTokenDuration  = 15 * time.Minute
+	RefreshTokenDuration = 30 * 24 * time.Hour
+	RotationGrace        = 60 * time.Second
+	EmailTokenDuration   = 30 * time.Minute
+
+	CookieAccess  = "tt_access"
+	CookieRefresh = "tt_refresh"
+	CookieCSRF    = "tt_csrf"
+
+	PurposeLogin  = "login"
+	PurposeReset  = "reset"
+	PurposeVerify = "verify"
+)
+
+var (
+	ErrBadCredentials = errors.New("invalid credentials")
+	ErrBanned         = errors.New("account banned")
+	ErrBadToken       = errors.New("invalid or expired token")
+	ErrPasswordRules  = errors.New("password does not meet requirements")
+)
+
+type Service struct {
+	Store  *store.Store
+	Secret []byte
+	Secure bool
+	pk     *passkeyState
+}
+
+func New(st *store.Store, secret string, secure bool) *Service {
+	return &Service{Store: st, Secret: []byte(secret), Secure: secure}
+}
+
+func hashToken(t string) string {
+	h := sha256.Sum256([]byte(t))
+	return hex.EncodeToString(h[:])
+}
+
+func randomToken() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("random token: %w", err)
+	}
+	return hex.EncodeToString(b), nil
+}
+
+func ValidPassword(p string) error {
+	if len(p) < 8 || len(p) > 72 {
+		return ErrPasswordRules
+	}
+	return nil
+}
+
+func HashPassword(p string) (string, error) {
+	if err := ValidPassword(p); err != nil {
+		return "", err
+	}
+	h, err := bcrypt.GenerateFromPassword([]byte(p), 12)
+	if err != nil {
+		return "", fmt.Errorf("bcrypt: %w", err)
+	}
+	return string(h), nil
+}
+
+var dummyHash, _ = bcrypt.GenerateFromPassword([]byte("tvt-dummy-password"), 12)
+
+func (s *Service) Login(email, password string) (*store.User, error) {
+	u, err := s.Store.UserByEmail(strings.ToLower(strings.TrimSpace(email)))
+	if err != nil {
+		bcrypt.CompareHashAndPassword(dummyHash, []byte(password))
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, ErrBadCredentials
+		}
+		return nil, fmt.Errorf("login lookup: %w", err)
+	}
+	if u.PasswordHash == "" || bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)) != nil {
+		return nil, ErrBadCredentials
+	}
+	if u.IsBanned {
+		return nil, ErrBanned
+	}
+	return u, nil
+}
+
+// CheckPassword verifies a password against an already loaded account.
+func (s *Service) CheckPassword(u *store.User, password string) bool {
+	if u.PasswordHash == "" {
+		return false
+	}
+	return bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)) == nil
+}
+
+func (s *Service) signToken(userID int64, scope string, ttl time.Duration) (string, error) {
+	now := time.Now()
+	claims := jwt.MapClaims{
+		"user_id": userID,
+		"jti":     uuid.NewString(),
+		"scope":   scope,
+		"iat":     now.Unix(),
+		"exp":     now.Add(ttl).Unix(),
+	}
+	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(s.Secret)
+}
+
+func (s *Service) parseToken(raw, scope string) (int64, error) {
+	tok, err := jwt.Parse(raw, func(t *jwt.Token) (any, error) {
+		if t.Method != jwt.SigningMethodHS256 {
+			return nil, errors.New("unexpected signing method")
+		}
+		return s.Secret, nil
+	})
+	if err != nil || !tok.Valid {
+		return 0, ErrBadToken
+	}
+	claims, ok := tok.Claims.(jwt.MapClaims)
+	if !ok {
+		return 0, ErrBadToken
+	}
+	if sc, _ := claims["scope"].(string); sc != scope {
+		return 0, ErrBadToken
+	}
+	uid, ok := claims["user_id"].(float64)
+	if !ok {
+		return 0, ErrBadToken
+	}
+	return int64(uid), nil
+}
+
+func (s *Service) setCookie(w http.ResponseWriter, name, value string, maxAge int) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     name,
+		Value:    value,
+		Path:     "/",
+		MaxAge:   maxAge,
+		HttpOnly: true,
+		Secure:   s.Secure,
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+func (s *Service) ClearCookies(w http.ResponseWriter) {
+	s.setCookie(w, CookieAccess, "", -1)
+	s.setCookie(w, CookieRefresh, "", -1)
+}
+
+func (s *Service) storeRefresh(tx *sql.Tx, userID int64, raw string, exp time.Time) error {
+	_, err := tx.Exec(`INSERT INTO refresh_tokens (user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?)`,
+		userID, hashToken(raw), store.Ts(exp), store.Now())
+	return err
+}
+
+func (s *Service) StartSession(w http.ResponseWriter, userID int64) error {
+	refresh, err := s.signToken(userID, "refresh", RefreshTokenDuration)
+	if err != nil {
+		return fmt.Errorf("sign refresh uid=%d: %w", userID, err)
+	}
+	access, err := s.signToken(userID, "access", AccessTokenDuration)
+	if err != nil {
+		return fmt.Errorf("sign access uid=%d: %w", userID, err)
+	}
+	tx, err := s.Store.DB.Begin()
+	if err != nil {
+		return fmt.Errorf("begin session uid=%d: %w", userID, err)
+	}
+	defer tx.Rollback()
+	if err := s.storeRefresh(tx, userID, refresh, time.Now().Add(RefreshTokenDuration)); err != nil {
+		return fmt.Errorf("store refresh uid=%d: %w", userID, err)
+	}
+	if _, err := tx.Exec(`DELETE FROM refresh_tokens WHERE user_id = ? AND (expires_at < ? OR (superseded_at IS NOT NULL AND superseded_at < ?))`,
+		userID, store.Now(), store.Ts(time.Now().Add(-time.Hour))); err != nil {
+		return fmt.Errorf("prune refresh uid=%d: %w", userID, err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit session uid=%d: %w", userID, err)
+	}
+	s.setCookie(w, CookieAccess, access, int(AccessTokenDuration.Seconds()))
+	s.setCookie(w, CookieRefresh, refresh, int(RefreshTokenDuration.Seconds()))
+	return nil
+}
+
+// Authenticate resolves the signed-in user for a request. An expired access
+// token is renewed from the refresh cookie. Rotation is claimed with a single
+// conditional UPDATE so that when several concurrent requests present the same
+// refresh token, exactly one rotates it; the others are inside the grace window
+// and only receive a fresh access token (the winner's Set-Cookie carries the
+// new refresh token). A superseded token outside the window is rejected.
+func (s *Service) Authenticate(w http.ResponseWriter, r *http.Request) (*store.User, error) {
+	if c, err := r.Cookie(CookieAccess); err == nil {
+		if uid, err := s.parseToken(c.Value, "access"); err == nil {
+			return s.loadUser(uid)
+		}
+	}
+	rc, err := r.Cookie(CookieRefresh)
+	if err != nil {
+		return nil, ErrBadToken
+	}
+	uid, err := s.parseToken(rc.Value, "refresh")
+	if err != nil {
+		s.ClearCookies(w)
+		return nil, ErrBadToken
+	}
+	oldHash := hashToken(rc.Value)
+
+	var supersededAt sql.NullString
+	var expires string
+	err = s.Store.DB.QueryRow(`SELECT expires_at, superseded_at FROM refresh_tokens WHERE token_hash = ? AND user_id = ?`, oldHash, uid).Scan(&expires, &supersededAt)
+	if err != nil {
+		s.ClearCookies(w)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrBadToken
+		}
+		return nil, fmt.Errorf("lookup refresh uid=%d: %w", uid, err)
+	}
+	if store.ParseTs(expires).Before(time.Now()) {
+		s.ClearCookies(w)
+		return nil, ErrBadToken
+	}
+	u, err := s.loadUser(uid)
+	if err != nil {
+		s.ClearCookies(w)
+		return nil, err
+	}
+
+	newRefresh, err := s.signToken(uid, "refresh", RefreshTokenDuration)
+	if err != nil {
+		return nil, fmt.Errorf("sign refresh uid=%d: %w", uid, err)
+	}
+	newHash := hashToken(newRefresh)
+	tx, err := s.Store.DB.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("begin rotate uid=%d: %w", uid, err)
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(`UPDATE refresh_tokens SET superseded_at = ?, superseded_by = ? WHERE token_hash = ? AND superseded_at IS NULL`,
+		store.Now(), newHash, oldHash)
+	if err != nil {
+		return nil, fmt.Errorf("claim rotation uid=%d: %w", uid, err)
+	}
+	won, err := res.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("rotation rows uid=%d: %w", uid, err)
+	}
+	if won == 1 {
+		if err := s.storeRefresh(tx, uid, newRefresh, time.Now().Add(RefreshTokenDuration)); err != nil {
+			return nil, fmt.Errorf("store rotated refresh uid=%d: %w", uid, err)
+		}
+		if err := tx.Commit(); err != nil {
+			return nil, fmt.Errorf("commit rotate uid=%d: %w", uid, err)
+		}
+		s.setCookie(w, CookieRefresh, newRefresh, int(RefreshTokenDuration.Seconds()))
+	} else {
+		tx.Rollback()
+		var sup string
+		if err := s.Store.DB.QueryRow(`SELECT superseded_at FROM refresh_tokens WHERE token_hash = ?`, oldHash).Scan(&sup); err != nil {
+			return nil, fmt.Errorf("read superseded uid=%d: %w", uid, err)
+		}
+		if time.Since(store.ParseTs(sup)) > RotationGrace {
+			logger.Warn("AUTH superseded refresh token reused outside grace uid=%d, revoking all sessions", uid)
+			if _, err := s.Store.DB.Exec(`DELETE FROM refresh_tokens WHERE user_id = ?`, uid); err != nil {
+				logger.Error("AUTH revoke sessions after reuse uid=%d: %v", uid, err)
+			}
+			s.ClearCookies(w)
+			return nil, ErrBadToken
+		}
+	}
+	access, err := s.signToken(uid, "access", AccessTokenDuration)
+	if err != nil {
+		return nil, fmt.Errorf("sign access uid=%d: %w", uid, err)
+	}
+	s.setCookie(w, CookieAccess, access, int(AccessTokenDuration.Seconds()))
+	return u, nil
+}
+
+func (s *Service) loadUser(uid int64) (*store.User, error) {
+	u, err := s.Store.UserByID(uid)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, ErrBadToken
+		}
+		return nil, fmt.Errorf("load user uid=%d: %w", uid, err)
+	}
+	if u.IsBanned {
+		return nil, ErrBanned
+	}
+	return u, nil
+}
+
+func (s *Service) EndSession(w http.ResponseWriter, r *http.Request) error {
+	var firstErr error
+	if rc, err := r.Cookie(CookieRefresh); err == nil {
+		if _, err := s.Store.DB.Exec(`DELETE FROM refresh_tokens WHERE token_hash = ?`, hashToken(rc.Value)); err != nil {
+			firstErr = fmt.Errorf("delete refresh on logout: %w", err)
+		}
+	}
+	s.ClearCookies(w)
+	return firstErr
+}
+
+func (s *Service) RevokeAll(userID int64) error {
+	if _, err := s.Store.DB.Exec(`DELETE FROM refresh_tokens WHERE user_id = ?`, userID); err != nil {
+		return fmt.Errorf("revoke all uid=%d: %w", userID, err)
+	}
+	return nil
+}
+
+func (s *Service) IssueEmailToken(userID int64, purpose string) (string, error) {
+	raw, err := randomToken()
+	if err != nil {
+		return "", err
+	}
+	if _, err := s.Store.DB.Exec(`INSERT INTO email_tokens (token_hash, user_id, purpose, expires_at, created_at) VALUES (?, ?, ?, ?, ?)`,
+		hashToken(raw), userID, purpose, store.Ts(time.Now().Add(EmailTokenDuration)), store.Now()); err != nil {
+		return "", fmt.Errorf("store email token uid=%d purpose=%s: %w", userID, purpose, err)
+	}
+	return raw, nil
+}
+
+// ConsumeEmailToken atomically marks a token used; two concurrent submissions
+// of the same link cannot both succeed.
+func (s *Service) ConsumeEmailToken(raw, purpose string) (int64, error) {
+	h := hashToken(raw)
+	res, err := s.Store.DB.Exec(`UPDATE email_tokens SET used_at = ? WHERE token_hash = ? AND purpose = ? AND used_at IS NULL AND expires_at > ?`,
+		store.Now(), h, purpose, store.Now())
+	if err != nil {
+		return 0, fmt.Errorf("consume email token purpose=%s: %w", purpose, err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("consume email token rows: %w", err)
+	}
+	if n != 1 {
+		return 0, ErrBadToken
+	}
+	var uid int64
+	if err := s.Store.DB.QueryRow(`SELECT user_id FROM email_tokens WHERE token_hash = ?`, h).Scan(&uid); err != nil {
+		return 0, fmt.Errorf("read email token owner: %w", err)
+	}
+	return uid, nil
+}

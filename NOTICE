@@ -1,0 +1,16 @@
+TVT
+Copyright (C) 2026 Carl Sinclair
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version. See the LICENSE file.
+
+Attribution: when you run or redistribute TVT, including a modified version
+offered over a network, keep this copyright notice and the "Source code" link in
+the page footer, as permitted by section 7(b) of the AGPL.
+
+Third-party data and services: show metadata and artwork come from TMDB
+(https://www.themoviedb.org/), episode air times from TVmaze
+(https://www.tvmaze.com/, CC BY-SA) and, optionally, Trakt (https://trakt.tv/).
+This product uses the TMDB API but is not endorsed or certified by TMDB.

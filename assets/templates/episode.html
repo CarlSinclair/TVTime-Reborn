@@ -1,0 +1,51 @@
+{{define "content"}}
+{{with .Data.Episode}}
+<p class="crumbs"><a href="/show/{{$.Data.Show.TMDBID}}">{{$.Data.Show.Name}}</a> / <a href="/show/{{$.Data.Show.TMDBID}}/season/{{.SeasonNumber}}">{{if eq .SeasonNumber 0}}{{$.T "show.specials"}}{{else}}{{$.T "show.season" .SeasonNumber}}{{end}}</a></p>
+<section class="ep-head">
+  <img class="still" src="{{img "w780" .StillPath}}" alt="">
+  <div>
+    <h1><span class="code">{{code .SeasonNumber .EpisodeNumber}}</span> {{.Name}}</h1>
+    <p class="meta"><span>{{if .AirAt}}<time datetime="{{.AirAt}}" data-ts="{{.AirAt}}">{{.AirAt}}</time>{{else if .AirDate}}{{.AirDate}}{{else}}{{$.T "ep.tba"}}{{end}}</span>{{if gt .Runtime 0}}<span>{{$.T "show.runtime" .Runtime}}</span>{{end}}{{if gt .VoteCount 0}}<span>&#9733; {{stars .VoteAverage}}</span>{{end}}</p>
+    <p>{{if .Overview}}{{.Overview}}{{else}}<span class="muted">{{$.T "show.no_overview"}}</span>{{end}}</p>
+    {{if $.User}}
+    <div class="actions">
+      {{if aired .AirDate}}
+      <button class="btn" type="button" data-watch="{{.ID}}" data-state="{{if .Watched}}1{{else}}0{{end}}" data-label-on="{{$.T "ep.watched"}}" data-label-off="{{$.T "ep.mark_watched"}}">{{if .Watched}}{{$.T "ep.watched"}}{{else}}{{$.T "ep.mark_watched"}}{{end}}</button>
+      <button class="btn ghost" type="button" data-watch-upto="{{.ID}}">{{$.T "ep.mark_upto"}}</button>
+      {{end}}
+      <label class="rate">{{$.T "ep.your_rating"}}
+        <select data-rate="{{.ID}}">
+          <option value="0">-</option>
+          {{range seq 10}}<option value="{{.}}" {{if eq . $.Data.Episode.UserRating}}selected{{end}}>{{.}}</option>{{end}}
+        </select>
+      </label>
+    </div>
+    {{end}}
+  </div>
+</section>
+<nav class="pager">
+  {{if $.Data.Prev}}<a class="chip" href="/episode/{{$.Data.Prev.ID}}"><span class="arr-l" aria-hidden="true"></span> {{code $.Data.Prev.SeasonNumber $.Data.Prev.EpisodeNumber}}</a>{{else}}<span></span>{{end}}
+  {{if $.Data.Next}}<a class="chip" href="/episode/{{$.Data.Next.ID}}">{{code $.Data.Next.SeasonNumber $.Data.Next.EpisodeNumber}} <span class="arr-r" aria-hidden="true"></span></a>{{end}}
+</nav>
+<section id="comments" class="comments" data-kind="episode" data-target="{{.ID}}" data-logged="{{if $.User}}1{{else}}0{{end}}" data-verified="{{if and $.User $.User.CanComment}}1{{else}}0{{end}}" data-admin="{{if and $.User $.User.IsAdmin}}1{{else}}0{{end}}">
+  <h2>{{$.T "comments.title"}} <small id="comments-count"></small></h2>
+  {{if $.User}}
+    {{if $.User.CanComment}}
+    <form class="comment-form" id="comment-form">
+      <textarea name="body" maxlength="2000" rows="3" placeholder="{{$.T "comments.placeholder"}}" required></textarea>
+      <div class="comment-form-row">
+        <label><input type="checkbox" name="spoiler"> {{$.T "comments.mark_spoiler"}}</label>
+        <button class="btn" type="submit">{{$.T "comments.post"}}</button>
+      </div>
+    </form>
+    {{else}}
+    <p class="notice">{{$.T "comments.verify_needed"}}</p>
+    {{end}}
+  {{else}}
+  <p class="muted"><a href="/login">{{$.T "comments.login_needed"}}</a></p>
+  {{end}}
+  <ul class="comment-list" id="comment-list"></ul>
+  <p class="center"><button class="btn ghost" type="button" id="comments-more" hidden>{{$.T "comments.load_more"}}</button></p>
+</section>
+{{end}}
+{{end}}

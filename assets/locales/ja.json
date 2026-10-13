@@ -1,0 +1,498 @@
+{
+  "nav": {
+    "home": "ホーム",
+    "shows": "マイドラマ",
+    "calendar": "カレンダー",
+    "search": "検索",
+    "search_placeholder": "ドラマを検索",
+    "settings": "設定",
+    "theme": "テーマを切り替え",
+    "language": "言語",
+    "notifications": "通知"
+  },
+  "auth": {
+    "login": "ログイン",
+    "register": "新規登録",
+    "logout": "ログアウト",
+    "email": "メールアドレス",
+    "password": "パスワード",
+    "username": "ユーザー名",
+    "username_hint": "英数字とアンダースコアで3〜20文字",
+    "password_hint": "8文字以上",
+    "forgot": "パスワードをお忘れですか？",
+    "forgot_sent": "このメールアドレスにアカウントがある場合、再設定用のリンクを送信しました。",
+    "send_link": "リンクを送信",
+    "magic_link": "ログイン用リンクをメールで送る",
+    "magic_sent": "このメールアドレスにアカウントがある場合、ログイン用リンクを送信しました。",
+    "have_account": "アカウントをお持ちの方",
+    "verify_banner": "コメントするにはメールアドレスの確認が必要です。",
+    "resend_verify": "メールを再送信",
+    "passkey_login": "パスキーでログイン",
+    "telegram_login": "Telegramで続ける"
+  },
+  "token": {
+    "login": {
+      "title": "ログイン",
+      "text": "ボタンを押してログインを完了してください。"
+    },
+    "reset": {
+      "title": "新しいパスワードを設定",
+      "text": "アカウントの新しいパスワードを入力してください。"
+    },
+    "verify": {
+      "title": "メールアドレスの確認",
+      "text": "ボタンを押してメールアドレスを確認してください。"
+    },
+    "continue": "続ける"
+  },
+  "home": {
+    "hero_title": "観ているドラマをすべて記録",
+    "hero_text": "新エピソードをチェックし、観た作品を記録して、ほかのファンと語り合いましょう。",
+    "up_next": "次に観る",
+    "up_next_empty": "すべて観終わりました。ドラマをフォローして次に観る作品を見つけましょう。",
+    "remaining": "未視聴のエピソード：%d",
+    "last_aired": "最新の放送エピソード",
+    "trending": "今週のトレンド",
+    "no_metadata": "メタデータサービスが未設定のため、作品データはまだ利用できません。"
+  },
+  "stats": {
+    "shows": "作品数",
+    "episodes": "視聴済みエピソード",
+    "time": "視聴時間"
+  },
+  "search": {
+    "none": "ドラマが見つかりませんでした。",
+    "prompt": "検索ボックスに作品名を入力してください。"
+  },
+  "show": {
+    "runtime": "%d分",
+    "no_overview": "あらすじはありません。",
+    "status": "ステータス",
+    "favorite": "お気に入り",
+    "unfollow": "フォロー解除",
+    "follow": "フォロー",
+    "login_to_follow": "ログインしてフォロー",
+    "progress": "%d / %d 話視聴済み",
+    "sync_error": "この作品のデータ更新に失敗しました。一部の情報が古い可能性があります。",
+    "seasons": "シーズン",
+    "specials": "スペシャル",
+    "season": "シーズン%d"
+  },
+  "status": {
+    "watching": "視聴中",
+    "plan": "観る予定",
+    "completed": "視聴完了",
+    "paused": "一時停止",
+    "dropped": "視聴中止",
+    "all": "すべて"
+  },
+  "season": {
+    "mark_all": "シーズンを視聴済みにする",
+    "unmark_all": "シーズンの視聴済みを解除"
+  },
+  "ep": {
+    "tba": "未定",
+    "mark_watched": "視聴済みにする",
+    "watched": "視聴済み",
+    "mark_upto": "ここまですべて視聴済みにする",
+    "your_rating": "あなたの評価"
+  },
+  "comments": {
+    "title": "コメント",
+    "placeholder": "感想を共有しましょう",
+    "mark_spoiler": "ネタバレを含む",
+    "post": "投稿",
+    "verify_needed": "ディスカッションに参加するにはメールアドレスの確認が必要です。",
+    "login_needed": "ログインして参加する",
+    "load_more": "コメントをさらに読み込む"
+  },
+  "myshows": {
+    "empty": "まだフォローしているドラマはありません。"
+  },
+  "calendar": {
+    "today": "今日",
+    "empty": "この期間にフォロー中の作品の放送はありません。"
+  },
+  "settings": {
+    "password": "パスワードを変更",
+    "current_password": "現在のパスワード",
+    "new_password": "新しいパスワード",
+    "save": "保存",
+    "password_changed": "パスワードを変更しました。",
+    "blocked": "ブロックしたユーザー",
+    "unblock": "ブロック解除",
+    "blocked_none": "ブロックしているユーザーはいません。",
+    "data": "あなたのデータ",
+    "export": "データをダウンロード",
+    "delete": "アカウントを削除",
+    "delete_warning": "アカウント、視聴履歴、コメントが完全に削除されます。",
+    "delete_confirm": "アカウントを完全に削除しますか？",
+    "add_email": "メールアドレスを追加",
+    "add_email_hint": "通知の受信とパスワード回復のためにメールアドレスを追加してください。",
+    "copy": "コピー",
+    "delete_type_username": "確認のためユーザー名（%s）を入力してください",
+    "done": "完了",
+    "email_added": "受信トレイを確認して、メールアドレスを認証してください。",
+    "logout_everywhere": "すべてのデバイスからログアウト",
+    "preferences": "環境設定",
+    "recovery_left": "残りのリカバリーコード：%d。",
+    "recovery_regen": "新しいリカバリーコードを生成",
+    "recovery_regen_label": "リカバリーコードを置き換えるには現在のコードを入力してください",
+    "recovery_save": "これらのリカバリーコードを安全な場所に保管してください。各コードは1回のみ使え、再表示されません。",
+    "saved": "保存しました。",
+    "sessions": "セッション",
+    "tab_account": "アカウント",
+    "tab_notifications": "通知",
+    "tab_profile": "プロフィール",
+    "telegram_linked": "Telegramをアカウントに連携しました。",
+    "telegram_linked_as": "連携中のTelegramログイン：",
+    "telegram_login": "Telegramログイン",
+    "telegram_login_hint": "Telegramを連携すると、ワンタップでログインできます。",
+    "telegram_unavailable": "このサーバーではTelegramが設定されていません。",
+    "telegram_unlink": "Telegramログインの連携を解除",
+    "timezone": "タイムゾーン",
+    "timezone_detect": "デバイスのタイムゾーンを使う",
+    "twofa": "2段階認証",
+    "twofa_confirm": "確認して有効にする",
+    "twofa_disable": "2段階認証をオフにする",
+    "twofa_enable": "2段階認証を設定する",
+    "twofa_hint": "認証アプリのコードでアカウントを保護します。",
+    "twofa_off": "2段階認証をオフにしました。",
+    "twofa_on": "2段階認証はオンです。",
+    "twofa_secret": "スキャンできませんか？このキーを入力してください：",
+    "passkeys": "パスキー",
+    "passkeys_hint": "パスワードの代わりに指紋、顔、またはデバイスのPINでログインできます。2段階認証がオンの場合は、引き続きそのコードの入力が必要です。",
+    "passkey_add": "パスキーを追加",
+    "passkey_name": "名前（任意）",
+    "passkey_none": "パスキーはまだありません。",
+    "passkey_unnamed": "パスキー",
+    "passkey_added_on": "追加日：%s",
+    "passkey_last_used": "最終使用日：%s",
+    "passkey_never": "未使用",
+    "passkey_remove": "削除",
+    "telegram_link_btn": "Telegramアカウントを連携"
+  },
+  "footer": {
+    "tmdb": "作品データと画像の提供元：",
+    "unofficial": "%s は独立したプロジェクトであり、TMDB とは提携していません。",
+    "tvmaze": "エピソードの放送時刻の提供元：",
+    "privacy": "プライバシー",
+    "source": "ソースコード（AGPL-3.0）"
+  },
+  "admin": {
+    "reports": "通報",
+    "reporters": "通報数：%d",
+    "view": "表示",
+    "dismiss": "却下",
+    "delete": "コメントを削除",
+    "ban": "ユーザーをBAN",
+    "none": "未対応の通報はありません。"
+  },
+  "offline": {
+    "title": "オフラインです",
+    "text": "このページは接続がないと表示できません。"
+  },
+  "err": {
+    "title": "問題が発生しました",
+    "bad_request": "リクエストが正しくありません。",
+    "login_required": "先にログインしてください。",
+    "forbidden": "この操作を行う権限がありません。",
+    "not_found": "見つかりませんでした。",
+    "rate_limited": "試行回数が多すぎます。しばらくしてからもう一度お試しください。",
+    "verify_email": "先にメールアドレスを確認してください。",
+    "mail_unavailable": "現在メールを送信できません。後でもう一度お試しください。",
+    "metadata_unavailable": "作品データサービスが応答していません。後でもう一度お試しください。",
+    "internal": "サーバー側で問題が発生しました。もう一度お試しください。",
+    "metadata_not_configured": "作品データサービスが設定されていません。",
+    "invalid_email": "有効なメールアドレスを入力してください。",
+    "invalid_username": "ユーザー名は英数字とアンダースコアで3〜20文字です。",
+    "weak_password": "パスワードは8〜72文字にしてください。",
+    "email_taken": "このメールアドレスは既に登録されています。",
+    "username_taken": "このユーザー名は既に使われています。",
+    "bad_credentials": "メールアドレスまたはパスワードが違います。",
+    "banned": "このアカウントは停止されています。",
+    "link_invalid": "このリンクは無効か、期限切れです。",
+    "comment_invalid": "コメントは1〜2000文字で入力してください。",
+    "already_reported": "既に通報済みです。",
+    "own_comment": "自分のコメントにはこの操作はできません。",
+    "confirm_username": "確認のためユーザー名を入力してください。",
+    "image_invalid": "この画像は使用できません。6MB以下のJPEG、PNG、GIF、WebPを使ってください。",
+    "invalid_timezone": "有効なタイムゾーンを選択してください。",
+    "last_login_method": "Telegramログインを解除する前に、パスワードを設定するか確認済みのメールアドレスを追加してください。",
+    "mfa_bad_code": "コードが正しくありません。",
+    "mfa_expired": "ログインセッションの有効期限が切れました。もう一度ログインしてください。",
+    "notify_no_email": "メール通知を受け取るには確認済みのメールアドレスが必要です。",
+    "notify_no_push": "プッシュ通知が有効なデバイスがありません。先にこのデバイスで有効にしてください。",
+    "notify_no_telegram": "Telegram通知が接続されていません。",
+    "notify_test_failed": "テスト通知を配信できませんでした。サーバーログを確認してください。",
+    "profile_too_long": "表示名は40文字まで、自己紹介は500文字までです。",
+    "telegram_failed": "Telegramでのログインに失敗しました。もう一度お試しください。",
+    "telegram_send_failed": "Telegramがメッセージを受け付けませんでした。もう一度お試しください。",
+    "telegram_start_bot": "先にTelegramでボットを開いて「開始」を押してから、もう一度お試しください。",
+    "telegram_taken": "このTelegramアカウントは既に別のユーザーに連携されています。",
+    "telegram_unavailable": "Telegramは現在利用できません。",
+    "passkey_failed": "パスキーの検証に失敗しました。もう一度お試しください。",
+    "passkey_expired": "パスキーのリクエストが期限切れです。もう一度お試しください。",
+    "passkey_last_method": "最後のパスキーを削除する前に、パスワードの設定、メールの確認、またはTelegramの連携など、ログイン方法を最低1つ残してください。",
+    "invalid_timing": "7日以内のオフセットと有効な時刻を選択してください。"
+  },
+  "mail": {
+    "login": {
+      "subject": "%s のログイン用リンク",
+      "body": "このリンクから %s にログインできます。有効期限は30分で、1回のみ使えます：\n\n%s\n\n心当たりがない場合は、このメールを無視してください。"
+    },
+    "reset": {
+      "subject": "%s のパスワード再設定",
+      "body": "このリンクから %s の新しいパスワードを設定できます。有効期限は30分で、1回のみ使えます：\n\n%s\n\n心当たりがない場合は、このメールを無視してください。"
+    },
+    "verify": {
+      "subject": "%s のメールアドレス確認",
+      "body": "%s へようこそ。次のリンクでメールアドレスを確認してください（有効期限30分）：\n\n%s\n\n登録に心当たりがない場合は、このメールを無視してください。"
+    },
+    "button_open": "開く",
+    "footer": "このメールは {app} の通知設定に基づいて送信されています。"
+  },
+  "js": {
+    "network_error": "ネットワークエラーです。もう一度お試しください。",
+    "mail_failed": "確認メールを送信できませんでした。メールが使えるようになったら再送ボタンを使ってください。",
+    "verify_sent": "確認メールを送信しました。",
+    "marked_many": "視聴済みにしました：%d",
+    "saved": "保存しました。",
+    "comments_empty": "まだコメントはありません。最初のコメントを書きましょう。",
+    "reported": "通報を受け付けました。ありがとうございます。",
+    "report_reason": "このコメントを通報する理由を教えてください。",
+    "mark_spoiler": "ネタバレを含む",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "post_reply": "返信",
+    "deleted_comment": "削除されたコメント",
+    "edited": "編集済み",
+    "spoiler_label": "ネタバレの可能性",
+    "spoiler_tag": "ネタバレ",
+    "reply": "返信",
+    "edit": "編集",
+    "delete": "削除",
+    "delete_confirm": "削除しますか？この操作は取り消せません。",
+    "report_not_spoiler": "ネタバレではない",
+    "report_spoiler": "ネタバレ",
+    "report_abuse": "通報",
+    "block": "ユーザーをブロック",
+    "block_confirm": "このユーザーをブロックしますか？お互いのコメントが表示されなくなります。",
+    "admin_delete": "削除",
+    "ban_confirm": "このユーザーをBANしますか？",
+    "copied": "コピーしました。",
+    "copy_failed": "コピーできませんでした。テキストを選択して手動でコピーしてください。",
+    "notif_empty": "まだ通知はありません。",
+    "push_denied": "通知の許可が得られませんでした。",
+    "push_enabled": "このデバイスでプッシュ通知を有効にしました。",
+    "push_unsupported": "このブラウザはプッシュ通知に対応していません。iPhoneでは先にアプリをホーム画面に追加してください。",
+    "show": "表示",
+    "telegram_unlink_confirm": "Telegramをログイン方法から外しますか？",
+    "test_sent": "テスト通知を送信しました。",
+    "passkey_unsupported": "このブラウザはパスキーに対応していません。",
+    "passkey_cancelled": "パスキーのリクエストがキャンセルされました。",
+    "passkey_added": "パスキーを追加しました。",
+    "passkey_remove_confirm": "このパスキーを削除しますか？",
+    "invalid_timing": "有効な数値を入力してください。",
+    "telegram_failed": "Telegramでのログインがキャンセルまたはブロックされました。もう一度お試しください。",
+    "telegram_open": "Telegramを開く"
+  },
+  "genre": {
+    "action_adventure": "アクション＆アドベンチャー",
+    "animation": "アニメーション",
+    "comedy": "コメディ",
+    "crime": "犯罪",
+    "documentary": "ドキュメンタリー",
+    "drama": "ドラマ",
+    "family": "ファミリー",
+    "kids": "キッズ",
+    "mystery": "ミステリー",
+    "news": "ニュース",
+    "reality": "リアリティ",
+    "sci_fi_fantasy": "SF＆ファンタジー",
+    "soap": "ソープオペラ",
+    "talk": "トーク",
+    "war_politics": "戦争＆政治",
+    "western": "西部劇"
+  },
+  "mfa": {
+    "code": "確認コード",
+    "recovery_hint": "デバイスを紛失しましたか？代わりにリカバリーコードを入力してください。",
+    "text": "認証アプリに表示される6桁のコードを入力してください。",
+    "title": "2段階認証"
+  },
+  "notif": {
+    "abuse_report": {
+      "body": "{user} さんがコメントを通報しました。モデレーションキューで確認してください。",
+      "title": "新しいコメントの通報"
+    },
+    "always": "（常にオン）",
+    "cat": {
+      "episodes": "新エピソード",
+      "moderation": "モデレーション",
+      "security": "セキュリティ",
+      "social": "返信",
+      "system": "システム"
+    },
+    "categories": "通知する内容",
+    "ch": {
+      "email": "メール",
+      "in_app": "アプリ内",
+      "push": "プッシュ",
+      "telegram": "Telegram"
+    },
+    "channels": "チャンネル",
+    "comment_reply": {
+      "body": "{excerpt}",
+      "title": "{user} さんがあなたのコメントに返信しました"
+    },
+    "email_needs_verified": "メール通知にはアカウントに確認済みのメールアドレスが必要です。",
+    "empty": "まだ通知はありません。",
+    "episode_aired": {
+      "body": "{code} {name} が配信されました。",
+      "title": "新エピソード：{show}"
+    },
+    "mark_all": "すべて既読にする",
+    "newer": "新しい",
+    "older": "古い",
+    "password_changed": {
+      "body": "パスワードが変更されました。心当たりがない場合は、すぐにアカウントを保護してください。",
+      "title": "パスワードを変更しました"
+    },
+    "push_devices": "プッシュ通知が有効なデバイス：%d",
+    "push_disable": "このデバイスのプッシュ通知を無効にする",
+    "push_enable": "このデバイスのプッシュ通知を有効にする",
+    "push_hint": "アプリを閉じていても、このデバイスに通知が届きます。",
+    "push_title": "プッシュ通知",
+    "telegram_connect": "Telegramを接続",
+    "telegram_connected": "Telegram通知が接続されています。",
+    "telegram_disconnect": "接続を解除",
+    "telegram_dropped": {
+      "body": "ボットがあなたにメッセージを送れなくなったため、Telegram通知をオフにしました。設定で再接続してください。",
+      "title": "Telegramの接続が切れました"
+    },
+    "telegram_hint": "Telegramでボットを開き、「開始」を押して接続します。",
+    "telegram_linked": {
+      "body": "Telegramがログイン方法としてアカウントに連携されました。",
+      "title": "Telegramを連携しました"
+    },
+    "telegram_oneclick": "Telegramログインを使う",
+    "telegram_title": "Telegram通知",
+    "telegram_waiting": "Telegramで「開始」を押すのを待っています...",
+    "test": {
+      "body": "これが読めていれば、このチャンネルは正常です。",
+      "title": "テスト通知"
+    },
+    "test_hint": "各チャンネルにテストを送って動作を確認できます。",
+    "test_title": "チャンネルをテスト",
+    "twofa_disabled": {
+      "body": "アカウントの2段階認証がオフになりました。",
+      "title": "2段階認証をオフにしました"
+    },
+    "twofa_enabled": {
+      "body": "アカウントの2段階認証がオンになりました。",
+      "title": "2段階認証をオンにしました"
+    },
+    "view_all": "すべて見る",
+    "passkey_added": {
+      "title": "パスキーを追加しました",
+      "body": "アカウントに新しいパスキーが追加されました。心当たりがない場合は、すぐにアカウントを保護してください。"
+    },
+    "timing_title": "エピソード通知のタイミング",
+    "timing_hint": "エピソードの正確な放送時刻がわかる場合（TVmaze、予備としてTrakt）は、通知にその時刻を使います。日付のみの場合は、その日の正午（あなたのタイムゾーン）を基準にします。",
+    "timing_when": "通知するタイミング",
+    "timing_before30": "30分前",
+    "timing_release": "配信時",
+    "timing_after60": "1時間後",
+    "timing_nextday": "翌日",
+    "timing_custom": "カスタム",
+    "timing_custom_label": "オフセット（負の値は前）",
+    "timing_unit": "単位",
+    "timing_unit_min": "分",
+    "timing_unit_hour": "時間",
+    "timing_unit_day": "日"
+  },
+  "profile": {
+    "bio": "自己紹介",
+    "display_name": "表示名",
+    "edit": "プロフィールを編集",
+    "fav_shows": "お気に入りのドラマ",
+    "genres": "好きなジャンル",
+    "joined": "%s に登録",
+    "lifetime": "累計",
+    "month": "過去30日間",
+    "private": "このプロフィールは非公開です。",
+    "public": "プロフィールを公開",
+    "public_hint": "オフにすると、統計とお気に入りはあなただけに表示されます。",
+    "recent": "最近観た作品",
+    "remove": "削除",
+    "today": "今日",
+    "upload_avatar": "写真をアップロード",
+    "upload_banner": "バナーをアップロード",
+    "upload_hint": "JPEG、PNG、GIF、WebP（6MBまで）。",
+    "view_public": "公開プロフィールを見る",
+    "watch_time": "視聴時間",
+    "week": "過去7日間"
+  },
+  "tg": {
+    "error": "問題が発生しました。もう一度お試しください。",
+    "help": "コマンド：/start で連携状況を確認、/stop で通知をオフにします。",
+    "link_invalid": "このリンクは無効か期限切れです。アプリの設定で新しく作成してください。",
+    "linked": "連携しました。通知はこのチャットに届きます。",
+    "private_only": "個人チャットで話しかけてください。",
+    "status_linked": "このチャットはあなたのアカウントに連携されています。",
+    "status_unlinked": "このチャットはまだ連携されていません。アプリの設定の「通知」で「Telegramを接続」を押してください。",
+    "stopped": "このチャットの通知をオフにしました。"
+  },
+  "privacy": {
+    "title": "プライバシーポリシー",
+    "updated": "最終更新：%s",
+    "intro": "このポリシーは、{app} があなたについて何を保存し、ほかに誰が関わるかを説明します。{app} はオープンソースソフトウェアで、このサイトは {operator} が運営しています。ここに書かれている内容は法的助言ではありません。",
+    "operator_default": "このサイトの運営者",
+    "contact_none": "連絡先はサイトまたはそのソースコードリポジトリに記載されています。",
+    "data": {
+      "title": "保存される情報",
+      "body": "アカウント情報（ユーザー名、追加した場合のメールアドレス、設定した場合のパスワードのハッシュ、表示名、自己紹介、プロフィール画像、言語、タイムゾーン）、Telegramを使う場合はTelegram IDとユーザー名、パスキーの公開鍵、フォローしている作品、視聴・評価の記録、コメント・通報・ブロック、通知設定・通知・プッシュ購読。"
+    },
+    "signin": {
+      "title": "ログインとセキュリティの情報",
+      "body": "セッションにはCookieとハッシュ化されたリフレッシュトークンを使います。2段階認証の秘密鍵は暗号化して、リカバリーコードはハッシュで保存します。IPアドレスはレート制限のためにメモリ上でのみ使われ、ログには一切書き込まれません。セキュリティログに記録されるのは国コードだけです。"
+    },
+    "cookies": {
+      "title": "Cookieとローカルストレージ",
+      "body": "使用するのは必須のCookieのみです：ログインセッション、CSRF対策、言語、短時間有効なセキュリティ確認。テーマの選択はブラウザのローカルストレージに保存されます。解析、広告、トラッキングのスクリプトはありません。"
+    },
+    "third": {
+      "title": "関係するその他のサービス",
+      "body": "作品データはTMDBとTVmaze、任意でTraktから取得します。これらのリクエストはサーバーが行い、あなたに関する情報は送りません。画像はサーバーが一度取得し、このサイトまたは運営者が管理するストレージから配信されるため、あなたのブラウザがそれらのサービスに接続することはありません。Telegramを選ぶと、Telegramはあなたのログインと送信される通知を受け取ります。そのスクリプトはTelegramボタンを押したときにのみ読み込まれます。プッシュ通知はブラウザ提供元のプッシュサービスを経由します。メールは運営者のメールプロバイダを経由します。"
+    },
+    "public": {
+      "title": "他の人に見えるもの",
+      "body": "ユーザー名、表示名、自己紹介、プロフィール画像は公開されます。統計、お気に入り、最近観た作品は、プロフィールを非公開にしない限り公開されます。コメントは全員に表示され、あなたの名前が付きます。互いにブロックしたユーザー同士はコメントが見えません。"
+    },
+    "use": {
+      "title": "利用目的",
+      "body": "サービスの運営のためだけに使います：進捗の表示、選択した通知の送信、コメントスレッドの提供、不正利用の防止。データを販売したり、広告やプロファイリングに使ったりすることはありません。"
+    },
+    "retention": {
+      "title": "保存期間",
+      "body": "削除するまで保存されます。アカウントを削除すると、アカウント、履歴、コメント、通知、アップロードした画像が完全に削除されます。削除したコメントの本文はすぐに消えます。通知は90日後に削除されます。運営者のバックアップには、しばらくの間コピーが残ることがあります。"
+    },
+    "rights": {
+      "title": "あなたの選択",
+      "body": "設定から、データのダウンロード、プロフィールの編集・削除、通知チャンネルのオフ、アカウント削除ができます。GDPRなどの法律に基づき、運営者にデータの開示・訂正・削除を求めることもできます。"
+    },
+    "children": {
+      "title": "子ども",
+      "body": "このサービスは13歳未満（またはお住まいの国の最低年齢未満）の子どもを対象としておらず、意図的にそのデータを収集しません。"
+    },
+    "changes": {
+      "title": "変更",
+      "body": "このポリシーが変更された場合、新しい版は日付とともにこのページに掲載されます。翻訳に差異がある場合は英語版が優先されます。"
+    },
+    "contact": {
+      "title": "連絡先",
+      "body": "運営者：{operator}。{contact}"
+    }
+  }
+}

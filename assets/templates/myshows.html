@@ -1,0 +1,21 @@
+{{define "content"}}
+<h1>{{.T "nav.shows"}}</h1>
+<div class="season-links">
+  <a class="chip" href="/shows" {{if not .Data.Status}}aria-current="page"{{end}}>{{.T "status.all"}}</a>
+  {{range .Data.Statuses}}<a class="chip" href="/shows?status={{.}}" {{if eq . $.Data.Status}}aria-current="page"{{end}}>{{$.T (printf "status.%s" .)}}</a>{{end}}
+</div>
+{{if .Data.Entries}}
+<div class="grid">
+  {{range .Data.Entries}}
+  <a class="card" href="/show/{{.Show.TMDBID}}">
+    <img loading="lazy" src="{{img "w342" .Show.PosterPath}}" alt="">
+    <span class="card-title">{{if .Follow.Favorite}}&#9829; {{end}}{{.Show.Name}}</span>
+    <progress max="{{.Progress.Aired}}" value="{{.Progress.Watched}}"></progress>
+    <span class="card-sub">{{$.T "show.progress" .Progress.Watched .Progress.Aired}}</span>
+  </a>
+  {{end}}
+</div>
+{{else}}
+<p class="muted">{{.T "myshows.empty"}}</p>
+{{end}}
+{{end}}

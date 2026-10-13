@@ -1,0 +1,10 @@
+{{define "content"}}
+<section class="auth-card">
+  <h1>{{.T "auth.forgot"}}</h1>
+  <form class="stack" data-api="/api/auth/forgot" data-success="{{.T "auth.forgot_sent"}}">
+    <label>{{.T "auth.email"}}<input type="email" name="email" autocomplete="email" required></label>
+    <p class="form-error" role="alert" hidden></p>
+    <button class="btn" type="submit">{{.T "auth.send_link"}}</button>
+  </form>
+</section>
+{{end}}

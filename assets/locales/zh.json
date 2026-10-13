@@ -1,0 +1,498 @@
+{
+  "nav": {
+    "home": "首页",
+    "shows": "我的剧集",
+    "calendar": "日历",
+    "search": "搜索",
+    "search_placeholder": "搜索剧集",
+    "settings": "设置",
+    "theme": "切换主题",
+    "language": "语言",
+    "notifications": "通知"
+  },
+  "auth": {
+    "login": "登录",
+    "register": "注册",
+    "logout": "退出登录",
+    "email": "邮箱",
+    "password": "密码",
+    "username": "用户名",
+    "username_hint": "3 到 20 位字母、数字或下划线",
+    "password_hint": "至少 8 个字符",
+    "forgot": "忘记密码？",
+    "forgot_sent": "如果该邮箱已注册，重置链接已发送。",
+    "send_link": "发送链接",
+    "magic_link": "通过邮件发送登录链接",
+    "magic_sent": "如果该邮箱已注册，登录链接已发送。",
+    "have_account": "我已有账号",
+    "verify_banner": "请验证邮箱后再发表评论。",
+    "resend_verify": "重新发送邮件",
+    "passkey_login": "使用通行密钥登录",
+    "telegram_login": "使用 Telegram 继续"
+  },
+  "token": {
+    "login": {
+      "title": "登录",
+      "text": "点击按钮完成登录。"
+    },
+    "reset": {
+      "title": "设置新密码",
+      "text": "请为你的账号输入新密码。"
+    },
+    "verify": {
+      "title": "验证邮箱",
+      "text": "点击按钮确认你的邮箱地址。"
+    },
+    "continue": "继续"
+  },
+  "home": {
+    "hero_title": "记录你追的每一部剧",
+    "hero_text": "跟上最新剧集，标记看过的内容，并与其他剧迷交流。",
+    "up_next": "接下来看",
+    "up_next_empty": "你已经追完了。关注一些剧集，看看接下来该看什么。",
+    "remaining": "待看剧集：%d",
+    "last_aired": "最新播出的一集",
+    "trending": "本周热门",
+    "no_metadata": "由于尚未配置元数据服务，暂时无法获取剧集数据。"
+  },
+  "stats": {
+    "shows": "剧集",
+    "episodes": "已看集数",
+    "time": "观看时长"
+  },
+  "search": {
+    "none": "没有找到剧集。",
+    "prompt": "请在搜索框中输入剧名。"
+  },
+  "show": {
+    "runtime": "%d 分钟",
+    "no_overview": "暂无简介。",
+    "status": "状态",
+    "favorite": "收藏",
+    "unfollow": "取消关注",
+    "follow": "关注",
+    "login_to_follow": "登录后关注",
+    "progress": "已看 %d / %d",
+    "sync_error": "这部剧上次的数据刷新失败，部分信息可能已过期。",
+    "seasons": "季",
+    "specials": "特别篇",
+    "season": "第 %d 季"
+  },
+  "status": {
+    "watching": "在看",
+    "plan": "想看",
+    "completed": "已看完",
+    "paused": "暂停",
+    "dropped": "弃剧",
+    "all": "全部"
+  },
+  "season": {
+    "mark_all": "标记本季为已看",
+    "unmark_all": "取消标记本季"
+  },
+  "ep": {
+    "tba": "待定",
+    "mark_watched": "标记为已看",
+    "watched": "已看",
+    "mark_upto": "标记到此集为止的全部",
+    "your_rating": "你的评分"
+  },
+  "comments": {
+    "title": "评论",
+    "placeholder": "说说你的想法",
+    "mark_spoiler": "这条含有剧透",
+    "post": "发布",
+    "verify_needed": "请验证邮箱后参与讨论。",
+    "login_needed": "登录后参与讨论",
+    "load_more": "加载更多评论"
+  },
+  "myshows": {
+    "empty": "你还没有关注任何剧集。"
+  },
+  "calendar": {
+    "today": "今天",
+    "empty": "这段时间内你关注的剧集没有更新。"
+  },
+  "settings": {
+    "password": "修改密码",
+    "current_password": "当前密码",
+    "new_password": "新密码",
+    "save": "保存",
+    "password_changed": "密码已修改。",
+    "blocked": "已屏蔽的用户",
+    "unblock": "取消屏蔽",
+    "blocked_none": "你还没有屏蔽任何人。",
+    "data": "你的数据",
+    "export": "下载我的数据",
+    "delete": "删除账号",
+    "delete_warning": "这将永久删除你的账号、观看记录和评论。",
+    "delete_confirm": "确定要永久删除你的账号吗？",
+    "add_email": "添加邮箱",
+    "add_email_hint": "添加邮箱以接收邮件通知并找回密码。",
+    "copy": "复制",
+    "delete_type_username": "输入你的用户名（%s）以确认",
+    "done": "完成",
+    "email_added": "请查收邮件以验证你的邮箱。",
+    "logout_everywhere": "退出所有设备",
+    "preferences": "偏好设置",
+    "recovery_left": "剩余恢复码：%d。",
+    "recovery_regen": "生成新的恢复码",
+    "recovery_regen_label": "输入当前验证码以替换恢复码",
+    "recovery_save": "请将这些恢复码保存在安全的地方。每个只能使用一次，且不会再次显示。",
+    "saved": "已保存。",
+    "sessions": "会话",
+    "tab_account": "账号",
+    "tab_notifications": "通知",
+    "tab_profile": "资料",
+    "telegram_linked": "Telegram 已绑定到你的账号。",
+    "telegram_linked_as": "已绑定的 Telegram 登录：",
+    "telegram_login": "Telegram 登录",
+    "telegram_login_hint": "绑定 Telegram 后可一键登录。",
+    "telegram_unavailable": "此服务器未配置 Telegram。",
+    "telegram_unlink": "解除 Telegram 登录绑定",
+    "timezone": "时区",
+    "timezone_detect": "使用我设备的时区",
+    "twofa": "两步验证",
+    "twofa_confirm": "确认并开启",
+    "twofa_disable": "关闭两步验证",
+    "twofa_enable": "设置两步验证",
+    "twofa_hint": "使用验证器应用中的验证码保护你的账号。",
+    "twofa_off": "两步验证已关闭。",
+    "twofa_on": "两步验证已开启。",
+    "twofa_secret": "无法扫描？请输入此密钥：",
+    "passkeys": "通行密钥",
+    "passkeys_hint": "用指纹、面容或设备 PIN 代替密码登录。如果已开启两步验证，仍会要求你输入验证码。",
+    "passkey_add": "添加通行密钥",
+    "passkey_name": "名称（可选）",
+    "passkey_none": "你还没有通行密钥。",
+    "passkey_unnamed": "通行密钥",
+    "passkey_added_on": "添加于 %s",
+    "passkey_last_used": "最后使用于 %s",
+    "passkey_never": "从未使用",
+    "passkey_remove": "移除",
+    "telegram_link_btn": "绑定我的 Telegram 账号"
+  },
+  "footer": {
+    "tmdb": "剧集数据和图片由以下平台提供：",
+    "unofficial": "%s 是独立项目，与 TMDB 无关联。",
+    "tvmaze": "剧集播出时间由以下平台提供：",
+    "privacy": "隐私",
+    "source": "源代码（AGPL-3.0）"
+  },
+  "admin": {
+    "reports": "举报",
+    "reporters": "举报数：%d",
+    "view": "查看",
+    "dismiss": "忽略",
+    "delete": "删除评论",
+    "ban": "封禁用户",
+    "none": "没有待处理的举报。"
+  },
+  "offline": {
+    "title": "你已离线",
+    "text": "没有网络连接时无法访问此页面。"
+  },
+  "err": {
+    "title": "出错了",
+    "bad_request": "请求无效。",
+    "login_required": "请先登录。",
+    "forbidden": "你没有权限执行此操作。",
+    "not_found": "找不到相关内容。",
+    "rate_limited": "尝试次数过多，请稍后再试。",
+    "verify_email": "请先验证你的邮箱地址。",
+    "mail_unavailable": "暂时无法发送邮件，请稍后再试。",
+    "metadata_unavailable": "剧集数据服务无响应，请稍后再试。",
+    "internal": "我们这边出了问题，请重试。",
+    "metadata_not_configured": "尚未配置剧集数据服务。",
+    "invalid_email": "请输入有效的邮箱地址。",
+    "invalid_username": "用户名需为 3 到 20 位字母、数字或下划线。",
+    "weak_password": "密码长度须为 8 到 72 个字符。",
+    "email_taken": "该邮箱已被注册。",
+    "username_taken": "该用户名已被占用。",
+    "bad_credentials": "邮箱或密码错误。",
+    "banned": "此账号已被封禁。",
+    "link_invalid": "此链接无效或已过期。",
+    "comment_invalid": "评论长度须为 1 到 2000 个字符。",
+    "already_reported": "你已经举报过了。",
+    "own_comment": "你不能对自己的评论执行此操作。",
+    "confirm_username": "请输入你的用户名以确认。",
+    "image_invalid": "无法使用该图片。请使用不超过 6 MB 的 JPEG、PNG、GIF 或 WebP。",
+    "invalid_timezone": "请选择有效的时区。",
+    "last_login_method": "移除 Telegram 登录前，请先设置密码或添加已验证的邮箱。",
+    "mfa_bad_code": "验证码无效。",
+    "mfa_expired": "登录会话已过期，请重新登录。",
+    "notify_no_email": "需要已验证的邮箱才能接收邮件通知。",
+    "notify_no_push": "尚无设备开启推送。请先在此设备上开启。",
+    "notify_no_telegram": "尚未连接 Telegram 通知。",
+    "notify_test_failed": "测试通知发送失败。请查看服务器日志。",
+    "profile_too_long": "显示名称最多 40 个字符，简介最多 500 个字符。",
+    "telegram_failed": "Telegram 登录失败，请重试。",
+    "telegram_send_failed": "Telegram 未接受该消息，请重试。",
+    "telegram_start_bot": "请先在 Telegram 中打开机器人并点击“开始”，然后重试。",
+    "telegram_taken": "该 Telegram 账号已绑定到其他用户。",
+    "telegram_unavailable": "Telegram 暂时不可用。",
+    "passkey_failed": "通行密钥验证失败，请重试。",
+    "passkey_expired": "通行密钥请求已过期，请重试。",
+    "passkey_last_method": "请至少保留一种登录方式：在移除最后一个通行密钥前，先设置密码、验证邮箱或绑定 Telegram。",
+    "invalid_timing": "请选择 7 天以内的偏移量和有效的时间。"
+  },
+  "mail": {
+    "login": {
+      "subject": "你的 %s 登录链接",
+      "body": "使用此链接登录 %s。链接 30 分钟内有效，且只能使用一次：\n\n%s\n\n如果这不是你本人的操作，请忽略此邮件。"
+    },
+    "reset": {
+      "subject": "重置你的 %s 密码",
+      "body": "使用此链接为 %s 设置新密码。链接 30 分钟内有效，且只能使用一次：\n\n%s\n\n如果这不是你本人的操作，请忽略此邮件。"
+    },
+    "verify": {
+      "subject": "验证你的 %s 邮箱",
+      "body": "欢迎使用 %s。请通过此链接确认你的邮箱地址，链接 30 分钟内有效：\n\n%s\n\n如果你没有注册，请忽略此邮件。"
+    },
+    "button_open": "打开",
+    "footer": "你收到此邮件是因为你在 {app} 中的通知设置。"
+  },
+  "js": {
+    "network_error": "网络错误，请重试。",
+    "mail_failed": "无法发送验证邮件。邮件服务恢复后请使用重新发送按钮。",
+    "verify_sent": "验证邮件已发送。",
+    "marked_many": "已标记为已看：%d",
+    "saved": "已保存。",
+    "comments_empty": "还没有评论，来抢沙发吧。",
+    "reported": "谢谢，你的举报已提交。",
+    "report_reason": "你为什么要举报这条评论？",
+    "mark_spoiler": "这条含有剧透",
+    "save": "保存",
+    "cancel": "取消",
+    "post_reply": "回复",
+    "deleted_comment": "评论已删除",
+    "edited": "已编辑",
+    "spoiler_label": "可能含有剧透",
+    "spoiler_tag": "剧透",
+    "reply": "回复",
+    "edit": "编辑",
+    "delete": "删除",
+    "delete_confirm": "确定删除吗？此操作无法撤销。",
+    "report_not_spoiler": "不是剧透",
+    "report_spoiler": "剧透",
+    "report_abuse": "举报",
+    "block": "屏蔽用户",
+    "block_confirm": "确定屏蔽此用户吗？你们将互相看不到对方的评论。",
+    "admin_delete": "移除",
+    "ban_confirm": "确定封禁此用户吗？",
+    "copied": "已复制。",
+    "copy_failed": "无法复制。请选中文本后手动复制。",
+    "notif_empty": "暂无通知。",
+    "push_denied": "未获得通知权限。",
+    "push_enabled": "已在此设备上开启推送通知。",
+    "push_unsupported": "此浏览器不支持推送通知。在 iPhone 上，请先将应用添加到主屏幕。",
+    "show": "显示",
+    "telegram_unlink_confirm": "要移除 Telegram 登录方式吗？",
+    "test_sent": "测试通知已发送。",
+    "passkey_unsupported": "此浏览器不支持通行密钥。",
+    "passkey_cancelled": "通行密钥请求已取消。",
+    "passkey_added": "通行密钥已添加。",
+    "passkey_remove_confirm": "要移除这个通行密钥吗？",
+    "invalid_timing": "请输入有效的数字。",
+    "telegram_failed": "Telegram 登录已取消或被拦截，请重试。",
+    "telegram_open": "打开 Telegram"
+  },
+  "genre": {
+    "action_adventure": "动作冒险",
+    "animation": "动画",
+    "comedy": "喜剧",
+    "crime": "犯罪",
+    "documentary": "纪录片",
+    "drama": "剧情",
+    "family": "家庭",
+    "kids": "儿童",
+    "mystery": "悬疑",
+    "news": "新闻",
+    "reality": "真人秀",
+    "sci_fi_fantasy": "科幻奇幻",
+    "soap": "肥皂剧",
+    "talk": "脱口秀",
+    "war_politics": "战争与政治",
+    "western": "西部"
+  },
+  "mfa": {
+    "code": "验证码",
+    "recovery_hint": "设备丢失了？请改为输入一个恢复码。",
+    "text": "请输入验证器应用中的 6 位验证码。",
+    "title": "两步验证"
+  },
+  "notif": {
+    "abuse_report": {
+      "body": "{user} 举报了一条评论，请在审核队列中查看。",
+      "title": "新的评论举报"
+    },
+    "always": "（始终开启）",
+    "cat": {
+      "episodes": "新剧集",
+      "moderation": "审核",
+      "security": "安全",
+      "social": "回复",
+      "system": "系统"
+    },
+    "categories": "通知内容",
+    "ch": {
+      "email": "邮件",
+      "in_app": "应用内",
+      "push": "推送",
+      "telegram": "Telegram"
+    },
+    "channels": "通知渠道",
+    "comment_reply": {
+      "body": "{excerpt}",
+      "title": "{user} 回复了你的评论"
+    },
+    "email_needs_verified": "邮件通知需要你的账号有已验证的邮箱地址。",
+    "empty": "暂无通知。",
+    "episode_aired": {
+      "body": "{code} {name} 已上线。",
+      "title": "新剧集：{show}"
+    },
+    "mark_all": "全部标为已读",
+    "newer": "较新",
+    "older": "较早",
+    "password_changed": {
+      "body": "你的密码已被修改。如果不是你本人操作，请立即保护你的账号。",
+      "title": "密码已修改"
+    },
+    "push_devices": "已开启推送的设备：%d",
+    "push_disable": "在此设备上关闭推送",
+    "push_enable": "在此设备上开启推送",
+    "push_hint": "即使应用已关闭，也能在此设备上收到提醒。",
+    "push_title": "推送通知",
+    "telegram_connect": "连接 Telegram",
+    "telegram_connected": "Telegram 通知已连接。",
+    "telegram_disconnect": "断开连接",
+    "telegram_dropped": {
+      "body": "由于机器人无法再向你发送消息，Telegram 通知已关闭。请在设置中重新连接。",
+      "title": "Telegram 已断开"
+    },
+    "telegram_hint": "在 Telegram 中打开机器人并点击“开始”即可连接。",
+    "telegram_linked": {
+      "body": "Telegram 已作为登录方式绑定到你的账号。",
+      "title": "Telegram 已绑定"
+    },
+    "telegram_oneclick": "使用我的 Telegram 登录",
+    "telegram_title": "Telegram 通知",
+    "telegram_waiting": "正在等待你在 Telegram 中点击“开始”...",
+    "test": {
+      "body": "如果你能看到这条消息，说明此渠道可用。",
+      "title": "测试通知"
+    },
+    "test_hint": "向每个渠道发送一条测试消息，检查是否正常。",
+    "test_title": "测试你的渠道",
+    "twofa_disabled": {
+      "body": "你的账号已关闭两步验证。",
+      "title": "两步验证已关闭"
+    },
+    "twofa_enabled": {
+      "body": "你的账号已开启两步验证。",
+      "title": "两步验证已开启"
+    },
+    "view_all": "查看全部",
+    "passkey_added": {
+      "title": "已添加通行密钥",
+      "body": "你的账号新增了一个通行密钥。如果不是你本人操作，请立即保护你的账号。"
+    },
+    "timing_title": "剧集提醒时间",
+    "timing_hint": "当某一集的确切播出时间已知时（来自 TVmaze，Trakt 作为备用），提醒会使用它。如果只知道播出日期，则按该日期当天中午（你的时区）来计算提醒。",
+    "timing_when": "何时提醒我",
+    "timing_before30": "提前 30 分钟",
+    "timing_release": "播出时",
+    "timing_after60": "播出 1 小时后",
+    "timing_nextday": "第二天",
+    "timing_custom": "自定义",
+    "timing_custom_label": "偏移量（负数表示提前）",
+    "timing_unit": "单位",
+    "timing_unit_min": "分钟",
+    "timing_unit_hour": "小时",
+    "timing_unit_day": "天"
+  },
+  "profile": {
+    "bio": "简介",
+    "display_name": "显示名称",
+    "edit": "编辑资料",
+    "fav_shows": "收藏的剧集",
+    "genres": "最爱类型",
+    "joined": "加入于 %s",
+    "lifetime": "累计",
+    "month": "最近 30 天",
+    "private": "此资料为私密。",
+    "public": "公开资料",
+    "public_hint": "关闭后，只有你自己能看到统计数据和收藏。",
+    "recent": "最近观看",
+    "remove": "移除",
+    "today": "今天",
+    "upload_avatar": "上传头像",
+    "upload_banner": "上传横幅",
+    "upload_hint": "JPEG、PNG、GIF 或 WebP，不超过 6 MB。",
+    "view_public": "查看我的公开资料",
+    "watch_time": "观看时长",
+    "week": "最近 7 天"
+  },
+  "tg": {
+    "error": "出错了，请重试。",
+    "help": "命令：/start 查看绑定状态，/stop 关闭通知。",
+    "link_invalid": "该链接无效或已过期。请在应用设置中重新生成。",
+    "linked": "已绑定。你将在这里收到通知。",
+    "private_only": "请在私聊中联系我。",
+    "status_linked": "此聊天已绑定到你的账号。",
+    "status_unlinked": "此聊天尚未绑定。请打开应用设置的“通知”，点击“连接 Telegram”。",
+    "stopped": "已为此聊天关闭通知。"
+  },
+  "privacy": {
+    "title": "隐私政策",
+    "updated": "最后更新：%s",
+    "intro": "本政策说明 {app} 会保存哪些与你有关的信息，以及还有谁参与其中。{app} 是开源软件，本站由 {operator} 运营。本文不构成法律意见。",
+    "operator_default": "运营本站的个人",
+    "contact_none": "联系方式见本站或其源代码仓库。",
+    "data": {
+      "title": "保存哪些数据",
+      "body": "你的账号（用户名、你添加的邮箱、你设置的密码哈希、显示名称、简介、头像和横幅图片、语言和时区）；如果使用 Telegram，则包括你的 Telegram ID 和用户名；你的通行密钥的公钥；你关注的剧集、观看和评分记录；你的评论、举报和屏蔽；你的通知设置、通知和推送订阅。"
+    },
+    "signin": {
+      "title": "登录与安全数据",
+      "body": "会话使用 Cookie 和经过哈希的刷新令牌。两步验证密钥加密存储，恢复码以哈希形式存储。IP 地址仅在内存中用于限速，绝不会写入日志：安全日志只记录国家代码。"
+    },
+    "cookies": {
+      "title": "Cookie 与本地存储",
+      "body": "仅使用必要的 Cookie：登录会话、CSRF 防护、语言以及短期安全验证。主题选择保存在浏览器本地存储中。没有统计分析、广告或跟踪脚本。"
+    },
+    "third": {
+      "title": "涉及的其他服务",
+      "body": "剧集数据来自 TMDB 和 TVmaze，以及可选的 Trakt。这些请求由服务器发出，不包含任何与你有关的信息。图片由服务器获取一次，并从本站或运营者控制的存储提供，因此你的浏览器不会联系这些服务。如果你选择 Telegram，Telegram 会收到你的登录请求和发给你的通知；只有当你点击 Telegram 按钮时才会加载它的脚本。推送通知会经过你浏览器厂商的推送服务。电子邮件会经过运营者的邮件服务商。"
+    },
+    "public": {
+      "title": "其他人能看到什么",
+      "body": "你的用户名、显示名称、简介和头像是公开的。你的统计数据、收藏和最近观看的剧集是公开的，除非你把资料设为私密。评论对所有人可见，并显示你的名字。互相屏蔽的用户看不到对方的评论。"
+    },
+    "use": {
+      "title": "如何使用",
+      "body": "仅用于运行服务：显示你的进度、发送你选择的通知、托管评论以及防止滥用。你的数据不会被出售，也不会用于广告或用户画像。"
+    },
+    "retention": {
+      "title": "保存多久",
+      "body": "直到你删除为止。删除账号会永久移除你的账号、历史记录、评论、通知和上传的图片。已删除的评论会立即清除文字。通知在 90 天后删除。运营者的备份可能会再多保留一小段时间。"
+    },
+    "rights": {
+      "title": "你的选择",
+      "body": "在设置中，你可以下载你的数据、编辑或移除资料、关闭任意通知渠道并删除账号。根据 GDPR 等法律，你也可以要求运营者提供、更正或删除你的数据。"
+    },
+    "children": {
+      "title": "儿童",
+      "body": "本服务不面向 13 岁以下（或你所在国家规定的最低年龄以下）的儿童，也不会有意收集他们的数据。"
+    },
+    "changes": {
+      "title": "变更",
+      "body": "如果本政策发生变化，新版本会连同日期发布在本页面。如各语言版本有差异，以英文版为准。"
+    },
+    "contact": {
+      "title": "联系方式",
+      "body": "运营者：{operator}。{contact}"
+    }
+  }
+}

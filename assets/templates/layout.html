@@ -1,0 +1,78 @@
+{{define "layout"}}<!doctype html>
+<html lang="{{.Lang}}" dir="{{.Dir}}" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{if .Title}}{{.Title}} - {{end}}{{.AppName}}</title>
+<meta name="csrf" content="{{.CSRF}}">
+<meta name="theme-color" content="#7c5cff">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/static/img/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/static/img/icon.svg">
+<script src="/static/theme.js?v={{assetV}}"></script>
+<link rel="stylesheet" href="/static/app.css?v={{assetV}}">
+</head>
+<body data-user="{{if .User}}1{{else}}0{{end}}">
+<header class="topbar">
+  <a class="brand" href="/">{{.AppName}}</a>
+  <nav class="nav">
+    <a href="/" {{if eq .Path "/"}}aria-current="page"{{end}}>{{.T "nav.home"}}</a>
+    {{if .User}}
+    <a href="/shows" {{if eq .Path "/shows"}}aria-current="page"{{end}}>{{.T "nav.shows"}}</a>
+    <a href="/calendar" {{if eq .Path "/calendar"}}aria-current="page"{{end}}>{{.T "nav.calendar"}}</a>
+    {{end}}
+  </nav>
+  <form class="search" action="/search" method="get" role="search">
+    <input id="q" name="q" type="search" autocomplete="off" placeholder="{{.T "nav.search_placeholder"}}" aria-label="{{.T "nav.search"}}" value="{{index .Data "Query"}}">
+    <div class="suggest" id="suggest" hidden></div>
+  </form>
+  <div class="account">
+    <button class="icon-btn" type="button" id="theme-toggle" aria-label="{{.T "nav.theme"}}">&#9680;</button>
+    <select id="lang-select" aria-label="{{.T "nav.language"}}">
+      {{range .Langs}}<option value="{{.}}" {{if eq . $.Lang}}selected{{end}}>{{$.LangName .}}</option>{{end}}
+    </select>
+    {{if .User}}
+    <div class="bell-wrap">
+      <button class="icon-btn bell" type="button" id="bell" aria-label="{{.T "nav.notifications"}}" aria-expanded="false">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5.5-6.84V3.5a1.5 1.5 0 0 0-3 0v.66A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z"/></svg>
+        <span class="badge" id="bell-badge" {{if eq .Unread 0}}hidden{{end}}>{{.Unread}}</span>
+      </button>
+      <div class="dropdown" id="bell-menu" hidden>
+        <div class="dropdown-head"><strong>{{.T "nav.notifications"}}</strong><button class="link-btn" type="button" id="bell-read-all">{{.T "notif.mark_all"}}</button></div>
+        <ul class="dropdown-list" id="bell-list"></ul>
+        <a class="dropdown-foot" href="/notifications">{{.T "notif.view_all"}}</a>
+      </div>
+    </div>
+    <a class="user-link" href="/u/{{.User.Username}}">
+      {{if .User.AvatarPath}}<img class="avatar xs" src="{{avatar .User.AvatarPath}}" alt="">{{else}}<span class="avatar xs fallback">{{initial .User.Name}}</span>{{end}}
+      <span class="user-name">{{.User.Name}}</span>
+    </a>
+    <a href="/settings">{{.T "nav.settings"}}</a>
+    {{if .User.IsAdmin}}<a href="/admin/reports">{{.T "admin.reports"}}</a>{{end}}
+    <button class="btn ghost" type="button" data-logout>{{.T "auth.logout"}}</button>
+    {{else}}
+    <a class="btn ghost" href="/login">{{.T "auth.login"}}</a>
+    <a class="btn" href="/register">{{.T "auth.register"}}</a>
+    {{end}}
+  </div>
+</header>
+{{if and .User .User.Email (not .User.EmailVerified)}}
+<div class="banner" role="status">
+  <span>{{.T "auth.verify_banner"}}</span>
+  <button class="btn small" type="button" data-resend-verify>{{.T "auth.resend_verify"}}</button>
+</div>
+{{end}}
+<main class="container">
+{{template "content" .}}
+</main>
+<footer class="footer">
+  <p>{{.T "footer.tmdb"}} <a href="https://www.themoviedb.org/" rel="noopener noreferrer" target="_blank">TMDB</a>.</p>
+  <p>{{.T "footer.tvmaze"}} <a href="https://www.tvmaze.com/" rel="noopener noreferrer" target="_blank">TVmaze</a>{{if .TraktEnabled}}, <a href="https://trakt.tv/" rel="noopener noreferrer" target="_blank">Trakt</a>{{end}}.</p>
+  <p>{{.T "footer.unofficial" .AppName}}</p>
+  <p><a href="{{.SourceURL}}" rel="noopener noreferrer" target="_blank">{{.T "footer.source"}}</a> &middot; <a href="/privacy">{{.T "footer.privacy"}}</a></p>
+</footer>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<script type="application/json" id="i18n">{{.JSStrings}}</script>
+<script src="/static/app.js?v={{assetV}}" defer></script>
+</body>
+</html>{{end}}

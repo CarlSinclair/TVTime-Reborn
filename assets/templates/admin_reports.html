@@ -1,0 +1,20 @@
+{{define "content"}}
+<h1>{{.T "admin.reports"}}</h1>
+{{if .Data.Reports}}
+<ul class="reports">
+  {{range .Data.Reports}}
+  <li class="panel">
+    <p><strong>{{.Author}}</strong> <small class="muted">{{$.T "admin.reporters" .Reporters}}</small></p>
+    <blockquote>{{.Body}}</blockquote>
+    {{if .Reasons}}<p class="muted">{{.Reasons}}</p>{{end}}
+    <p class="actions">
+      <a class="btn ghost small" href="/episode/{{.Target.ID}}">{{$.T "admin.view"}}</a>
+      <button class="btn small" type="button" data-admin-resolve="{{.CommentID}}">{{$.T "admin.dismiss"}}</button>
+      <button class="btn danger small" type="button" data-admin-delete="{{.CommentID}}">{{$.T "admin.delete"}}</button>
+      <button class="btn danger small" type="button" data-admin-ban="{{.AuthorID}}">{{$.T "admin.ban"}}</button>
+    </p>
+  </li>
+  {{end}}
+</ul>
+{{else}}<p class="muted">{{.T "admin.none"}}</p>{{end}}
+{{end}}

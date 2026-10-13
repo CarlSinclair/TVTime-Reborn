@@ -1,0 +1,20 @@
+{{define "content"}}
+<h1>{{.T "nav.search"}}</h1>
+{{if .Data.NoMetadata}}<div class="notice">{{.T "home.no_metadata"}}</div>{{end}}
+{{if .Data.SearchFailed}}<div class="notice error">{{.T "err.metadata_unavailable"}}</div>{{end}}
+{{if .Data.Query}}
+  {{if .Data.Results}}
+  <div class="grid">
+    {{range .Data.Results}}{{template "card" (dict "Href" (printf "/show/%d" .ID) "Poster" .PosterPath "Title" .Name "Sub" (year .FirstAirDate))}}{{end}}
+  </div>
+  {{else if .Data.Local}}
+  <div class="grid">
+    {{range .Data.Local}}{{template "card" (dict "Href" (printf "/show/%d" .TMDBID) "Poster" .PosterPath "Title" .Name "Sub" (year .FirstAirDate))}}{{end}}
+  </div>
+  {{else if not .Data.SearchFailed}}
+  <p class="muted">{{.T "search.none"}}</p>
+  {{end}}
+{{else}}
+  <p class="muted">{{.T "search.prompt"}}</p>
+{{end}}
+{{end}}

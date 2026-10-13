@@ -1,0 +1,498 @@
+{
+  "nav": {
+    "home": "Inicio",
+    "shows": "Mis series",
+    "calendar": "Calendario",
+    "search": "Buscar",
+    "search_placeholder": "Buscar series",
+    "settings": "Ajustes",
+    "theme": "Cambiar tema",
+    "language": "Idioma",
+    "notifications": "Notificaciones"
+  },
+  "auth": {
+    "login": "Iniciar sesión",
+    "register": "Crear cuenta",
+    "logout": "Cerrar sesión",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "username": "Nombre de usuario",
+    "username_hint": "De 3 a 20 letras, números o guiones bajos",
+    "password_hint": "Al menos 8 caracteres",
+    "forgot": "¿Olvidaste tu contraseña?",
+    "forgot_sent": "Si ese correo tiene una cuenta, te hemos enviado un enlace para restablecerla.",
+    "send_link": "Enviar enlace",
+    "magic_link": "Envíame un enlace de acceso por correo",
+    "magic_sent": "Si ese correo tiene una cuenta, te hemos enviado un enlace de acceso.",
+    "have_account": "Ya tengo una cuenta",
+    "verify_banner": "Verifica tu correo para poder comentar.",
+    "resend_verify": "Reenviar correo",
+    "passkey_login": "Iniciar sesión con passkey",
+    "telegram_login": "Continuar con Telegram"
+  },
+  "token": {
+    "login": {
+      "title": "Iniciar sesión",
+      "text": "Pulsa el botón para terminar de iniciar sesión."
+    },
+    "reset": {
+      "title": "Elige una nueva contraseña",
+      "text": "Escribe una nueva contraseña para tu cuenta."
+    },
+    "verify": {
+      "title": "Verifica tu correo",
+      "text": "Pulsa el botón para confirmar tu dirección de correo."
+    },
+    "continue": "Continuar"
+  },
+  "home": {
+    "hero_title": "Sigue todas las series que ves",
+    "hero_text": "Mantente al día con los nuevos episodios, marca lo que has visto y coméntalo con otros fans.",
+    "up_next": "A continuación",
+    "up_next_empty": "Estás al día. Sigue algunas series para ver qué ver después.",
+    "remaining": "Episodios por ver: %d",
+    "last_aired": "Último episodio emitido",
+    "trending": "Tendencias de la semana",
+    "no_metadata": "Los datos de las series aún no están disponibles porque el servicio de metadatos no está configurado."
+  },
+  "stats": {
+    "shows": "Series",
+    "episodes": "Episodios vistos",
+    "time": "Tiempo visto"
+  },
+  "search": {
+    "none": "No se encontraron series.",
+    "prompt": "Escribe el nombre de una serie en el buscador."
+  },
+  "show": {
+    "runtime": "%d min",
+    "no_overview": "Sinopsis no disponible.",
+    "status": "Estado",
+    "favorite": "Favorita",
+    "unfollow": "Dejar de seguir",
+    "follow": "Seguir",
+    "login_to_follow": "Inicia sesión para seguir",
+    "progress": "%d de %d vistos",
+    "sync_error": "La última actualización de datos de esta serie falló. Parte de la información puede estar desactualizada.",
+    "seasons": "Temporadas",
+    "specials": "Especiales",
+    "season": "Temporada %d"
+  },
+  "status": {
+    "watching": "Viendo",
+    "plan": "Pendiente de ver",
+    "completed": "Completada",
+    "paused": "En pausa",
+    "dropped": "Abandonada",
+    "all": "Todas"
+  },
+  "season": {
+    "mark_all": "Marcar temporada como vista",
+    "unmark_all": "Desmarcar temporada"
+  },
+  "ep": {
+    "tba": "Por confirmar",
+    "mark_watched": "Marcar como visto",
+    "watched": "Visto",
+    "mark_upto": "Marcar todo hasta aquí",
+    "your_rating": "Tu puntuación"
+  },
+  "comments": {
+    "title": "Comentarios",
+    "placeholder": "Comparte tu opinión",
+    "mark_spoiler": "Esto es un spoiler",
+    "post": "Publicar",
+    "verify_needed": "Verifica tu correo para unirte a la conversación.",
+    "login_needed": "Inicia sesión para unirte a la conversación",
+    "load_more": "Cargar más comentarios"
+  },
+  "myshows": {
+    "empty": "Todavía no sigues ninguna serie."
+  },
+  "calendar": {
+    "today": "Hoy",
+    "empty": "No hay estrenos de tus series en este periodo."
+  },
+  "settings": {
+    "password": "Cambiar contraseña",
+    "current_password": "Contraseña actual",
+    "new_password": "Nueva contraseña",
+    "save": "Guardar",
+    "password_changed": "Contraseña cambiada.",
+    "blocked": "Usuarios bloqueados",
+    "unblock": "Desbloquear",
+    "blocked_none": "No has bloqueado a nadie.",
+    "data": "Tus datos",
+    "export": "Descargar mis datos",
+    "delete": "Eliminar cuenta",
+    "delete_warning": "Esto elimina de forma permanente tu cuenta, tu historial y tus comentarios.",
+    "delete_confirm": "¿Eliminar tu cuenta de forma permanente?",
+    "add_email": "Añadir correo",
+    "add_email_hint": "Añade un correo para recibir notificaciones y recuperar la contraseña.",
+    "copy": "Copiar",
+    "delete_type_username": "Escribe tu nombre de usuario (%s) para confirmar",
+    "done": "Listo",
+    "email_added": "Revisa tu bandeja de entrada para verificar el correo.",
+    "logout_everywhere": "Cerrar sesión en todos los dispositivos",
+    "preferences": "Preferencias",
+    "recovery_left": "Códigos de recuperación restantes: %d.",
+    "recovery_regen": "Generar nuevos códigos de recuperación",
+    "recovery_regen_label": "Introduce un código actual para reemplazar tus códigos de recuperación",
+    "recovery_save": "Guarda estos códigos de recuperación en un lugar seguro. Cada uno funciona una sola vez y no se volverán a mostrar.",
+    "saved": "Guardado.",
+    "sessions": "Sesiones",
+    "tab_account": "Cuenta",
+    "tab_notifications": "Notificaciones",
+    "tab_profile": "Perfil",
+    "telegram_linked": "Telegram vinculado a tu cuenta.",
+    "telegram_linked_as": "Acceso con Telegram vinculado como",
+    "telegram_login": "Acceso con Telegram",
+    "telegram_login_hint": "Vincula Telegram para iniciar sesión con un toque.",
+    "telegram_unavailable": "Telegram no está configurado en este servidor.",
+    "telegram_unlink": "Desvincular acceso con Telegram",
+    "timezone": "Zona horaria",
+    "timezone_detect": "Usar la zona horaria de mi dispositivo",
+    "twofa": "Verificación en dos pasos",
+    "twofa_confirm": "Confirmar y activar",
+    "twofa_disable": "Desactivar la verificación en dos pasos",
+    "twofa_enable": "Configurar la verificación en dos pasos",
+    "twofa_hint": "Protege tu cuenta con un código de una app de autenticación.",
+    "twofa_off": "Verificación en dos pasos desactivada.",
+    "twofa_on": "La verificación en dos pasos está activa.",
+    "twofa_secret": "¿No puedes escanear? Introduce esta clave:",
+    "passkeys": "Passkeys",
+    "passkeys_hint": "Inicia sesión con tu huella, rostro o PIN del dispositivo en lugar de una contraseña. Si la verificación en dos pasos está activada, se te seguirá pidiendo su código.",
+    "passkey_add": "Añadir una passkey",
+    "passkey_name": "Nombre (opcional)",
+    "passkey_none": "Aún no tienes passkeys.",
+    "passkey_unnamed": "Passkey",
+    "passkey_added_on": "Añadida el %s",
+    "passkey_last_used": "Último uso el %s",
+    "passkey_never": "Nunca usada",
+    "passkey_remove": "Quitar",
+    "telegram_link_btn": "Vincular mi cuenta de Telegram"
+  },
+  "footer": {
+    "tmdb": "Los datos e imágenes de las series los proporciona",
+    "unofficial": "%s es un proyecto independiente y no está afiliado a TMDB.",
+    "tvmaze": "Horarios de emisión de los episodios proporcionados por",
+    "privacy": "Privacidad",
+    "source": "Código fuente (AGPL-3.0)"
+  },
+  "admin": {
+    "reports": "Denuncias",
+    "reporters": "Denuncias: %d",
+    "view": "Ver",
+    "dismiss": "Descartar",
+    "delete": "Eliminar comentario",
+    "ban": "Expulsar usuario",
+    "none": "No hay denuncias abiertas."
+  },
+  "offline": {
+    "title": "Sin conexión",
+    "text": "Esta página no está disponible sin conexión."
+  },
+  "err": {
+    "title": "Algo salió mal",
+    "bad_request": "Esa solicitud no era válida.",
+    "login_required": "Inicia sesión primero.",
+    "forbidden": "No tienes permiso para hacer eso.",
+    "not_found": "No encontramos eso.",
+    "rate_limited": "Demasiados intentos. Espera un poco e inténtalo de nuevo.",
+    "verify_email": "Verifica primero tu dirección de correo.",
+    "mail_unavailable": "No pudimos enviar el correo ahora. Inténtalo más tarde.",
+    "metadata_unavailable": "El servicio de datos de series no responde. Inténtalo más tarde.",
+    "internal": "Algo salió mal por nuestra parte. Inténtalo de nuevo.",
+    "metadata_not_configured": "El servicio de datos de series no está configurado.",
+    "invalid_email": "Introduce un correo electrónico válido.",
+    "invalid_username": "Los nombres de usuario tienen de 3 a 20 letras, números o guiones bajos.",
+    "weak_password": "Las contraseñas deben tener entre 8 y 72 caracteres.",
+    "email_taken": "Ese correo ya está registrado.",
+    "username_taken": "Ese nombre de usuario ya está en uso.",
+    "bad_credentials": "Correo o contraseña incorrectos.",
+    "banned": "Esta cuenta ha sido suspendida.",
+    "link_invalid": "Este enlace no es válido o ha caducado.",
+    "comment_invalid": "Los comentarios deben tener entre 1 y 2000 caracteres.",
+    "already_reported": "Ya lo has denunciado.",
+    "own_comment": "No puedes hacer eso con tu propio comentario.",
+    "confirm_username": "Escribe tu nombre de usuario para confirmar.",
+    "image_invalid": "No se pudo usar esa imagen. Usa JPEG, PNG, GIF o WebP de hasta 6 MB.",
+    "invalid_timezone": "Elige una zona horaria válida.",
+    "last_login_method": "Define una contraseña o añade un correo verificado antes de quitar el acceso con Telegram.",
+    "mfa_bad_code": "Ese código no es válido.",
+    "mfa_expired": "Tu sesión de acceso caducó. Inicia sesión de nuevo.",
+    "notify_no_email": "Necesitas un correo verificado para recibir notificaciones por correo.",
+    "notify_no_push": "Ningún dispositivo tiene las notificaciones push activadas. Actívalas primero en este dispositivo.",
+    "notify_no_telegram": "Las notificaciones de Telegram no están conectadas.",
+    "notify_test_failed": "No se pudo entregar la notificación de prueba. Revisa el registro del servidor.",
+    "profile_too_long": "Nombre visible de hasta 40 caracteres y biografía de hasta 500.",
+    "telegram_failed": "Falló el acceso con Telegram. Inténtalo de nuevo.",
+    "telegram_send_failed": "Telegram no aceptó el mensaje. Inténtalo de nuevo.",
+    "telegram_start_bot": "Abre el bot en Telegram y pulsa Iniciar primero; luego inténtalo de nuevo.",
+    "telegram_taken": "Esa cuenta de Telegram ya está vinculada a otro usuario.",
+    "telegram_unavailable": "Telegram no está disponible ahora mismo.",
+    "passkey_failed": "Falló la verificación de la passkey. Inténtalo de nuevo.",
+    "passkey_expired": "La solicitud de la passkey caducó. Inténtalo de nuevo.",
+    "passkey_last_method": "Mantén al menos una forma de iniciar sesión: define una contraseña, verifica un correo o vincula Telegram antes de quitar tu última passkey.",
+    "invalid_timing": "Elige un desfase de hasta 7 días y una hora válida."
+  },
+  "mail": {
+    "login": {
+      "subject": "Tu enlace de acceso a %s",
+      "body": "Usa este enlace para iniciar sesión en %s. Caduca en 30 minutos y solo funciona una vez:\n\n%s\n\nSi no lo solicitaste, puedes ignorar este correo."
+    },
+    "reset": {
+      "subject": "Restablece tu contraseña de %s",
+      "body": "Usa este enlace para elegir una nueva contraseña en %s. Caduca en 30 minutos y solo funciona una vez:\n\n%s\n\nSi no lo solicitaste, puedes ignorar este correo."
+    },
+    "verify": {
+      "subject": "Verifica tu correo de %s",
+      "body": "Te damos la bienvenida a %s. Confirma tu dirección de correo con este enlace, que caduca en 30 minutos:\n\n%s\n\nSi no creaste una cuenta, puedes ignorar este correo."
+    },
+    "button_open": "Abrir",
+    "footer": "Recibes esto por tus ajustes de notificaciones de {app}."
+  },
+  "js": {
+    "network_error": "Error de red. Inténtalo de nuevo.",
+    "mail_failed": "No pudimos enviar el correo de verificación. Usa el botón de reenvío cuando el correo funcione.",
+    "verify_sent": "Correo de verificación enviado.",
+    "marked_many": "Marcados como vistos: %d",
+    "saved": "Guardado.",
+    "comments_empty": "Aún no hay comentarios. Sé el primero.",
+    "reported": "Gracias, tu denuncia fue enviada.",
+    "report_reason": "¿Por qué denuncias este comentario?",
+    "mark_spoiler": "Esto es un spoiler",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "post_reply": "Responder",
+    "deleted_comment": "Comentario eliminado",
+    "edited": "editado",
+    "spoiler_label": "Posible spoiler",
+    "spoiler_tag": "spoiler",
+    "reply": "Responder",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "delete_confirm": "¿Eliminar esto? No se puede deshacer.",
+    "report_not_spoiler": "No es spoiler",
+    "report_spoiler": "Spoiler",
+    "report_abuse": "Denunciar",
+    "block": "Bloquear usuario",
+    "block_confirm": "¿Bloquear a este usuario? Dejarán de verse los comentarios mutuamente.",
+    "admin_delete": "Quitar",
+    "ban_confirm": "¿Expulsar a este usuario?",
+    "copied": "Copiado.",
+    "copy_failed": "No se pudo copiar. Selecciona el texto y cópialo manualmente.",
+    "notif_empty": "Aún no hay notificaciones.",
+    "push_denied": "No se concedió el permiso de notificaciones.",
+    "push_enabled": "Notificaciones push activadas en este dispositivo.",
+    "push_unsupported": "Este navegador no admite notificaciones push. En iPhone, añade primero la app a la pantalla de inicio.",
+    "show": "Mostrar",
+    "telegram_unlink_confirm": "¿Quitar Telegram como método de acceso?",
+    "test_sent": "Notificación de prueba enviada.",
+    "passkey_unsupported": "Las passkeys no son compatibles con este navegador.",
+    "passkey_cancelled": "Se canceló la solicitud de la passkey.",
+    "passkey_added": "Passkey añadida.",
+    "passkey_remove_confirm": "¿Quitar esta passkey?",
+    "invalid_timing": "Introduce un número válido.",
+    "telegram_failed": "El acceso con Telegram se canceló o se bloqueó. Inténtalo de nuevo.",
+    "telegram_open": "Abrir Telegram"
+  },
+  "genre": {
+    "action_adventure": "Acción y aventura",
+    "animation": "Animación",
+    "comedy": "Comedia",
+    "crime": "Crimen",
+    "documentary": "Documental",
+    "drama": "Drama",
+    "family": "Familia",
+    "kids": "Infantil",
+    "mystery": "Misterio",
+    "news": "Noticias",
+    "reality": "Reality",
+    "sci_fi_fantasy": "Ciencia ficción y fantasía",
+    "soap": "Telenovela",
+    "talk": "Talk show",
+    "war_politics": "Guerra y política",
+    "western": "Western"
+  },
+  "mfa": {
+    "code": "Código de verificación",
+    "recovery_hint": "¿Perdiste tu dispositivo? Introduce uno de tus códigos de recuperación.",
+    "text": "Introduce el código de 6 dígitos de tu app de autenticación.",
+    "title": "Verificación en dos pasos"
+  },
+  "notif": {
+    "abuse_report": {
+      "body": "{user} denunció un comentario. Revísalo en la cola de moderación.",
+      "title": "Nueva denuncia de comentario"
+    },
+    "always": "(siempre activo)",
+    "cat": {
+      "episodes": "Nuevos episodios",
+      "moderation": "Moderación",
+      "security": "Seguridad",
+      "social": "Respuestas",
+      "system": "Sistema"
+    },
+    "categories": "Sobre qué recibir avisos",
+    "ch": {
+      "email": "Correo",
+      "in_app": "En la app",
+      "push": "Push",
+      "telegram": "Telegram"
+    },
+    "channels": "Canales",
+    "comment_reply": {
+      "body": "{excerpt}",
+      "title": "{user} respondió a tu comentario"
+    },
+    "email_needs_verified": "Las notificaciones por correo requieren un correo verificado en tu cuenta.",
+    "empty": "Aún no hay notificaciones.",
+    "episode_aired": {
+      "body": "{code} {name} ya está disponible.",
+      "title": "Nuevo episodio: {show}"
+    },
+    "mark_all": "Marcar todo como leído",
+    "newer": "Más recientes",
+    "older": "Más antiguas",
+    "password_changed": {
+      "body": "Se cambió tu contraseña. Si no fuiste tú, protege tu cuenta de inmediato.",
+      "title": "Contraseña cambiada"
+    },
+    "push_devices": "Dispositivos con push activado: %d",
+    "push_disable": "Desactivar push en este dispositivo",
+    "push_enable": "Activar push en este dispositivo",
+    "push_hint": "Recibe avisos en este dispositivo aunque la app esté cerrada.",
+    "push_title": "Notificaciones push",
+    "telegram_connect": "Conectar Telegram",
+    "telegram_connected": "Las notificaciones de Telegram están conectadas.",
+    "telegram_disconnect": "Desconectar",
+    "telegram_dropped": {
+      "body": "Las notificaciones de Telegram se desactivaron porque el bot ya no puede escribirte. Vuelve a conectarlas en los ajustes.",
+      "title": "Telegram desconectado"
+    },
+    "telegram_hint": "Abre el bot en Telegram y pulsa Iniciar para conectar.",
+    "telegram_linked": {
+      "body": "Telegram se vinculó a tu cuenta como método de acceso.",
+      "title": "Telegram vinculado"
+    },
+    "telegram_oneclick": "Usar mi acceso de Telegram",
+    "telegram_title": "Notificaciones de Telegram",
+    "telegram_waiting": "Esperando a que pulses Iniciar en Telegram...",
+    "test": {
+      "body": "Si puedes leer esto, este canal funciona.",
+      "title": "Notificación de prueba"
+    },
+    "test_hint": "Envíate una prueba por cada canal para comprobar que funciona.",
+    "test_title": "Prueba tus canales",
+    "twofa_disabled": {
+      "body": "Se desactivó la verificación en dos pasos en tu cuenta.",
+      "title": "Verificación en dos pasos desactivada"
+    },
+    "twofa_enabled": {
+      "body": "La verificación en dos pasos ya está activa en tu cuenta.",
+      "title": "Verificación en dos pasos activada"
+    },
+    "view_all": "Ver todas",
+    "passkey_added": {
+      "title": "Passkey añadida",
+      "body": "Se añadió una nueva passkey a tu cuenta. Si no fuiste tú, protege tu cuenta de inmediato."
+    },
+    "timing_title": "Momento del aviso de episodios",
+    "timing_hint": "Cuando se conoce la hora exacta de emisión de un episodio (por TVmaze, con Trakt como respaldo), los avisos la usan. Si solo se conoce la fecha, los avisos se calculan desde el mediodía de esa fecha en tu zona horaria.",
+    "timing_when": "Cuándo avisarme",
+    "timing_before30": "30 minutos antes",
+    "timing_release": "Cuando se emita",
+    "timing_after60": "1 hora después",
+    "timing_nextday": "Al día siguiente",
+    "timing_custom": "Personalizado",
+    "timing_custom_label": "Desfase (negativo significa antes)",
+    "timing_unit": "Unidad",
+    "timing_unit_min": "minutos",
+    "timing_unit_hour": "horas",
+    "timing_unit_day": "días"
+  },
+  "profile": {
+    "bio": "Biografía",
+    "display_name": "Nombre visible",
+    "edit": "Editar perfil",
+    "fav_shows": "Series favoritas",
+    "genres": "Géneros favoritos",
+    "joined": "Se unió el %s",
+    "lifetime": "Total",
+    "month": "Últimos 30 días",
+    "private": "Este perfil es privado.",
+    "public": "Perfil público",
+    "public_hint": "Si está desactivado, solo tú ves tus estadísticas y favoritos.",
+    "recent": "Visto recientemente",
+    "remove": "Quitar",
+    "today": "Hoy",
+    "upload_avatar": "Subir foto",
+    "upload_banner": "Subir banner",
+    "upload_hint": "JPEG, PNG, GIF o WebP, hasta 6 MB.",
+    "view_public": "Ver mi perfil público",
+    "watch_time": "Tiempo de visionado",
+    "week": "Últimos 7 días"
+  },
+  "tg": {
+    "error": "Algo salió mal. Inténtalo de nuevo.",
+    "help": "Comandos: /start para ver el estado del vínculo, /stop para desactivar las notificaciones.",
+    "link_invalid": "Ese enlace no es válido o ha caducado. Crea uno nuevo en los ajustes de la app.",
+    "linked": "Vinculado. Recibirás las notificaciones aquí.",
+    "private_only": "Escríbeme en un chat privado, por favor.",
+    "status_linked": "Este chat está vinculado a tu cuenta.",
+    "status_unlinked": "Este chat aún no está vinculado. Abre los ajustes de la app, Notificaciones, y pulsa Conectar Telegram.",
+    "stopped": "Notificaciones desactivadas para este chat."
+  },
+  "privacy": {
+    "title": "Política de privacidad",
+    "updated": "Última actualización: %s",
+    "intro": "Esta política explica qué guarda {app} sobre ti y quién más interviene. {app} es software de código abierto y este sitio lo gestiona {operator}. Nada de esto es asesoramiento jurídico.",
+    "operator_default": "la persona que gestiona este sitio",
+    "contact_none": "Los datos de contacto están en el sitio o en su repositorio de código.",
+    "data": {
+      "title": "Qué se guarda",
+      "body": "Tu cuenta (nombre de usuario, un correo si lo añades, una contraseña con hash si la defines, nombre visible, biografía, imágenes de perfil, idioma y zona horaria); tu ID y alias de Telegram si usas Telegram; las claves públicas de tus passkeys; las series que sigues, lo que has visto y puntuado; tus comentarios, denuncias y bloqueos; tus ajustes de notificaciones, las notificaciones y las suscripciones push."
+    },
+    "signin": {
+      "title": "Datos de acceso y seguridad",
+      "body": "Las sesiones usan cookies y tokens de renovación con hash. El secreto de la verificación en dos pasos se guarda cifrado y los códigos de recuperación con hash. Las direcciones IP se usan en memoria para limitar solicitudes y nunca se escriben en los registros: las líneas de registro de seguridad solo guardan un código de país."
+    },
+    "cookies": {
+      "title": "Cookies y almacenamiento local",
+      "body": "Solo se usan cookies esenciales: tu sesión, la protección CSRF, tu idioma y desafíos de seguridad de corta duración. Tu elección de tema se guarda en el almacenamiento local del navegador. No hay analíticas, publicidad ni scripts de seguimiento."
+    },
+    "third": {
+      "title": "Otros servicios implicados",
+      "body": "Los datos de las series vienen de TMDB y TVmaze y, opcionalmente, de Trakt. El servidor hace estas consultas y no envía nada sobre ti. Las imágenes las descarga una vez el servidor y se sirven desde este sitio o desde un almacenamiento controlado por el operador, así que tu navegador no contacta con esos servicios. Si eliges Telegram, este recibe tu inicio de sesión y las notificaciones que te envía; su script solo se carga cuando pulsas el botón de Telegram. Las notificaciones push pasan por el servicio push del fabricante de tu navegador. El correo pasa por el proveedor de correo del operador."
+    },
+    "public": {
+      "title": "Qué pueden ver los demás",
+      "body": "Tu nombre de usuario, nombre visible, biografía e imágenes de perfil son públicos. Tus estadísticas, favoritas y series vistas recientemente son públicas salvo que hagas tu perfil privado. Los comentarios son visibles para todos y muestran tu nombre. Los usuarios que se bloquean no ven los comentarios del otro."
+    },
+    "use": {
+      "title": "Cómo se usa",
+      "body": "Solo para hacer funcionar el servicio: mostrar tu progreso, enviar las notificaciones que elijas, alojar los comentarios y prevenir abusos. Tus datos no se venden ni se usan para publicidad o elaboración de perfiles."
+    },
+    "retention": {
+      "title": "Cuánto tiempo se conserva",
+      "body": "Hasta que lo borres. Eliminar tu cuenta borra de forma permanente tu cuenta, historial, comentarios, notificaciones e imágenes subidas. Un comentario eliminado pierde su texto al instante. Las notificaciones se borran a los 90 días. Las copias de seguridad del operador pueden conservar copias durante un breve tiempo adicional."
+    },
+    "rights": {
+      "title": "Tus opciones",
+      "body": "En Ajustes puedes descargar tus datos, editar o quitar tu perfil, desactivar cualquier canal de notificación y eliminar tu cuenta. Según leyes como el RGPD, también puedes pedir al operador acceso, rectificación o supresión de tus datos."
+    },
+    "children": {
+      "title": "Menores",
+      "body": "Este servicio no está dirigido a menores de 13 años, o de la edad mínima de tu país, y no recopila sus datos de forma consciente."
+    },
+    "changes": {
+      "title": "Cambios",
+      "body": "Si esta política cambia, la nueva versión se publicará en esta página con su fecha. Si las traducciones difieren, prevalece la versión en inglés."
+    },
+    "contact": {
+      "title": "Contacto",
+      "body": "Operador: {operator}. {contact}"
+    }
+  }
+}

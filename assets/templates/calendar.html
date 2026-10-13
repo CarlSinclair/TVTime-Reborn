@@ -1,0 +1,20 @@
+{{define "content"}}
+<h1>{{.T "nav.calendar"}}</h1>
+{{if .Data.Days}}
+{{range .Data.Days}}
+<section class="cal-day {{if eq .Date $.Data.Today}}today{{end}}">
+  <h3>{{.Date}}{{if eq .Date $.Data.Today}} <small>{{$.T "calendar.today"}}</small>{{end}}</h3>
+  <ul class="cal-list">
+    {{range .Items}}
+    <li>
+      <img loading="lazy" src="{{img "w92" .PosterPath}}" alt="">
+      <a href="/episode/{{.Episode.ID}}"><strong>{{.ShowName}}</strong> {{code .Episode.SeasonNumber .Episode.EpisodeNumber}} {{.Episode.Name}}</a>
+    </li>
+    {{end}}
+  </ul>
+</section>
+{{end}}
+{{else}}
+<p class="muted">{{.T "calendar.empty"}}</p>
+{{end}}
+{{end}}
