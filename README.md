@@ -22,7 +22,7 @@ Licensed under the [GNU AGPL v3](LICENSE); see [NOTICE](NOTICE) for attribution,
 
 ## Run
 
-Build from source:
+Download the binary for your system from the [releases page](https://github.com/CarlSinclair/tvt/releases/latest), check it against `SHA256SUMS`, and run it. Nothing else is needed: templates, assets, translations, database migrations and time zone data are all inside the file. Every deployment publishes a new release. To build from source instead:
 
     cp tvt.env.example tvt.env      # set TVT_JWT_SECRET (32+ chars) and TVT_TMDB_KEY
     set -a; . ./tvt.env; set +a

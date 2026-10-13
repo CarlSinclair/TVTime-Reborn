@@ -46,7 +46,7 @@ jobs:
         env:
           CGO_ENABLED: "0"
         run: |
-          go build -trimpath -ldflags "-s -w -X tvt/logger.Version=${GITHUB_RUN_NUMBER}" -o tvt .
+          go build -trimpath -ldflags "-s -w -X tvt/logger.Version=v0.1.${GITHUB_RUN_NUMBER}" -o tvt .
           file tvt
 
       - name: deploy over ssh
@@ -68,3 +68,46 @@ jobs:
             -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=20 \
             "deploy@$DEPLOY_HOST" "tvt $SHA" < tvt.tar.gz
           shred -u ~/.ssh/id_ed25519 || rm -f ~/.ssh/id_ed25519
+
+  release:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: build for every platform
+        env:
+          CGO_ENABLED: "0"
+          VERSION: v0.1.${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          mkdir dist
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; do
+            os=${target%/*}; arch=${target#*/}
+            name=tvt-${VERSION}-${os}-${arch}
+            ext=""; [ "$os" = windows ] && ext=".exe"
+            mkdir "dist/$name"
+            GOOS=$os GOARCH=$arch go build -trimpath -ldflags "-s -w -X tvt/logger.Version=${VERSION}" -o "dist/$name/tvt$ext" .
+            cp LICENSE NOTICE README.md PRIVACY.md tvt.env.example "dist/$name/"
+            if [ "$os" = windows ]; then
+              (cd dist && zip -qr "$name.zip" "$name")
+            else
+              tar -C dist -czf "dist/$name.tar.gz" "$name"
+            fi
+            rm -rf "dist/$name"
+          done
+          (cd dist && sha256sum * > SHA256SUMS)
+          ls -l dist
+      - name: publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: v0.1.${{ github.run_number }}
+        run: gh release create "$VERSION" dist/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "$VERSION" --generate-notes --latest

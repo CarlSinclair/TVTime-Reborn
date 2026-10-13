@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# Deploy trigger for TVT: commits with a [deploy] tag and pushes main; GitHub
+# Actions then tests, builds and ships the binary to the server.
+#
+#   ./ship "what changed"     commit all changes and deploy them
+#   ./ship                    deploy commits already made locally
+#   ./ship --redeploy         rebuild and redeploy the current HEAD
+#   add -w / --watch          follow the run until it finishes
+set -euo pipefail
+
+cd "$(dirname "$0")"
+BRANCH=main
+
+msg=""
+redeploy=0
+watch=0
+for arg in "$@"; do
+  case "$arg" in
+    --redeploy|-r) redeploy=1 ;;
+    --watch|-w) watch=1 ;;
+    *) msg="${msg:+$msg }$arg" ;;
+  esac
+done
+
+tag_subject() {
+  local m="$1" first rest
+  first="${m%%$'\n'*}"
+  rest="${m#"$first"}"
+  case "$first" in
+    *"[deploy]"*) printf '%s' "$m" ;;
+    *) printf '%s [deploy]%s' "$first" "$rest" ;;
+  esac
+}
+
+current="$(git rev-parse --abbrev-ref HEAD)"
+if [ "$current" != "$BRANCH" ]; then
+  echo "ship: on '$current', deploys are from '$BRANCH'" >&2
+  exit 1
+fi
+
+git add -A
+if git ls-files --error-unmatch tvt.env >/dev/null 2>&1 || git diff --cached --name-only | grep -qE '(^|/)[^/]*\.env$'; then
+  echo "ship: an env file is staged; refusing to publish secrets" >&2
+  git reset -q
+  exit 1
+fi
+
+git fetch --quiet origin "$BRANCH"
+
+if ! git diff --cached --quiet; then
+  if [ -z "$msg" ]; then
+    echo "ship: there are uncommitted changes, describe them:  ./ship \"what changed\"" >&2
+    git reset -q
+    exit 1
+  fi
+  git commit -q -m "$(tag_subject "$msg")"$'\n\n'"Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
+elif [ -n "$(git log "origin/$BRANCH..HEAD" --oneline)" ]; then
+  if ! git log "origin/$BRANCH..HEAD" --format='%B' | grep -q '\[deploy\]'; then
+    git commit -q --allow-empty -m "$(tag_subject "${msg:-chore: deploy}")"
+  fi
+elif [ "$redeploy" = 1 ]; then
+  git commit -q --allow-empty -m "$(tag_subject "${msg:-chore: redeploy $(git rev-parse --short HEAD)}")"
+else
+  echo "ship: nothing to deploy; make a change or pass --redeploy" >&2
+  exit 1
+fi
+
+if ! git merge-base --is-ancestor "origin/$BRANCH" HEAD; then
+  echo "-> behind origin/$BRANCH, rebasing"
+  git rebase "origin/$BRANCH" || {
+    git rebase --abort 2>/dev/null || true
+    echo "ship: could not rebase onto origin/$BRANCH; resolve by hand and run again" >&2
+    exit 1
+  }
+fi
+
+echo "-> pushing $BRANCH"
+git push origin "$BRANCH"
+
+if command -v gh >/dev/null 2>&1; then
+  sleep 4
+  if [ "$watch" = 1 ]; then
+    id="$(gh run list --branch "$BRANCH" --workflow "build & deploy" --limit 1 --json databaseId --jq '.[0].databaseId')"
+    [ -n "$id" ] && gh run watch "$id" --exit-status
+  else
+    gh run list --branch "$BRANCH" --limit 2
+  fi
+fi
