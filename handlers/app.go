@@ -181,6 +181,7 @@ func (a *App) loadTemplates() error {
 	funcs := template.FuncMap{
 		"img":      imgURL,
 		"loveHref": loveHref,
+		"starsOf":  starsOf,
 		"code":     episodeCode,
 		"add":      func(x, y int) int { return x + y },
 		"seq":      seq,

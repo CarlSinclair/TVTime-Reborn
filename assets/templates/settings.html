@@ -11,11 +11,6 @@
 
 {{if eq .Data.Tab "account"}}
 <section class="panel">
-  <h2>{{.User.Name}}</h2>
-  <p class="muted">{{if .User.Email}}{{.User.Email}}{{else}}@{{.User.Username}}{{end}}</p>
-</section>
-
-<section class="panel">
   <h2>{{.T "settings.preferences"}}</h2>
   <div class="stack">
     <label>{{.T "nav.language"}}
@@ -24,84 +19,41 @@
       </select>
     </label>
     <label>{{.T "settings.timezone"}}
-      <select id="settings-tz" data-current="{{.User.Timezone}}">
-        {{range .Data.Timezones}}<option value="{{.}}" {{if eq . $.User.Timezone}}selected{{end}}>{{.}}</option>{{end}}
-      </select>
+      <span class="inline-field">
+        <select id="settings-tz" data-current="{{.User.Timezone}}">
+          {{range .Data.Timezones}}<option value="{{.}}" {{if eq . $.User.Timezone}}selected{{end}}>{{.}}</option>{{end}}
+        </select>
+        <button class="btn ghost small" type="button" id="tz-detect">{{.T "settings.timezone_detect"}}</button>
+      </span>
     </label>
-    <p><button class="btn ghost small" type="button" id="tz-detect">{{.T "settings.timezone_detect"}}</button></p>
   </div>
 </section>
 
 <section class="panel">
-  <h2>{{.T "settings.password"}}</h2>
-  <form class="stack" data-api="/api/account/password" data-success="{{.T "settings.password_changed"}}">
-    {{if .User.HasPassword}}<label>{{.T "settings.current_password"}}<input type="password" name="current" autocomplete="current-password" required></label>{{end}}
-    <label>{{.T "settings.new_password"}}<input type="password" name="new" autocomplete="new-password" minlength="8" maxlength="72" data-pw-rules required></label>
-    <p class="form-error" role="alert" hidden></p>
-    <button class="btn" type="submit">{{.T "settings.save"}}</button>
-  </form>
-</section>
-
-{{if .User.Email}}
-<section class="panel">
-  <h2>{{.T "settings.email_title"}}</h2>
-  <p>{{.User.Email}}</p>
+  <h2>{{.T "settings.security"}}</h2>
+  <div class="row">
+    <div class="row-main"><strong>{{.T "settings.email_title"}}</strong><span class="muted">{{if .User.Email}}{{.User.Email}}{{else}}&nbsp;{{end}}</span></div>
+    <button class="btn ghost small" type="button" data-modal-open="{{if .User.Email}}m-email{{else}}m-email-add{{end}}">{{if .User.Email}}{{.T "settings.change"}}{{else}}{{.T "settings.add_email"}}{{end}}</button>
+  </div>
   {{if .User.PendingEmail}}<p class="notice">{{.T "settings.email_pending" .User.PendingEmail}}</p>{{end}}
-  <form class="stack" data-api="/api/account/email/change" data-success="{{.T "settings.email_change_sent"}}" data-reload="1">
-    <label>{{.T "settings.email_new"}}<input type="email" name="email" autocomplete="email" required></label>
-    {{if .User.HasPassword}}<label>{{.T "auth.password"}}<input type="password" name="password" autocomplete="current-password" required></label>{{end}}
-    {{if .User.TOTPEnabled}}<label>{{.T "mfa.code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>{{end}}
-    <p class="form-error" role="alert" hidden></p>
-    <button class="btn" type="submit">{{.T "settings.email_change_btn"}}</button>
-  </form>
-</section>
-{{end}}
-
-{{if not .User.Email}}
-<section class="panel">
-  <h2>{{.T "settings.add_email"}}</h2>
-  <p class="muted">{{.T "settings.add_email_hint"}}</p>
-  <form class="stack" data-api="/api/account/email" data-success="{{.T "settings.email_added"}}">
-    <label>{{.T "auth.email"}}<input type="email" name="email" autocomplete="email" required></label>
-    <p class="form-error" role="alert" hidden></p>
-    <button class="btn" type="submit">{{.T "settings.add_email"}}</button>
-  </form>
-</section>
-{{end}}
-
-<section class="panel" id="twofa">
-  <h2>{{.T "settings.twofa"}}</h2>
+  <div class="row">
+    <div class="row-main"><strong>{{.T "auth.password"}}</strong><span class="muted">{{if .User.HasPassword}}&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;{{else}}&nbsp;{{end}}</span></div>
+    <button class="btn ghost small" type="button" data-modal-open="m-password">{{if .User.HasPassword}}{{.T "settings.change"}}{{else}}{{.T "settings.set"}}{{end}}</button>
+  </div>
+  <div class="row" id="twofa">
+    <div class="row-main"><strong>{{.T "settings.twofa"}}</strong><span class="muted">{{if .User.TOTPEnabled}}{{.T "settings.on"}}{{else}}{{.T "settings.off"}}{{end}}</span></div>
+    {{if .User.TOTPEnabled}}
+    <button class="btn ghost small" type="button" data-modal-open="m-twofa-off">{{.T "settings.disable"}}</button>
+    {{else}}
+    <button class="btn small" type="button" id="twofa-start">{{.T "settings.twofa_enable"}}</button>
+    {{end}}
+  </div>
   {{if .User.TOTPEnabled}}
-  <p class="notice">{{.T "settings.twofa_on"}} {{.T "settings.recovery_left" .Data.RecoveryLeft}}</p>
-  <form class="stack" data-api="/api/account/2fa/disable" data-success="{{.T "settings.twofa_off"}}" data-reload="1">
-    {{if .User.HasPassword}}<label>{{.T "auth.password"}}<input type="password" name="password" autocomplete="current-password" required></label>{{end}}
-    <label>{{.T "mfa.code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>
-    <p class="form-error" role="alert" hidden></p>
-    <button class="btn danger" type="submit">{{.T "settings.twofa_disable"}}</button>
-  </form>
-  <form class="stack" data-api="/api/account/2fa/recovery" data-recovery="1">
-    <label>{{.T "settings.recovery_regen_label"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>
-    <p class="form-error" role="alert" hidden></p>
-    <button class="btn ghost" type="submit">{{.T "settings.recovery_regen"}}</button>
-  </form>
-  {{else}}
-  <p class="muted">{{.T "settings.twofa_hint"}}</p>
-  <button class="btn" type="button" id="twofa-start">{{.T "settings.twofa_enable"}}</button>
-  <div id="twofa-setup" hidden>
-    <img id="twofa-qr" class="qr" alt="">
-    <p class="muted">{{.T "settings.twofa_secret"}} <code id="twofa-secret"></code></p>
-    <form class="stack" id="twofa-confirm">
-      <label>{{.T "mfa.code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>
-      <p class="form-error" role="alert" hidden></p>
-      <button class="btn" type="submit">{{.T "settings.twofa_confirm"}}</button>
-    </form>
+  <div class="row">
+    <div class="row-main"><strong>{{.T "settings.recovery_title"}}</strong><span class="muted">{{.T "settings.recovery_n" .Data.RecoveryLeft}}</span></div>
+    <button class="btn ghost small" type="button" data-modal-open="m-recovery-regen">{{.T "settings.change"}}</button>
   </div>
   {{end}}
-  <div id="recovery-box" hidden>
-    <p class="notice">{{.T "settings.recovery_save"}}</p>
-    <pre id="recovery-codes" class="codes"></pre>
-    <p><button class="btn ghost small" type="button" id="recovery-copy">{{.T "settings.copy"}}</button> <button class="btn small" type="button" id="recovery-done">{{.T "settings.done"}}</button></p>
-  </div>
 </section>
 
 {{if .PasskeysEnabled}}
@@ -118,32 +70,12 @@
     {{end}}
   </ul>
   {{else}}<p class="muted">{{.T "settings.passkey_none"}}</p>{{end}}
-  <div class="actions">
+  <div class="inline-field">
     <input type="text" id="passkey-name" maxlength="40" placeholder="{{.T "settings.passkey_name"}}" aria-label="{{.T "settings.passkey_name"}}">
-    <button class="btn" type="button" id="passkey-add">{{.T "settings.passkey_add"}}</button>
+    <button class="icon-btn solid" type="button" id="passkey-add" aria-label="{{.T "settings.passkey_add"}}" title="{{.T "settings.passkey_add"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-plus"></use></svg></button>
   </div>
 </section>
 {{end}}
-
-<section class="panel" id="telegram-login">
-  <h2>{{.T "settings.telegram_login"}}</h2>
-  {{if .TelegramBot}}
-    {{if .User.TelegramID}}
-    <p>{{.T "settings.telegram_linked_as"}} {{if .User.TelegramUsername}}@{{.User.TelegramUsername}}{{else}}ID {{.User.TelegramID}}{{end}}</p>
-    <p><button class="btn ghost" type="button" data-telegram-unlink>{{.T "settings.telegram_unlink"}}</button></p>
-    {{else}}
-    <p class="muted">{{.T "settings.telegram_login_hint"}}</p>
-    {{template "telegram_widget" (dict "BotID" .TelegramBotID "Label" (.T "settings.telegram_link_btn") "Action" "link")}}
-    {{end}}
-  {{else}}
-  <p class="muted">{{.T "settings.telegram_unavailable"}}</p>
-  {{end}}
-</section>
-
-<section class="panel">
-  <h2>{{.T "settings.sessions"}}</h2>
-  <p><button class="btn ghost" type="button" data-logout-everywhere>{{.T "settings.logout_everywhere"}}</button></p>
-</section>
 
 <section class="panel">
   <h2>{{.T "settings.blocked"}}</h2>
@@ -154,24 +86,108 @@
   {{else}}<p class="muted">{{.T "settings.blocked_none"}}</p>{{end}}
 </section>
 
-<section class="panel">
-  <h2>{{.T "settings.data"}}</h2>
-  <p><a class="btn ghost" href="/api/account/export" download>{{.T "settings.export"}}</a></p>
+<section class="panel danger">
+  <h2>{{.T "settings.danger"}}</h2>
+  <div class="row">
+    <div class="row-main"><strong>{{.T "settings.data"}}</strong></div>
+    <a class="btn ghost small" href="/api/account/export" download>{{.T "settings.export"}}</a>
+  </div>
+  <div class="row">
+    <div class="row-main"><strong>{{.T "settings.sessions"}}</strong></div>
+    <button class="btn ghost small" type="button" data-logout-everywhere>{{.T "settings.logout_everywhere"}}</button>
+  </div>
+  <div class="row">
+    <div class="row-main"><strong>{{.T "settings.delete"}}</strong><span class="muted">{{.T "settings.delete_warning"}}</span></div>
+    <button class="btn danger small" type="button" data-modal-open="m-delete">{{.T "settings.delete"}}</button>
+  </div>
 </section>
 
-<section class="panel danger">
-  <h2>{{.T "settings.delete"}}</h2>
-  <p class="muted">{{.T "settings.delete_warning"}}</p>
+<dialog class="modal" id="m-email" aria-labelledby="m-email-t">
+  <form class="stack" data-api="/api/account/email/change" data-success="{{.T "settings.email_change_sent"}}" data-reload="1">
+    <h2 id="m-email-t">{{.T "settings.email_change_btn"}}</h2>
+    <label>{{.T "settings.email_new"}}<input type="email" name="email" autocomplete="email" required></label>
+    {{if .User.HasPassword}}<label>{{.T "auth.password"}}<input type="password" name="password" autocomplete="current-password" required></label>{{end}}
+    {{if .User.TOTPEnabled}}<label>{{.T "mfa.code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>{{end}}
+    <p class="form-error" role="alert" hidden></p>
+    <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn" type="submit">{{.T "settings.email_change_btn"}}</button></div>
+  </form>
+</dialog>
+
+<dialog class="modal" id="m-email-add" aria-labelledby="m-email-add-t">
+  <form class="stack" data-api="/api/account/email" data-success="{{.T "settings.email_added"}}" data-reload="1">
+    <h2 id="m-email-add-t">{{.T "settings.add_email"}}</h2>
+    <p class="muted">{{.T "settings.add_email_hint"}}</p>
+    <label>{{.T "auth.email"}}<input type="email" name="email" autocomplete="email" required></label>
+    <p class="form-error" role="alert" hidden></p>
+    <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn" type="submit">{{.T "settings.add_email"}}</button></div>
+  </form>
+</dialog>
+
+<dialog class="modal" id="m-password" aria-labelledby="m-password-t">
+  <form class="stack" data-api="/api/account/password" data-success="{{.T "settings.password_changed"}}">
+    <h2 id="m-password-t">{{.T "settings.password"}}</h2>
+    {{if .User.HasPassword}}<label>{{.T "settings.current_password"}}<input type="password" name="current" autocomplete="current-password" required></label>{{end}}
+    <label>{{.T "settings.new_password"}}<input type="password" name="new" autocomplete="new-password" minlength="8" maxlength="72" data-pw-rules required></label>
+    <p class="form-error" role="alert" hidden></p>
+    <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn" type="submit">{{.T "settings.save"}}</button></div>
+  </form>
+</dialog>
+
+<dialog class="modal" id="m-twofa" aria-labelledby="m-twofa-t">
+  <div class="stack">
+    <h2 id="m-twofa-t">{{.T "settings.twofa"}}</h2>
+    <p class="muted">{{.T "settings.twofa_hint"}}</p>
+    <img id="twofa-qr" class="qr" alt="">
+    <p class="muted">{{.T "settings.twofa_secret"}} <code id="twofa-secret"></code></p>
+    <form class="stack" id="twofa-confirm">
+      <label>{{.T "mfa.code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>
+      <p class="form-error" role="alert" hidden></p>
+      <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn" type="submit">{{.T "settings.twofa_confirm"}}</button></div>
+    </form>
+  </div>
+</dialog>
+
+<dialog class="modal" id="m-twofa-off" aria-labelledby="m-twofa-off-t">
+  <form class="stack" data-api="/api/account/2fa/disable" data-success="{{.T "settings.twofa_off"}}" data-reload="1">
+    <h2 id="m-twofa-off-t">{{.T "settings.twofa_disable"}}</h2>
+    {{if .User.HasPassword}}<label>{{.T "auth.password"}}<input type="password" name="password" autocomplete="current-password" required></label>{{end}}
+    <label>{{.T "mfa.code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>
+    <p class="form-error" role="alert" hidden></p>
+    <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn danger" type="submit">{{.T "settings.disable"}}</button></div>
+  </form>
+</dialog>
+
+<dialog class="modal" id="m-recovery-regen" aria-labelledby="m-recovery-regen-t">
+  <form class="stack" data-api="/api/account/2fa/recovery" data-recovery="1">
+    <h2 id="m-recovery-regen-t">{{.T "settings.recovery_regen"}}</h2>
+    <label>{{.T "settings.recovery_regen_label"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>
+    <p class="form-error" role="alert" hidden></p>
+    <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn" type="submit">{{.T "settings.recovery_regen"}}</button></div>
+  </form>
+</dialog>
+
+<dialog class="modal" id="m-recovery" aria-labelledby="m-recovery-t">
+  <div class="stack" id="recovery-box">
+    <h2 id="m-recovery-t">{{.T "settings.recovery_title"}}</h2>
+    <p class="notice">{{.T "settings.recovery_save"}}</p>
+    <pre id="recovery-codes" class="codes"></pre>
+    <div class="modal-actions"><button class="btn ghost" type="button" id="recovery-copy">{{.T "settings.copy"}}</button><button class="btn" type="button" id="recovery-done">{{.T "settings.done"}}</button></div>
+  </div>
+</dialog>
+
+<dialog class="modal" id="m-delete" aria-labelledby="m-delete-t">
   <form class="stack" data-api="/api/account/delete" data-confirm="{{.T "settings.delete_confirm"}}">
+    <h2 id="m-delete-t">{{.T "settings.delete"}}</h2>
+    <p class="muted">{{.T "settings.delete_warning"}}</p>
     {{if .User.HasPassword}}
     <label>{{.T "auth.password"}}<input type="password" name="password" autocomplete="current-password" required></label>
     {{else}}
     <label>{{.T "settings.delete_type_username" .User.Username}}<input type="text" name="confirm" autocomplete="off" required></label>
     {{end}}
     <p class="form-error" role="alert" hidden></p>
-    <button class="btn danger" type="submit">{{.T "settings.delete"}}</button>
+    <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn danger" type="submit">{{.T "settings.delete"}}</button></div>
   </form>
-</section>
+</dialog>
 
 {{else if eq .Data.Tab "profile"}}
 <section class="panel">
@@ -180,23 +196,25 @@
   </div>
   <div class="upload-row">
     <label class="btn ghost small">{{.T "profile.upload_banner"}}<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-upload="banners" hidden></label>
-    <button class="btn ghost small" type="button" data-remove-media="banners">{{.T "profile.remove"}}</button>
+    {{if .User.BannerPath}}<button class="btn ghost small" type="button" data-remove-media="banners">{{.T "profile.remove"}}</button>{{end}}
   </div>
   <div class="avatar-row">
     {{if .User.AvatarPath}}<img id="avatar-preview" class="avatar lg" src="{{avatar .User.AvatarPath}}" alt="">{{else}}<span id="avatar-fallback" class="avatar lg fallback">{{initial .User.Name}}</span><img id="avatar-preview" class="avatar lg" src="" alt="" hidden>{{end}}
     <div class="upload-row">
       <label class="btn ghost small">{{.T "profile.upload_avatar"}}<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-upload="avatars" hidden></label>
-      <button class="btn ghost small" type="button" data-remove-media="avatars">{{.T "profile.remove"}}</button>
+      {{if .User.AvatarPath}}<button class="btn ghost small" type="button" data-remove-media="avatars">{{.T "profile.remove"}}</button>{{end}}
     </div>
   </div>
   <p class="muted">{{.T "profile.upload_hint"}}</p>
 </section>
 <section class="panel">
   <form class="stack" data-api="/api/profile" data-success="{{.T "settings.saved"}}">
-    <label>{{.T "profile.display_name"}}<input type="text" name="display_name" maxlength="40" value="{{.User.DisplayName}}" placeholder="{{.User.Username}}"></label>
+    <label>{{.T "profile.display_name"}}<input type="text" name="display_name" maxlength="40" value="{{.User.Name}}"></label>
     <label>{{.T "profile.bio"}}<textarea name="bio" rows="4" maxlength="500">{{.User.Bio}}</textarea></label>
-    <label class="check"><input type="checkbox" name="public" {{if .User.ProfilePublic}}checked{{end}}> {{.T "profile.public"}}</label>
-    <p class="muted">{{.T "profile.public_hint"}}</p>
+    <div class="notify-row">
+      <div class="tswitch"><input type="checkbox" class="tswitch-input" id="profile-public" name="public" {{if .User.ProfilePublic}}checked{{end}}><label for="profile-public" class="tswitch-label"><span class="ball"></span></label></div>
+      <label class="notify-text" for="profile-public">{{.T "profile.public"}}</label>
+    </div>
     <p class="form-error" role="alert" hidden></p>
     <button class="btn" type="submit">{{.T "settings.save"}}</button>
   </form>
@@ -211,7 +229,7 @@
   <p>{{.T "import.how_body"}}</p>
   <p class="muted">{{.T "import.what"}}</p>
   <p class="muted">{{.T "import.keeps"}}</p>
-  <label>{{.T "import.file_label"}}<input type="file" accept=".zip,application/zip" id="import-file" data-import="tvtime"></label>
+  <label id="import-picker">{{.T "import.file_label"}}<input type="file" accept=".zip,application/zip,application/x-zip-compressed" id="import-file" data-import="tvtime"></label>
 </section>
 
 <section class="panel" id="import-status" hidden>
@@ -229,34 +247,29 @@
   <div class="notify-row">
     <div class="tswitch"><input type="checkbox" class="tswitch-input" id="ch-in_app" data-master="in_app" aria-label="{{.T "notif.ch.in_app"}}" {{if .User.NotifyInApp}}checked{{end}}><label for="ch-in_app" class="tswitch-label"><span class="ball"></span></label></div>
     <div class="notify-text"><strong>{{.T "notif.ch.in_app"}}</strong></div>
-    <div class="notify-actions"><button class="btn ghost small" type="button" data-test-channel="in_app">{{.T "notif.test"}}</button></div>
+    <div class="notify-actions"><button class="btn ghost small" type="button" data-test-channel="in_app">{{.T "notif.test_btn"}}</button></div>
   </div>
-  <div class="notify-row {{if eq .Data.PushDevices 0}}off{{end}}">
-    <div class="tswitch"><input type="checkbox" class="tswitch-input" id="ch-push" data-master="push" aria-label="{{.T "notif.ch.push"}}" {{if and .User.NotifyPush (gt .Data.PushDevices 0)}}checked{{end}} {{if eq .Data.PushDevices 0}}disabled title="{{.T "notif.push_off_hint"}}"{{end}}><label for="ch-push" class="tswitch-label"><span class="ball"></span></label></div>
-    <div class="notify-text"><strong>{{.T "notif.ch.push"}}</strong><span class="notify-sub" id="push-count">{{if eq .Data.PushDevices 0}}{{.T "notif.push_off_hint"}}{{else}}{{.T "notif.push_devices" .Data.PushDevices}}{{end}}</span></div>
-    <div class="notify-actions">
-      <button class="btn small" type="button" id="push-enable">{{.T "notif.push_enable"}}</button>
-      <button class="btn ghost small" type="button" id="push-disable" hidden>{{.T "notif.push_disable"}}</button>
-      <button class="btn ghost small" type="button" data-test-channel="push" {{if eq .Data.PushDevices 0}}disabled{{end}}>{{.T "notif.test"}}</button>
-    </div>
+  <div class="notify-row">
+    <div class="tswitch"><input type="checkbox" class="tswitch-input" id="ch-push" data-master="push" aria-label="{{.T "notif.ch.push"}}" {{if and .User.NotifyPush (gt .Data.PushDevices 0)}}checked{{end}}><label for="ch-push" class="tswitch-label"><span class="ball"></span></label></div>
+    <div class="notify-text"><strong>{{.T "notif.ch.push"}}</strong><span class="notify-sub" id="push-count">{{.T "notif.push_devices" .Data.PushDevices}}</span></div>
+    <div class="notify-actions"><button class="btn ghost small" type="button" data-test-channel="push" {{if eq .Data.PushDevices 0}}disabled{{end}}>{{.T "notif.test_btn"}}</button></div>
   </div>
   <div class="notify-row {{if not .Data.EmailReady}}off{{end}}">
-    <div class="tswitch"><input type="checkbox" class="tswitch-input" id="ch-email" data-master="email" aria-label="{{.T "notif.ch.email"}}" {{if and .User.NotifyEmail .Data.EmailReady}}checked{{end}} {{if not .Data.EmailReady}}disabled title="{{.T "notif.email_needs_verified"}}"{{end}}><label for="ch-email" class="tswitch-label"><span class="ball"></span></label></div>
-    <div class="notify-text"><strong>{{.T "notif.ch.email"}}</strong><span class="notify-sub">{{if .Data.EmailReady}}{{.User.Email}}{{else}}{{.T "notif.email_needs_verified"}}{{end}}</span></div>
-    <div class="notify-actions"><button class="btn ghost small" type="button" data-test-channel="email" {{if not .Data.EmailReady}}disabled{{end}}>{{.T "notif.test"}}</button></div>
+    <div class="tswitch"><input type="checkbox" class="tswitch-input" id="ch-email" data-master="email" aria-label="{{.T "notif.ch.email"}}" {{if and .User.NotifyEmail .Data.EmailReady}}checked{{end}} {{if not .Data.EmailReady}}disabled{{end}}><label for="ch-email" class="tswitch-label"><span class="ball"></span></label></div>
+    <div class="notify-text"><strong>{{.T "notif.ch.email"}}</strong>{{if not .Data.EmailReady}}<span class="notify-sub">{{.T "notif.verify_first"}}</span>{{end}}</div>
+    <div class="notify-actions"><button class="btn ghost small" type="button" data-test-channel="email" {{if not .Data.EmailReady}}disabled{{end}}>{{.T "notif.test_btn"}}</button></div>
   </div>
   {{if .Data.TelegramReady}}
   <div class="notify-row {{if not .User.TelegramChatID}}off{{end}}" id="telegram-box">
-    <div class="tswitch"><input type="checkbox" class="tswitch-input" id="ch-telegram" data-master="telegram" aria-label="{{.T "notif.ch.telegram"}}" {{if and .User.NotifyTelegram .User.TelegramChatID}}checked{{end}} {{if not .User.TelegramChatID}}disabled title="{{.T "notif.telegram_off_hint"}}"{{end}}><label for="ch-telegram" class="tswitch-label"><span class="ball"></span></label></div>
-    <div class="notify-text"><strong>{{.T "notif.ch.telegram"}}</strong><span class="notify-sub">{{if .User.TelegramChatID}}{{.T "notif.telegram_connected"}}{{else}}{{.T "notif.telegram_off_hint"}}{{end}}</span><span class="notify-sub" id="telegram-waiting" hidden>{{.T "notif.telegram_waiting"}}</span></div>
+    <div class="tswitch"><input type="checkbox" class="tswitch-input" id="ch-telegram" data-master="telegram" aria-label="{{.T "notif.ch.telegram"}}" {{if and .User.NotifyTelegram .User.TelegramChatID}}checked{{end}} {{if not .User.TelegramChatID}}disabled{{end}}><label for="ch-telegram" class="tswitch-label"><span class="ball"></span></label></div>
+    <div class="notify-text"><strong>{{.T "notif.ch.telegram"}}</strong><span class="notify-sub" id="telegram-waiting" hidden>{{.T "notif.telegram_waiting"}}</span></div>
     <div class="notify-actions">
       {{if .User.TelegramChatID}}
       <button class="btn ghost small" type="button" data-telegram-unlink-chat>{{.T "notif.telegram_disconnect"}}</button>
       {{else}}
       <button class="btn small" type="button" id="telegram-connect">{{.T "notif.telegram_connect"}}</button>
-      {{if .User.TelegramID}}<button class="btn ghost small" type="button" id="telegram-dm">{{.T "notif.telegram_oneclick"}}</button>{{end}}
       {{end}}
-      <button class="btn ghost small" type="button" data-test-channel="telegram" {{if not .User.TelegramChatID}}disabled{{end}}>{{.T "notif.test"}}</button>
+      <button class="btn ghost small" type="button" data-test-channel="telegram" {{if not .User.TelegramChatID}}disabled{{end}}>{{.T "notif.test_btn"}}</button>
     </div>
   </div>
   {{end}}
@@ -276,9 +289,7 @@
       </select>
     </label>
     <div class="custom-offset" id="timing-custom" hidden>
-      <label>{{.T "notif.timing_custom_label"}}
-        <input type="number" id="timing-value" step="1" value="0">
-      </label>
+      <input type="number" id="timing-value" step="1" value="0" aria-label="{{.T "notif.timing_custom_label"}}">
       <select id="timing-unit" aria-label="{{.T "notif.timing_unit"}}">
         <option value="1">{{.T "notif.timing_unit_min"}}</option>
         <option value="60">{{.T "notif.timing_unit_hour"}}</option>

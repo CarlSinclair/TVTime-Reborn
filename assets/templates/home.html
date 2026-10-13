@@ -1,38 +1,10 @@
 {{define "content"}}
 {{if .Data.NoMetadata}}<div class="notice">{{.T "home.no_metadata"}}</div>{{end}}
-{{if .User}}
-  <section class="stats">
-    <div><strong>{{.Data.Stats.Shows}}</strong><span>{{.T "stats.shows"}}</span></div>
-    <div><strong>{{.Data.Stats.Episodes}}</strong><span>{{.T "stats.episodes"}}</span></div>
-    <div><strong>{{hours .Data.Stats.Minutes}}</strong><span>{{.T "stats.time"}}</span></div>
-  </section>
-  <section>
-    <h2>{{.T "home.up_next"}}</h2>
-    {{if .Data.UpNext}}
-    <div class="upnext">
-      {{range .Data.UpNext}}
-      <article class="upnext-item">
-        <a href="/show/{{.Show.TMDBID}}"><img loading="lazy" src="{{img "w300" .Episode.StillPath}}" alt=""></a>
-        <div class="upnext-body">
-          <a class="upnext-show" href="/show/{{.Show.TMDBID}}">{{.Show.Name}}</a>
-          <a href="/episode/{{.Episode.ID}}">{{code .Episode.SeasonNumber .Episode.EpisodeNumber}} {{.Episode.Name}}</a>
-          <small>{{if gt .Remaining 1}}{{$.T "home.remaining" .Remaining}}{{else}}{{$.T "home.last_aired"}}{{end}}</small>
-          <button class="btn small" type="button" data-watch="{{.Episode.ID}}" data-state="0">{{$.T "ep.mark_watched"}}</button>
-        </div>
-      </article>
-      {{end}}
-    </div>
-    {{else}}
-    <p class="muted">{{.T "home.up_next_empty"}}</p>
-    {{end}}
-  </section>
-{{end}}
-{{if .Data.Trending}}
 <section>
-  <h2>{{.T "home.trending"}}</h2>
-  <div class="grid">
-    {{range .Data.Trending}}{{template "card" (dict "Href" (printf "/show/%d" .ID) "Poster" .PosterPath "Title" .Name "Sub" (year .FirstAirDate))}}{{end}}
+  <h2>{{.T "home.up_next"}}</h2>
+  <div class="upnext" id="upnext">
+    {{range .Data.UpNext}}{{template "upnext_card" (dict "It" . "V" $)}}{{end}}
   </div>
+  <p class="muted" id="upnext-empty" {{if .Data.UpNext}}hidden{{end}}>{{.T "home.up_next_empty"}}</p>
 </section>
-{{end}}
 {{end}}

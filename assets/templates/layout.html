@@ -75,9 +75,9 @@
 </main>
 {{if .User}}
 <nav class="bottomnav" aria-label="{{.T "nav.menu"}}">
-  <a href="/" {{if eq .Path "/"}}aria-current="page"{{end}}>{{.T "nav.home"}}</a>
-  <a href="/shows" {{if eq .Path "/shows"}}aria-current="page"{{end}}>{{.T "nav.shows"}}</a>
-  <a href="/calendar" {{if eq .Path "/calendar"}}aria-current="page"{{end}}>{{.T "nav.calendar"}}</a>
+  <a href="/" aria-label="{{.T "nav.home"}}" {{if eq .Path "/"}}aria-current="page"{{end}}><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-home"></use></svg></a>
+  <a href="/shows" aria-label="{{.T "nav.shows"}}" {{if eq .Path "/shows"}}aria-current="page"{{end}}><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-tv"></use></svg></a>
+  <a href="/calendar" aria-label="{{.T "nav.calendar"}}" {{if eq .Path "/calendar"}}aria-current="page"{{end}}><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-calendar"></use></svg></a>
 </nav>
 {{end}}
 <footer class="footer">

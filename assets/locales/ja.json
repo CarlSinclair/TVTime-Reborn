@@ -84,7 +84,11 @@
     "sync_error": "この作品のデータ更新に失敗しました。一部の情報が古い可能性があります。",
     "seasons": "シーズン",
     "specials": "スペシャル",
-    "season": "シーズン%d"
+    "season": "シーズン%d",
+    "ratings": "評価",
+    "ratings_community": "%sのメンバー",
+    "ratings_none": "まだ評価がありません。",
+    "ratings_tmdb": "TMDB"
   },
   "status": {
     "watching": "視聴中",
@@ -103,7 +107,8 @@
     "mark_watched": "視聴済みにする",
     "watched": "視聴済み",
     "mark_upto": "ここまですべて視聴済みにする",
-    "your_rating": "あなたの評価"
+    "your_rating": "あなたの評価",
+    "star": "5つ星のうち%d"
   },
   "comments": {
     "title": "コメント",
@@ -119,7 +124,9 @@
   },
   "calendar": {
     "today": "今日",
-    "empty": "この期間にフォロー中の作品の放送はありません。"
+    "empty": "この期間にフォロー中の作品の放送はありません。",
+    "past": "過去の配信",
+    "back": "今後の配信"
   },
   "settings": {
     "password": "パスワードを変更",
@@ -163,7 +170,7 @@
     "twofa": "2段階認証",
     "twofa_confirm": "確認して有効にする",
     "twofa_disable": "2段階認証をオフにする",
-    "twofa_enable": "2段階認証を設定する",
+    "twofa_enable": "2FAを有効にする",
     "twofa_hint": "認証アプリのコードでアカウントを保護します。",
     "twofa_off": "2段階認証をオフにしました。",
     "twofa_on": "2段階認証はオンです。",
@@ -184,7 +191,17 @@
     "email_pending": "%s の確認待ちです。そちらに送ったリンクを開いてください。",
     "email_new": "新しいメールアドレス",
     "email_change_btn": "メールを変更",
-    "email_change_sent": "新しい受信箱を確認してください。確認リンクを送りました。"
+    "email_change_sent": "新しい受信箱を確認してください。確認リンクを送りました。",
+    "security": "セキュリティ",
+    "change": "変更",
+    "set": "設定",
+    "disable": "無効にする",
+    "on": "オン",
+    "off": "オフ",
+    "danger": "危険な操作",
+    "cancel": "キャンセル",
+    "recovery_title": "リカバリーコード",
+    "recovery_n": "残り%d個"
   },
   "footer": {
     "tmdb": "作品データと画像の提供元：",
@@ -347,7 +364,10 @@
     "pw_lower": "小文字",
     "pw_digit": "数字",
     "pw_special": "記号",
-    "pw_strong": "強力なパスワード"
+    "pw_strong": "強力なパスワード",
+    "marked_watched": "視聴済みにしました",
+    "marked_tip": "視聴済みにしました。ヒント：エピソードを評価しても同じ操作になります。",
+    "rated": "評価して視聴済みにしました"
   },
   "genre": {
     "action_adventure": "アクション＆アドベンチャー",
@@ -411,12 +431,12 @@
       "body": "パスワードが変更されました。心当たりがない場合は、すぐにアカウントを保護してください。",
       "title": "パスワードを変更しました"
     },
-    "push_devices": "プッシュ通知が有効なデバイス：%d",
+    "push_devices": "デバイス：%d",
     "push_disable": "このデバイスのプッシュ通知を無効にする",
     "push_enable": "このデバイスのプッシュ通知を有効にする",
     "push_hint": "アプリを閉じていても、このデバイスに通知が届きます。",
     "push_title": "プッシュ通知",
-    "telegram_connect": "Telegramを接続",
+    "telegram_connect": "連携",
     "telegram_connected": "Telegram通知が接続されています。",
     "telegram_disconnect": "接続を解除",
     "telegram_dropped": {
@@ -431,7 +451,10 @@
     "telegram_oneclick": "Telegramログインを使う",
     "telegram_title": "Telegram通知",
     "telegram_waiting": "Telegramで「開始」を押すのを待っています...",
-    "test": "テスト",
+    "test": {
+      "body": "これが読めていれば、このチャンネルは正常です。",
+      "title": "テスト通知"
+    },
     "test_hint": "各チャンネルにテストを送って動作を確認できます。",
     "test_title": "チャンネルをテスト",
     "twofa_disabled": {
@@ -473,7 +496,9 @@
     "email_changed": {
       "title": "メールアドレスが変更されました",
       "body": "メールアドレスは {email} になりました。心当たりがない場合は、すぐにアカウントを保護してください。"
-    }
+    },
+    "test_btn": "テスト",
+    "verify_first": "先にメールを確認"
   },
   "profile": {
     "bio": "自己紹介",
@@ -485,7 +510,7 @@
     "lifetime": "累計",
     "month": "過去30日間",
     "private": "このプロフィールは非公開です。",
-    "public": "プロフィールを公開",
+    "public": "統計とお気に入りを全員に公開する",
     "public_hint": "オフにすると、統計とお気に入りはあなただけに表示されます。",
     "recent": "最近観た作品",
     "remove": "削除",
@@ -560,9 +585,9 @@
   },
   "import": {
     "title": "TV Timeからインポート",
-    "intro": "TV Timeでフォローしていた作品、お気に入り、視聴履歴を引き継ぎます。",
-    "how_title": "ファイルの入手方法",
-    "how_body": "TV Timeアプリでデータのコピー（GDPRエクスポート）をリクエストし、ダウンロードリンクが記載されたメールを待ちます。そのzipファイルを開かずにそのままここにアップロードしてください。",
+    "intro": "TV Timeのエクスポートをお持ちですか？ここにアップロードして、作品、お気に入り、視聴履歴を引き継ぎます。",
+    "how_title": "エクスポートファイル",
+    "how_body": "TV Timeはサービスを終了したため、すでにダウンロード済みのデータエクスポート（zip）でのみ利用できます。開かずにそのままアップロードしてください。",
     "what": "インポートされるもの：フォロー中の作品、お気に入り、後で見る作品、そして視聴済みの全エピソード（元の日付つき）。映画、コメント、感情の投票はインポートされません。",
     "keeps": "ここで既に記録している内容は変更も削除もされません。ファイルはインポート作成のためサーバー上で読み取られ、その後は保存されません。",
     "file_label": "TV Timeのエクスポート（.zip）",

@@ -84,7 +84,11 @@
     "sync_error": "这部剧上次的数据刷新失败，部分信息可能已过期。",
     "seasons": "季",
     "specials": "特别篇",
-    "season": "第 %d 季"
+    "season": "第 %d 季",
+    "ratings": "评分",
+    "ratings_community": "%s 成员",
+    "ratings_none": "暂无评分。",
+    "ratings_tmdb": "TMDB"
   },
   "status": {
     "watching": "在看",
@@ -103,7 +107,8 @@
     "mark_watched": "标记为已看",
     "watched": "已看",
     "mark_upto": "标记到此集为止的全部",
-    "your_rating": "你的评分"
+    "your_rating": "你的评分",
+    "star": "%d 星（满分 5 星）"
   },
   "comments": {
     "title": "评论",
@@ -119,7 +124,9 @@
   },
   "calendar": {
     "today": "今天",
-    "empty": "这段时间内你关注的剧集没有更新。"
+    "empty": "这段时间内你关注的剧集没有更新。",
+    "past": "往期发布",
+    "back": "即将播出"
   },
   "settings": {
     "password": "修改密码",
@@ -163,7 +170,7 @@
     "twofa": "两步验证",
     "twofa_confirm": "确认并开启",
     "twofa_disable": "关闭两步验证",
-    "twofa_enable": "设置两步验证",
+    "twofa_enable": "启用两步验证",
     "twofa_hint": "使用验证器应用中的验证码保护你的账号。",
     "twofa_off": "两步验证已关闭。",
     "twofa_on": "两步验证已开启。",
@@ -184,7 +191,17 @@
     "email_pending": "正在等待你确认 %s。请打开发送到该邮箱的链接。",
     "email_new": "新邮箱地址",
     "email_change_btn": "更改邮箱",
-    "email_change_sent": "请查看新邮箱，我们已发送确认链接。"
+    "email_change_sent": "请查看新邮箱，我们已发送确认链接。",
+    "security": "安全",
+    "change": "更改",
+    "set": "设置",
+    "disable": "停用",
+    "on": "已开启",
+    "off": "未开启",
+    "danger": "危险区域",
+    "cancel": "取消",
+    "recovery_title": "恢复码",
+    "recovery_n": "剩余 %d 个"
   },
   "footer": {
     "tmdb": "剧集数据和图片由以下平台提供：",
@@ -347,7 +364,10 @@
     "pw_lower": "一个小写字母",
     "pw_digit": "一个数字",
     "pw_special": "一个特殊字符",
-    "pw_strong": "密码强度足够"
+    "pw_strong": "密码强度足够",
+    "marked_watched": "已标记为已看",
+    "marked_tip": "已标记为已看。提示：给一集评分也会标记为已看。",
+    "rated": "已评分并标记为已看"
   },
   "genre": {
     "action_adventure": "动作冒险",
@@ -411,12 +431,12 @@
       "body": "你的密码已被修改。如果不是你本人操作，请立即保护你的账号。",
       "title": "密码已修改"
     },
-    "push_devices": "已开启推送的设备：%d",
+    "push_devices": "设备：%d",
     "push_disable": "在此设备上关闭推送",
     "push_enable": "在此设备上开启推送",
     "push_hint": "即使应用已关闭，也能在此设备上收到提醒。",
     "push_title": "推送通知",
-    "telegram_connect": "连接 Telegram",
+    "telegram_connect": "连接",
     "telegram_connected": "Telegram 通知已连接。",
     "telegram_disconnect": "断开连接",
     "telegram_dropped": {
@@ -431,7 +451,10 @@
     "telegram_oneclick": "使用我的 Telegram 登录",
     "telegram_title": "Telegram 通知",
     "telegram_waiting": "正在等待你在 Telegram 中点击“开始”...",
-    "test": "测试",
+    "test": {
+      "body": "如果你能看到这条消息，说明此渠道可用。",
+      "title": "测试通知"
+    },
     "test_hint": "向每个渠道发送一条测试消息，检查是否正常。",
     "test_title": "测试你的渠道",
     "twofa_disabled": {
@@ -473,7 +496,9 @@
     "email_changed": {
       "title": "邮箱已更改",
       "body": "你的邮箱地址现在是 {email}。如果不是你本人操作，请立即保护你的账户。"
-    }
+    },
+    "test_btn": "测试",
+    "verify_first": "请先验证邮箱"
   },
   "profile": {
     "bio": "简介",
@@ -485,7 +510,7 @@
     "lifetime": "累计",
     "month": "最近 30 天",
     "private": "此资料为私密。",
-    "public": "公开资料",
+    "public": "向所有人显示我的统计和收藏",
     "public_hint": "关闭后，只有你自己能看到统计数据和收藏。",
     "recent": "最近观看",
     "remove": "移除",
@@ -560,9 +585,9 @@
   },
   "import": {
     "title": "从 TV Time 导入",
-    "intro": "把你在 TV Time 的关注剧集、收藏和观看记录带过来。",
-    "how_title": "如何获取文件",
-    "how_body": "在 TV Time 应用中申请获取你的数据副本（GDPR 导出），等待带下载链接的邮件。把该 zip 文件原样上传到这里，不要解压。",
+    "intro": "有 TV Time 的导出文件吗？在这里上传，带上你的剧集、收藏和观看记录。",
+    "how_title": "你的导出文件",
+    "how_body": "TV Time 已停止服务，因此只能使用你之前已下载的数据导出（zip）文件。请原样上传，不要解压。",
     "what": "会导入：你关注的剧集、收藏、稍后观看的剧集，以及每一集的观看记录（保留原日期）。电影、评论和情绪投票不会导入。",
     "keeps": "你在这里已有的记录不会被修改或删除。文件只在服务器上读取以生成导入内容，之后不会保留。",
     "file_label": "TV Time 导出文件（.zip）",

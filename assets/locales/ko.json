@@ -84,7 +84,11 @@
     "sync_error": "이 작품의 마지막 데이터 갱신에 실패했습니다. 일부 정보가 오래되었을 수 있습니다.",
     "seasons": "시즌",
     "specials": "스페셜",
-    "season": "시즌 %d"
+    "season": "시즌 %d",
+    "ratings": "평점",
+    "ratings_community": "%s 회원",
+    "ratings_none": "아직 평점이 없습니다.",
+    "ratings_tmdb": "TMDB"
   },
   "status": {
     "watching": "시청 중",
@@ -103,7 +107,8 @@
     "mark_watched": "시청 완료로 표시",
     "watched": "시청함",
     "mark_upto": "여기까지 모두 시청 표시",
-    "your_rating": "내 평점"
+    "your_rating": "내 평점",
+    "star": "5점 만점에 %d점"
   },
   "comments": {
     "title": "댓글",
@@ -119,7 +124,9 @@
   },
   "calendar": {
     "today": "오늘",
-    "empty": "이 기간에 방영되는 팔로우 작품이 없습니다."
+    "empty": "이 기간에 방영되는 팔로우 작품이 없습니다.",
+    "past": "지난 방영",
+    "back": "예정"
   },
   "settings": {
     "password": "비밀번호 변경",
@@ -163,7 +170,7 @@
     "twofa": "2단계 인증",
     "twofa_confirm": "확인 후 켜기",
     "twofa_disable": "2단계 인증 끄기",
-    "twofa_enable": "2단계 인증 설정",
+    "twofa_enable": "2FA 켜기",
     "twofa_hint": "인증 앱의 코드로 계정을 보호하세요.",
     "twofa_off": "2단계 인증을 껐습니다.",
     "twofa_on": "2단계 인증이 켜져 있습니다.",
@@ -184,7 +191,17 @@
     "email_pending": "%s 확인을 기다리는 중입니다. 해당 주소로 보낸 링크를 열어 주세요.",
     "email_new": "새 이메일 주소",
     "email_change_btn": "이메일 변경",
-    "email_change_sent": "새 받은편지함을 확인하세요. 확인 링크를 보냈습니다."
+    "email_change_sent": "새 받은편지함을 확인하세요. 확인 링크를 보냈습니다.",
+    "security": "보안",
+    "change": "변경",
+    "set": "설정",
+    "disable": "끄기",
+    "on": "켜짐",
+    "off": "꺼짐",
+    "danger": "위험 구역",
+    "cancel": "취소",
+    "recovery_title": "복구 코드",
+    "recovery_n": "%d개 남음"
   },
   "footer": {
     "tmdb": "작품 데이터와 이미지 제공:",
@@ -347,7 +364,10 @@
     "pw_lower": "소문자",
     "pw_digit": "숫자",
     "pw_special": "특수문자",
-    "pw_strong": "강력한 비밀번호"
+    "pw_strong": "강력한 비밀번호",
+    "marked_watched": "시청 완료로 표시했습니다",
+    "marked_tip": "시청 완료로 표시했습니다. 팁: 에피소드를 평가해도 같은 효과입니다.",
+    "rated": "평가하고 시청 완료로 표시했습니다"
   },
   "genre": {
     "action_adventure": "액션 & 어드벤처",
@@ -411,12 +431,12 @@
       "body": "비밀번호가 변경되었습니다. 본인이 아니라면 즉시 계정을 보호하세요.",
       "title": "비밀번호 변경됨"
     },
-    "push_devices": "푸시가 켜진 기기: %d",
+    "push_devices": "기기: %d",
     "push_disable": "이 기기에서 푸시 끄기",
     "push_enable": "이 기기에서 푸시 켜기",
     "push_hint": "앱을 닫아도 이 기기에서 알림을 받을 수 있습니다.",
     "push_title": "푸시 알림",
-    "telegram_connect": "Telegram 연결",
+    "telegram_connect": "연결",
     "telegram_connected": "Telegram 알림이 연결되어 있습니다.",
     "telegram_disconnect": "연결 해제",
     "telegram_dropped": {
@@ -431,7 +451,10 @@
     "telegram_oneclick": "내 Telegram 로그인 사용",
     "telegram_title": "Telegram 알림",
     "telegram_waiting": "Telegram에서 시작을 누르기를 기다리는 중...",
-    "test": "테스트",
+    "test": {
+      "body": "이 메시지가 보인다면 이 채널은 정상입니다.",
+      "title": "테스트 알림"
+    },
     "test_hint": "각 채널로 테스트를 보내 정상 작동하는지 확인하세요.",
     "test_title": "채널 테스트",
     "twofa_disabled": {
@@ -473,7 +496,9 @@
     "email_changed": {
       "title": "이메일이 변경되었습니다",
       "body": "이메일 주소가 이제 {email}입니다. 본인이 아니라면 즉시 계정을 보호하세요."
-    }
+    },
+    "test_btn": "테스트",
+    "verify_first": "먼저 이메일을 인증하세요"
   },
   "profile": {
     "bio": "소개",
@@ -485,7 +510,7 @@
     "lifetime": "전체",
     "month": "최근 30일",
     "private": "비공개 프로필입니다.",
-    "public": "공개 프로필",
+    "public": "내 통계와 즐겨찾기를 모두에게 공개",
     "public_hint": "끄면 통계와 즐겨찾기를 나만 볼 수 있습니다.",
     "recent": "최근 시청",
     "remove": "삭제",
@@ -560,9 +585,9 @@
   },
   "import": {
     "title": "TV Time에서 가져오기",
-    "intro": "TV Time에서 팔로우하던 작품, 즐겨찾기, 시청 기록을 옮겨 오세요.",
-    "how_title": "파일을 받는 방법",
-    "how_body": "TV Time 앱에서 내 데이터 사본(GDPR 내보내기)을 요청하고, 다운로드 링크가 담긴 이메일을 기다리세요. 받은 zip 파일을 열지 말고 그대로 여기에 업로드하세요.",
+    "intro": "TV Time 내보내기 파일이 있나요? 여기에 올려 작품, 즐겨찾기, 시청 기록을 가져오세요.",
+    "how_title": "내보내기 파일",
+    "how_body": "TV Time는 서비스를 종료했으므로 이미 내려받은 데이터 내보내기(zip) 파일로만 사용할 수 있습니다. 열지 말고 그대로 업로드하세요.",
     "what": "가져오는 항목: 팔로우 중인 작품, 즐겨찾기, 나중에 볼 작품, 시청한 모든 에피소드(원래 날짜 포함). 영화, 댓글, 감정 투표는 가져오지 않습니다.",
     "keeps": "여기서 이미 기록한 내용은 바뀌거나 삭제되지 않습니다. 파일은 가져오기를 만들기 위해 서버에서 읽히며 이후 보관되지 않습니다.",
     "file_label": "TV Time 내보내기 파일 (.zip)",

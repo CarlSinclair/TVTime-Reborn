@@ -55,7 +55,7 @@ self.addEventListener("push", (event) => {
       clients.forEach((client) => {
         if (client.visibilityState !== "visible") client.postMessage({ type: "tvt-badge", unreadCount: data.unread_count });
       });
-      if (clients.some((client) => client.visibilityState === "visible")) return undefined;
+      if (!data.force && clients.some((client) => client.visibilityState === "visible")) return undefined;
       return self.registration.showNotification(title, {
         body: data.body || "",
         icon: "/static/img/icon.svg",

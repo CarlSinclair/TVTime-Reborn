@@ -1,0 +1,14 @@
+{{define "upnext_card"}}
+<article class="upnext-item" data-show="{{.It.Show.ID}}">
+  <a href="/show/{{.It.Show.TMDBID}}"><img loading="lazy" src="{{img "w300" .It.Episode.StillPath}}" alt=""></a>
+  <div class="upnext-body">
+    <a class="upnext-show" href="/show/{{.It.Show.TMDBID}}">{{.It.Show.Name}}</a>
+    <a href="/episode/{{.It.Episode.ID}}">{{code .It.Episode.SeasonNumber .It.Episode.EpisodeNumber}} {{.It.Episode.Name}}</a>
+    <small>{{if gt .It.Remaining 1}}{{.V.T "home.remaining" .It.Remaining}}{{else}}{{.V.T "home.last_aired"}}{{end}}</small>
+    <div class="card-actions">
+      {{template "stars" (dict "ID" .It.Episode.ID "Rating" 0 "V" .V)}}
+      <button class="btn small" type="button" data-watch="{{.It.Episode.ID}}" data-state="0" data-card="1">{{.V.T "ep.mark_watched"}}</button>
+    </div>
+  </div>
+</article>
+{{end}}

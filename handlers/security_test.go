@@ -182,6 +182,9 @@ func TestTelegramBotLinkingAndNotificationDelivery(t *testing.T) {
 	if u.TelegramChatID != "555" {
 		t.Fatalf("chat not linked: %q", u.TelegramChatID)
 	}
+	if u.TelegramID != 555 {
+		t.Fatalf("connecting the bot must also link the Telegram sign-in identity, got %d", u.TelegramID)
+	}
 	if webhook(556, "/start "+token, "whsecret") != 200 {
 		t.Fatalf("second use of token returned an error status")
 	}

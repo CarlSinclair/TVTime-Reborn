@@ -13,12 +13,12 @@ import (
 )
 
 func TestValidKey(t *testing.T) {
-	for _, ok := range []string{"avatars/1-abcd.jpg", "tmdb/w342/abc_DEF-1.jpg"[:0] + "tmdb/w342/abc.jpg"} {
+	for _, ok := range []string{"avatars/1-abcd.jpg", "tmdb/w342/abc.jpg", "tmdb/w342/s3f8DtXbiZFLMwnc1CvW22QrhEY.jpg"} {
 		if !ValidKey(ok) {
 			t.Errorf("%q should be valid", ok)
 		}
 	}
-	for _, bad := range []string{"", "../etc/passwd", "a/../b", "/abs", "a//b", "A/upper", "a/b/", ".hidden", "a/./b", strings.Repeat("a", 300)} {
+	for _, bad := range []string{"", "../etc/passwd", "a/../b", "/abs", "a//b", "a b", "a/b/", ".hidden", "a/./b", strings.Repeat("a", 300)} {
 		if ValidKey(bad) {
 			t.Errorf("%q should be rejected", bad)
 		}

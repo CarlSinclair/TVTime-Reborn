@@ -87,3 +87,19 @@ func TestImportFallsBackToTVDB(t *testing.T) {
 		t.Fatalf("unmatched = %v", un)
 	}
 }
+
+func TestMixedCaseArtworkNamesAreServed(t *testing.T) {
+	e := newEnv(t)
+	c := e.signup(t, "caser", true)
+	if err := e.app.Media.Put(t.Context(), "tmdb/w342/s3f8DtXbiZFLMwnc1CvW22QrhEY.jpg", pngBytes(2, 2), "image/png"); err != nil {
+		t.Fatalf("mixed-case key refused by the store: %v", err)
+	}
+	resp, err := c.http.Get(c.base + "/img/w342/s3f8DtXbiZFLMwnc1CvW22QrhEY.jpg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("TMDB artwork names are mixed case; got %d", resp.StatusCode)
+	}
+}

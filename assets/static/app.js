@@ -107,9 +107,25 @@
     const pre = document.getElementById("recovery-codes");
     if (!box || !pre) return;
     pre.textContent = codes.join("\n");
-    box.hidden = false;
-    box.scrollIntoView({ behavior: "smooth", block: "center" });
+    document.querySelectorAll("dialog[open]").forEach((dlg) => dlg.close());
+    const dialog = document.getElementById("m-recovery");
+    if (dialog) dialog.showModal();
   };
+
+  document.addEventListener("click", (event) => {
+    const opener = event.target.closest("[data-modal-open]");
+    if (opener) {
+      const dlg = document.getElementById(opener.dataset.modalOpen);
+      if (dlg) dlg.showModal();
+      return;
+    }
+    if (event.target.closest("[data-modal-close]")) {
+      const dlg = event.target.closest("dialog");
+      if (dlg) dlg.close();
+      return;
+    }
+    if (event.target.tagName === "DIALOG") event.target.close();
+  });
 
   document.addEventListener("submit", async (event) => {
     const form = event.target.closest("form[data-api]");
@@ -131,6 +147,8 @@
       }
     });
     if (!data) return;
+    const parentDialog = form.closest("dialog");
+    if (parentDialog) parentDialog.close();
     if (data.mail_sent === false) toast(t("mail_failed"), "error");
     if (data.recovery_codes) {
       showRecovery(data.recovery_codes);
@@ -148,6 +166,51 @@
     }
   });
 
+  const setWatchedState = (el, watched) => {
+    el.dataset.state = watched ? "1" : "0";
+    if (el.classList.contains("watch-btn")) {
+      el.setAttribute("aria-pressed", watched ? "true" : "false");
+    } else if (el.dataset.labelOn) {
+      el.textContent = watched ? el.dataset.labelOn : el.dataset.labelOff;
+    }
+  };
+
+  const paintStars = (wrap, n) => {
+    wrap.querySelectorAll(".star").forEach((star) => {
+      star.classList.toggle("on", parseInt(star.dataset.star, 10) <= n);
+    });
+  };
+
+  const markedMessage = () => {
+    let first = true;
+    try {
+      first = !localStorage.getItem("tt-tip-rating");
+      if (first) localStorage.setItem("tt-tip-rating", "1");
+    } catch (err) {
+      console.warn("tip state not stored", err);
+    }
+    return t(first ? "marked_tip" : "marked_watched");
+  };
+
+  const swapCard = (card, html) => {
+    const list = card.parentNode;
+    const finish = () => {
+      if (html) {
+        const holder = document.createElement("template");
+        holder.innerHTML = html.trim();
+        const fresh = holder.content.firstElementChild;
+        if (fresh) card.replaceWith(fresh);
+        else card.remove();
+      } else {
+        card.remove();
+      }
+      const empty = document.getElementById("upnext-empty");
+      if (empty && list && list.id === "upnext") empty.hidden = list.children.length > 0;
+    };
+    card.classList.add("leaving");
+    setTimeout(finish, 280);
+  };
+
   const tmdbOf = (el) => {
     const box = el.closest("[data-tmdb]");
     return box ? box.dataset.tmdb : null;
@@ -161,35 +224,55 @@
 
   const pushSupported = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 
-  const pushEnable = async (el) => {
-    if (!pushSupported()) {
+  const subscribePush = async () => {
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") throw new Error(t("push_denied"));
+    const reg = await navigator.serviceWorker.ready;
+    const key = (await api("/api/push/key", null, "GET")).key;
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlKey(key) });
+    return api("/api/push/subscribe", sub.toJSON());
+  };
+
+  const unsubscribePush = async () => {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) return { ok: true };
+    const endpoint = sub.endpoint;
+    await sub.unsubscribe();
+    return api("/api/push/unsubscribe", { endpoint });
+  };
+
+  const saveNotifications = () => {
+    const master = {};
+    document.querySelectorAll("[data-master]").forEach((box) => {
+      master[box.dataset.master] = box.checked;
+    });
+    const prefs = {};
+    document.querySelectorAll("[data-cat]").forEach((box) => {
+      prefs[box.dataset.cat] = prefs[box.dataset.cat] || {};
+      prefs[box.dataset.cat][box.dataset.ch] = box.checked;
+    });
+    return api("/api/notifications/settings", { master, prefs });
+  };
+
+  const togglePush = async (el) => {
+    if (el.checked && !pushSupported()) {
+      el.checked = false;
       toast(t("push_unsupported"), "error");
       return;
     }
-    const data = await run(el, async () => {
-      const perm = await Notification.requestPermission();
-      if (perm !== "granted") throw new Error(t("push_denied"));
-      const reg = await navigator.serviceWorker.ready;
-      const key = (await api("/api/push/key", null, "GET")).key;
-      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlKey(key) });
-      return api("/api/push/subscribe", sub.toJSON());
+    const ok = await run(null, async () => {
+      if (el.checked) await subscribePush();
+      else await unsubscribePush();
+      await saveNotifications();
+      return true;
     });
-    if (data) {
-      toast(t("push_enabled"), "ok");
-      setTimeout(() => window.location.reload(), 700);
+    if (!ok) {
+      el.checked = !el.checked;
+      return;
     }
-  };
-
-  const pushDisable = async (el) => {
-    const data = await run(el, async () => {
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.getSubscription();
-      if (!sub) return { ok: true };
-      const endpoint = sub.endpoint;
-      await sub.unsubscribe();
-      return api("/api/push/unsubscribe", { endpoint });
-    });
-    if (data) window.location.reload();
+    toast(t("saved"), "ok");
+    setTimeout(() => window.location.reload(), 600);
   };
 
   let tgPoll = null;
@@ -267,17 +350,40 @@
     }
     if ("watch" in d) {
       const watched = d.state !== "1";
-      const data = await run(el, () => api("/api/episode/" + d.watch + "/watch", { watched }));
+      const card = el.closest(".upnext-item");
+      const data = await run(el, () => api("/api/episode/" + d.watch + "/watch", { watched, card: !!card }));
       if (!data) return;
-      if (el.closest(".upnext-item")) {
-        window.location.reload();
+      if (card) {
+        swapCard(card, data.next_html);
+        toast(markedMessage(), "ok");
         return;
       }
-      el.dataset.state = watched ? "1" : "0";
-      if (el.classList.contains("watch-btn")) {
-        el.setAttribute("aria-pressed", watched ? "true" : "false");
-      } else if (el.dataset.labelOn) {
-        el.textContent = watched ? el.dataset.labelOn : el.dataset.labelOff;
+      setWatchedState(el, watched);
+      return;
+    }
+    if ("star" in d) {
+      const wrap = el.closest(".stars");
+      const card = el.closest(".upnext-item");
+      const n = parseInt(d.star, 10);
+      const current = parseInt(wrap.dataset.stars, 10) || 0;
+      const stars = n === current ? 0 : n;
+      paintStars(wrap, stars);
+      const data = await run(null, () => api("/api/episode/" + wrap.dataset.ep + "/rate", { rating: stars * 2, card: !!card }));
+      if (!data) {
+        paintStars(wrap, current);
+        return;
+      }
+      wrap.dataset.stars = String(stars);
+      if (card) {
+        setTimeout(() => swapCard(card, data.next_html), 350);
+        toast(t("rated"), "ok");
+        return;
+      }
+      if (data.watched) {
+        document.querySelectorAll('[data-watch="' + wrap.dataset.ep + '"]').forEach((btn) => setWatchedState(btn, true));
+        toast(t("rated"), "ok");
+      } else {
+        toast(t("saved"), "ok");
       }
       return;
     }
@@ -294,7 +400,11 @@
       const data = await run(el, () =>
         api("/api/show/" + box.dataset.tmdb + "/season/" + box.dataset.season + "/watch", { watched: d.seasonWatch === "1" })
       );
-      if (data) window.location.reload();
+      if (data) {
+        const on = d.seasonWatch === "1";
+        document.querySelectorAll("[data-watch]").forEach((btn) => setWatchedState(btn, on));
+        toast(fmt("marked_many", data.marked), "ok");
+      }
       return;
     }
     if ("unblock" in d) {
@@ -319,8 +429,6 @@
       if (data) window.location.reload();
       return;
     }
-    if (el.id === "push-enable") return pushEnable(el);
-    if (el.id === "push-disable") return pushDisable(el);
     if (el.id === "telegram-connect") return telegramConnect(el);
     if (el.id === "telegram-dm") {
       const data = await run(el, () => api("/api/account/telegram/enable-dm"));
@@ -389,8 +497,7 @@
       if (!data) return;
       document.getElementById("twofa-qr").src = data.qr;
       document.getElementById("twofa-secret").textContent = data.secret;
-      document.getElementById("twofa-setup").hidden = false;
-      el.hidden = true;
+      document.getElementById("m-twofa").showModal();
       return;
     }
     if (el.id === "recovery-copy") {
@@ -456,10 +563,7 @@
           throw err;
         }
       });
-      if (data) {
-        document.getElementById("twofa-setup").hidden = true;
-        showRecovery(data.recovery_codes);
-      }
+      if (data) showRecovery(data.recovery_codes);
     });
   }
 
@@ -468,26 +572,16 @@
     if (el.matches("[data-follow-status]")) {
       const data = await run(el, () => api("/api/show/" + tmdbOf(el) + "/follow", { status: el.value }));
       if (data) toast(t("saved"), "ok");
-    } else if (el.matches("[data-rate]")) {
-      const data = await run(el, () => api("/api/episode/" + el.dataset.rate + "/rate", { rating: parseInt(el.value, 10) }));
-      if (data) toast(t("saved"), "ok");
     } else if (el.id === "lang-select" || el.id === "settings-lang") {
       const data = await run(el, () => api("/api/account/locale", { locale: el.value }));
       if (data) window.location.reload();
     } else if (el.id === "settings-tz") {
       const data = await run(el, () => api("/api/account/timezone", { timezone: el.value }));
       if (data) toast(t("saved"), "ok");
+    } else if (el.id === "ch-push") {
+      togglePush(el);
     } else if (el.matches("[data-master], [data-cat]")) {
-      const master = {};
-      document.querySelectorAll("[data-master]").forEach((box) => {
-        master[box.dataset.master] = box.checked;
-      });
-      const prefs = {};
-      document.querySelectorAll("[data-cat]").forEach((box) => {
-        prefs[box.dataset.cat] = prefs[box.dataset.cat] || {};
-        prefs[box.dataset.cat][box.dataset.ch] = box.checked;
-      });
-      const data = await run(null, () => api("/api/notifications/settings", { master, prefs }));
+      const data = await run(null, saveNotifications);
       if (data) {
         toast(t("saved"), "ok");
       } else {
@@ -507,7 +601,10 @@
       toast(t("import_uploading"));
       const data = await run(el, () => upload("/api/import/tvtime", file));
       el.value = "";
-      if (!data) return;
+      if (!data) {
+        pollImport();
+        return;
+      }
       toast(t("import_started"), "ok");
       pollImport();
     }
@@ -524,6 +621,8 @@
     const details = document.getElementById("import-details");
     const list = document.getElementById("import-unmatched");
     const listTitle = document.getElementById("import-un-title");
+    const picker = document.getElementById("import-picker");
+    if (picker) picker.hidden = job.active;
     const pct = job.total > 0 ? Math.round((job.shows_done / job.total) * 100) : 0;
     bar.value = job.status === "done" ? 100 : pct;
     if (job.status === "pending") line.textContent = t("import_pending");

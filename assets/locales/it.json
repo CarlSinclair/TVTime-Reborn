@@ -84,7 +84,11 @@
     "sync_error": "L'ultimo aggiornamento dei dati di questa serie non è riuscito. Alcune informazioni potrebbero non essere aggiornate.",
     "seasons": "Stagioni",
     "specials": "Speciali",
-    "season": "Stagione %d"
+    "season": "Stagione %d",
+    "ratings": "Valutazioni",
+    "ratings_community": "Membri di %s",
+    "ratings_none": "Ancora nessuna valutazione.",
+    "ratings_tmdb": "TMDB"
   },
   "status": {
     "watching": "In corso",
@@ -103,7 +107,8 @@
     "mark_watched": "Segna come visto",
     "watched": "Visto",
     "mark_upto": "Segna tutto fino a qui",
-    "your_rating": "Il tuo voto"
+    "your_rating": "Il tuo voto",
+    "star": "%d stelle su 5"
   },
   "comments": {
     "title": "Commenti",
@@ -119,7 +124,9 @@
   },
   "calendar": {
     "today": "Oggi",
-    "empty": "Nessuna uscita delle tue serie in questo periodo."
+    "empty": "Nessuna uscita delle tue serie in questo periodo.",
+    "past": "Uscite passate",
+    "back": "In arrivo"
   },
   "settings": {
     "password": "Cambia password",
@@ -163,7 +170,7 @@
     "twofa": "Verifica in due passaggi",
     "twofa_confirm": "Conferma e attiva",
     "twofa_disable": "Disattiva la verifica in due passaggi",
-    "twofa_enable": "Configura la verifica in due passaggi",
+    "twofa_enable": "Attiva 2FA",
     "twofa_hint": "Proteggi il tuo account con un codice da un'app di autenticazione.",
     "twofa_off": "Verifica in due passaggi disattivata.",
     "twofa_on": "La verifica in due passaggi è attiva.",
@@ -184,7 +191,17 @@
     "email_pending": "In attesa che tu confermi %s. Apri il link che abbiamo inviato lì.",
     "email_new": "Nuovo indirizzo e-mail",
     "email_change_btn": "Cambia e-mail",
-    "email_change_sent": "Controlla la nuova casella: ti abbiamo inviato un link di conferma."
+    "email_change_sent": "Controlla la nuova casella: ti abbiamo inviato un link di conferma.",
+    "security": "Sicurezza",
+    "change": "Cambia",
+    "set": "Imposta",
+    "disable": "Disattiva",
+    "on": "Attivo",
+    "off": "Disattivo",
+    "danger": "Zona pericolosa",
+    "cancel": "Annulla",
+    "recovery_title": "Codici di recupero",
+    "recovery_n": "%d rimasti"
   },
   "footer": {
     "tmdb": "Dati e immagini delle serie forniti da",
@@ -347,7 +364,10 @@
     "pw_lower": "Una lettera minuscola",
     "pw_digit": "Una cifra",
     "pw_special": "Un carattere speciale",
-    "pw_strong": "Password sicura"
+    "pw_strong": "Password sicura",
+    "marked_watched": "Segnato come visto",
+    "marked_tip": "Segnato come visto. Suggerimento: votare un episodio fa lo stesso.",
+    "rated": "Votato e segnato come visto"
   },
   "genre": {
     "action_adventure": "Azione e avventura",
@@ -411,12 +431,12 @@
       "body": "La tua password è stata cambiata. Se non sei stato tu, metti subito in sicurezza il tuo account.",
       "title": "Password cambiata"
     },
-    "push_devices": "Dispositivi con push attivo: %d",
+    "push_devices": "Dispositivi: %d",
     "push_disable": "Disattiva push su questo dispositivo",
     "push_enable": "Attiva push su questo dispositivo",
     "push_hint": "Ricevi avvisi su questo dispositivo anche con l'app chiusa.",
     "push_title": "Notifiche push",
-    "telegram_connect": "Collega Telegram",
+    "telegram_connect": "Collega",
     "telegram_connected": "Le notifiche di Telegram sono collegate.",
     "telegram_disconnect": "Scollega",
     "telegram_dropped": {
@@ -431,7 +451,10 @@
     "telegram_oneclick": "Usa il mio accesso Telegram",
     "telegram_title": "Notifiche di Telegram",
     "telegram_waiting": "In attesa che tu prema Avvia su Telegram...",
-    "test": "Prova",
+    "test": {
+      "body": "Se riesci a leggere questo, il canale funziona.",
+      "title": "Notifica di prova"
+    },
     "test_hint": "Invia a te stesso una prova su ogni canale per verificare che funzioni.",
     "test_title": "Prova i tuoi canali",
     "twofa_disabled": {
@@ -473,7 +496,9 @@
     "email_changed": {
       "title": "E-mail cambiata",
       "body": "Il tuo indirizzo e-mail ora è {email}. Se non sei stato tu, proteggi subito il tuo account."
-    }
+    },
+    "test_btn": "Prova",
+    "verify_first": "Verifica prima l'e-mail"
   },
   "profile": {
     "bio": "Bio",
@@ -485,7 +510,7 @@
     "lifetime": "Totale",
     "month": "Ultimi 30 giorni",
     "private": "Questo profilo è privato.",
-    "public": "Profilo pubblico",
+    "public": "Mostra le mie statistiche e i preferiti a tutti",
     "public_hint": "Se disattivato, solo tu vedi le tue statistiche e i tuoi preferiti.",
     "recent": "Guardati di recente",
     "remove": "Rimuovi",
@@ -560,9 +585,9 @@
   },
   "import": {
     "title": "Importa da TV Time",
-    "intro": "Porta qui le serie che segui, i preferiti e la cronologia di TV Time.",
-    "how_title": "Come ottenere il file",
-    "how_body": "Nell'app TV Time, richiedi una copia dei tuoi dati (esportazione GDPR) e attendi l'e-mail con il link di download. Carica qui il file zip così com'è, senza aprirlo.",
+    "intro": "Hai un'esportazione di TV Time? Caricala qui per portare serie, preferiti e cronologia.",
+    "how_title": "Il tuo file di esportazione",
+    "how_body": "TV Time ha chiuso, quindi funziona solo con un'esportazione dei dati (zip) già scaricata. Caricala così com'è, senza aprirla.",
     "what": "Vengono importati: le serie che segui, i preferiti, le serie salvate per dopo e ogni episodio visto con la data originale. Film, commenti e voti emozione non vengono importati.",
     "keeps": "Nulla di ciò che già segui qui viene modificato o rimosso. Il file viene letto sul server per preparare l'importazione e non viene conservato.",
     "file_label": "Esportazione di TV Time (.zip)",

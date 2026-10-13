@@ -1,0 +1,6 @@
+{{define "stars"}}
+<span class="stars" data-ep="{{.ID}}" data-stars="{{starsOf .Rating}}" role="group" aria-label="{{.V.T "ep.your_rating"}}">
+  {{$n := starsOf .Rating}}
+  {{range seq 5}}<button type="button" class="star{{if le . $n}} on{{end}}" data-star="{{.}}" aria-label="{{$.V.T "ep.star" .}}">&#9733;</button>{{end}}
+</span>
+{{end}}

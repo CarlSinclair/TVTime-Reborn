@@ -213,25 +213,15 @@ func (a *App) langOf(w http.ResponseWriter, r *http.Request) string {
 func (a *App) pageHome(w http.ResponseWriter, r *http.Request) {
 	lang := a.langOf(w, r)
 	data := map[string]any{"NoMetadata": !a.TMDB.Configured()}
-	ctx, cancel := withTimeout(r, 15*time.Second)
-	defer cancel()
-	data["Trending"] = a.trendingShows(ctx, lang)
 	if u := auth.UserFrom(r.Context()); u != nil {
-		next, err := a.Store.UpNext(u.ID, 24)
+		next, err := a.Store.UpNext(u.ID, 60)
 		if err != nil {
 			logger.Error("PAGE home up next uid=%d: %v", u.ID, err)
 			a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
 			return
 		}
 		a.localizeUpNext(lang, next)
-		stats, err := a.Store.UserStats(u.ID)
-		if err != nil {
-			logger.Error("PAGE home stats uid=%d: %v", u.ID, err)
-			a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
-			return
-		}
 		data["UpNext"] = next
-		data["Stats"] = stats
 	}
 	a.page(w, r, "home", "nav.home", data)
 }
@@ -336,6 +326,11 @@ func (a *App) pageShow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	data := map[string]any{"Show": sh, "Seasons": seasons}
+	if list, err := a.Store.ShowRatings(sh.ID); err != nil {
+		logger.Error("PAGE show ratings show=%d: %v", sh.ID, err)
+	} else {
+		data["Chart"] = buildRatingChart(list)
+	}
 	if u := auth.UserFrom(r.Context()); u != nil {
 		f, err := a.Store.FollowOf(u.ID, sh.ID)
 		if err != nil {
@@ -481,8 +476,13 @@ func (a *App) pageCalendar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	now := time.Now().UTC()
-	from := now.AddDate(0, 0, -7).Format("2006-01-02")
-	to := now.AddDate(0, 0, 45).Format("2006-01-02")
+	past := r.URL.Query().Get("past") == "1"
+	from := now.Format("2006-01-02")
+	to := now.AddDate(0, 0, 60).Format("2006-01-02")
+	if past {
+		from = now.AddDate(0, 0, -45).Format("2006-01-02")
+		to = now.AddDate(0, 0, -1).Format("2006-01-02")
+	}
 	items, err := a.Store.Calendar(u.ID, from, to)
 	if err != nil {
 		logger.Error("PAGE calendar uid=%d: %v", u.ID, err)
@@ -511,11 +511,14 @@ func (a *App) pageCalendar(w http.ResponseWriter, r *http.Request) {
 		d.Items = append(d.Items, it)
 	}
 	sort.Strings(dates)
+	if past {
+		sort.Sort(sort.Reverse(sort.StringSlice(dates)))
+	}
 	days := make([]*day, 0, len(dates))
 	for _, d := range dates {
 		days = append(days, byDate[d])
 	}
-	a.page(w, r, "calendar", "nav.calendar", map[string]any{"Days": days, "Today": now.Format("2006-01-02")})
+	a.page(w, r, "calendar", "nav.calendar", map[string]any{"Days": days, "Today": now.Format("2006-01-02"), "Past": past})
 }
 
 func (a *App) pageAdminReports(w http.ResponseWriter, r *http.Request) {

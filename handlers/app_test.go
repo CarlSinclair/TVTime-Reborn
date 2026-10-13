@@ -30,7 +30,6 @@ import (
 	"tvt/tvdb"
 )
 
-
 func fakeTVDB(t *testing.T) *httptest.Server {
 	t.Helper()
 	mux := http.NewServeMux()

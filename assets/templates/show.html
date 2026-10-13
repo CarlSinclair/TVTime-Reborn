@@ -42,8 +42,22 @@
   <h2>{{.T "show.seasons"}}</h2>
   <div class="season-links">
     {{range .Data.Seasons}}
-    <a class="chip" href="/show/{{$.Data.Show.TMDBID}}/season/{{.SeasonNumber}}">{{if eq .SeasonNumber 0}}{{$.T "show.specials"}}{{else}}{{$.T "show.season" .SeasonNumber}}{{end}} <small>{{.EpisodeCount}}</small></a>
+    <a class="season-card" href="/show/{{$.Data.Show.TMDBID}}/season/{{.SeasonNumber}}">
+      <img loading="lazy" src="{{img "w185" .PosterPath}}" alt="">
+      <span class="season-name">{{if eq .SeasonNumber 0}}{{$.T "show.specials"}}{{else}}{{$.T "show.season" .SeasonNumber}}{{end}}</span>
+      <span class="count-badge">{{.EpisodeCount}}</span>
+    </a>
     {{end}}
   </div>
 </section>
+{{if .Data.Chart}}
+<section class="ratings">
+  <h2>{{.T "show.ratings"}}</h2>
+  {{.Data.Chart.SVG}}
+  <ul class="legend">
+    {{if .Data.Chart.HasMembers}}<li><span class="swatch members"></span>{{.T "show.ratings_community" .AppName}}</li>{{end}}
+    {{if .Data.Chart.HasTMDB}}<li><span class="swatch tmdb"></span>{{.T "show.ratings_tmdb"}}</li>{{end}}
+  </ul>
+</section>
+{{end}}
 {{end}}

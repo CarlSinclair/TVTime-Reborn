@@ -422,7 +422,7 @@ func (s *Service) SendTest(u *store.User, channel string) error {
 		return nil
 	case ChanPush:
 		unread, _ := s.Store.UnreadCount(u.ID)
-		_, err := s.Push.SendToUser(u.ID, title, body, link, unread)
+		_, err := s.Push.SendTestToUser(u.ID, title, body, link, unread)
 		return err
 	case ChanEmail:
 		if !s.canEmail(u) {

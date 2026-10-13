@@ -16,6 +16,7 @@ import (
 	"tvt/store"
 	"tvt/syncer"
 	"tvt/tmdb"
+	"tvt/tvdb"
 )
 
 const (
@@ -82,9 +83,14 @@ func (r *Runner) resolve(ctx context.Context, s Show) (int64, string) {
 			return -s.TVDBID, ""
 		}
 	}
-	if strings.TrimSpace(s.Name) == "" {
+	return r.byName(ctx, s.Name)
+}
+
+func (r *Runner) byName(ctx context.Context, name string) (int64, string) {
+	if strings.TrimSpace(name) == "" {
 		return 0, "not_found"
 	}
+	s := Show{Name: name}
 	res, err := r.TMDB.SearchTV(ctx, s.Name, 1, "en-US")
 	if err != nil {
 		logger.Warn("IMPORT search name=%q: %v", s.Name, err)
@@ -213,7 +219,16 @@ func (r *Runner) run(ctx context.Context, jobID int64) {
 		var sh *store.Show
 		if reason == "" {
 			sh, err = r.Sync.EnsureShow(ctx, tmdbID)
-			if err != nil {
+			if err != nil && tmdbID < 0 && errors.Is(err, tvdb.ErrNotFound) {
+				logger.Info("IMPORT %q is not on TheTVDB under id %d, trying TMDB by name", s.Name, -tmdbID)
+				if id, why := r.byName(ctx, s.Name); id != 0 {
+					tmdbID, reason = id, ""
+					sh, err = r.Sync.EnsureShow(ctx, tmdbID)
+				} else {
+					reason = why
+				}
+			}
+			if reason == "" && err != nil {
 				logger.Warn("IMPORT sync show tmdb=%d name=%q: %v", tmdbID, s.Name, err)
 				reason = "error"
 			}

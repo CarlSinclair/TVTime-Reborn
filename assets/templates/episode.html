@@ -13,12 +13,7 @@
       <button class="btn" type="button" data-watch="{{.ID}}" data-state="{{if .Watched}}1{{else}}0{{end}}" data-label-on="{{$.T "ep.watched"}}" data-label-off="{{$.T "ep.mark_watched"}}">{{if .Watched}}{{$.T "ep.watched"}}{{else}}{{$.T "ep.mark_watched"}}{{end}}</button>
       <button class="btn ghost" type="button" data-watch-upto="{{.ID}}">{{$.T "ep.mark_upto"}}</button>
       {{end}}
-      <label class="rate">{{$.T "ep.your_rating"}}
-        <select data-rate="{{.ID}}">
-          <option value="0">-</option>
-          {{range seq 10}}<option value="{{.}}" {{if eq . $.Data.Episode.UserRating}}selected{{end}}>{{.}}</option>{{end}}
-        </select>
-      </label>
+      {{if aired .AirDate}}{{template "stars" (dict "ID" .ID "Rating" .UserRating "V" $)}}{{end}}
     </div>
     {{end}}
   </div>

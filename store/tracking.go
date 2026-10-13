@@ -218,6 +218,36 @@ func (s *Store) UserShows(userID int64, status string) ([]ShowEntry, error) {
 	return out, nil
 }
 
+type EpisodeRating struct {
+	Season, Episode int
+	TMDBAvg         float64
+	TMDBVotes       int
+	MemberAvg       float64
+	MemberVotes     int
+}
+
+// ShowRatings lists every regular episode with TMDB's rating and the average of
+// the ratings TVT members gave it (members rate in whole stars, stored x2).
+func (s *Store) ShowRatings(showID int64) ([]EpisodeRating, error) {
+	rows, err := s.DB.Query(`SELECT e.season_number, e.episode_number, e.vote_average, e.vote_count, COALESCE(AVG(r.rating),0), COUNT(r.rating)
+	  FROM episodes e LEFT JOIN episode_ratings r ON r.episode_id = e.id
+	  WHERE e.show_id = ? AND e.season_number > 0
+	  GROUP BY e.id ORDER BY e.season_number, e.episode_number`, showID)
+	if err != nil {
+		return nil, fmt.Errorf("show ratings show=%d: %w", showID, err)
+	}
+	defer rows.Close()
+	var out []EpisodeRating
+	for rows.Next() {
+		var r EpisodeRating
+		if err := rows.Scan(&r.Season, &r.Episode, &r.TMDBAvg, &r.TMDBVotes, &r.MemberAvg, &r.MemberVotes); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
 type UpNextItem struct {
 	Show      Show
 	Episode   Episode
@@ -225,6 +255,20 @@ type UpNextItem struct {
 }
 
 func (s *Store) UpNext(userID int64, limit int) ([]UpNextItem, error) {
+	return s.upNext(userID, 0, limit)
+}
+
+// UpNextFor is the card for one show: its first unwatched aired episode, or nil
+// when the person is caught up (or not watching it).
+func (s *Store) UpNextFor(userID, showID int64) (*UpNextItem, error) {
+	list, err := s.upNext(userID, showID, 1)
+	if err != nil || len(list) == 0 {
+		return nil, err
+	}
+	return &list[0], nil
+}
+
+func (s *Store) upNext(userID, showID int64, limit int) ([]UpNextItem, error) {
 	rows, err := s.DB.Query(`SELECT s.id, s.tmdb_id, s.name, s.poster_path, s.backdrop_path,
 	    `+episodeCols+`,
 	    (SELECT COUNT(*) FROM episodes e3 WHERE e3.show_id = s.id AND e3.season_number > 0 AND e3.air_date IS NOT NULL AND e3.air_date <= ?
@@ -236,9 +280,9 @@ func (s *Store) UpNext(userID int64, limit int) ([]UpNextItem, error) {
 	    WHERE e2.show_id = f.show_id AND e2.season_number > 0 AND e2.air_date IS NOT NULL AND e2.air_date <= ?
 	      AND NOT EXISTS (SELECT 1 FROM watched w WHERE w.user_id = f.user_id AND w.episode_id = e2.id)
 	    ORDER BY e2.season_number, e2.episode_number LIMIT 1)
-	  WHERE f.user_id = ? AND f.status = 'watching'
+	  WHERE f.user_id = ? AND f.status = 'watching' AND (? = 0 OR f.show_id = ?)
 	  ORDER BY COALESCE((SELECT MAX(w4.watched_at) FROM watched w4 WHERE w4.user_id = f.user_id AND w4.show_id = s.id), f.created_at) DESC
-	  LIMIT ?`, today(), today(), userID, limit)
+	  LIMIT ?`, today(), today(), userID, showID, showID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("up next uid=%d: %w", userID, err)
 	}

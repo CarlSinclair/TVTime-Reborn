@@ -84,7 +84,11 @@
     "sync_error": "The last data refresh for this show failed. Some information may be out of date.",
     "seasons": "Seasons",
     "specials": "Specials",
-    "season": "Season %d"
+    "season": "Season %d",
+    "ratings": "Ratings",
+    "ratings_community": "%s members",
+    "ratings_none": "No ratings yet.",
+    "ratings_tmdb": "TMDB"
   },
   "status": {
     "watching": "Watching",
@@ -103,7 +107,8 @@
     "mark_watched": "Mark as watched",
     "watched": "Watched",
     "mark_upto": "Mark all up to here",
-    "your_rating": "Your rating"
+    "your_rating": "Your rating",
+    "star": "%d of 5 stars"
   },
   "comments": {
     "title": "Comments",
@@ -119,7 +124,9 @@
   },
   "calendar": {
     "today": "Today",
-    "empty": "Nothing airing from your shows in this period."
+    "empty": "Nothing airing from your shows in this period.",
+    "past": "Past releases",
+    "back": "Upcoming"
   },
   "settings": {
     "password": "Change password",
@@ -163,7 +170,7 @@
     "twofa": "Two-step verification",
     "twofa_confirm": "Confirm and enable",
     "twofa_disable": "Turn off two-step verification",
-    "twofa_enable": "Set up two-step verification",
+    "twofa_enable": "Enable 2FA",
     "twofa_hint": "Protect your account with a code from an authenticator app.",
     "twofa_off": "Two-step verification turned off.",
     "twofa_on": "Two-step verification is on.",
@@ -184,7 +191,17 @@
     "email_pending": "Waiting for you to confirm %s. Open the link we emailed there.",
     "email_new": "New email address",
     "email_change_btn": "Change email",
-    "email_change_sent": "Check your new inbox for a confirmation link."
+    "email_change_sent": "Check your new inbox for a confirmation link.",
+    "security": "Security",
+    "change": "Change",
+    "set": "Set",
+    "disable": "Disable",
+    "on": "On",
+    "off": "Off",
+    "danger": "Danger zone",
+    "cancel": "Cancel",
+    "recovery_title": "Recovery codes",
+    "recovery_n": "%d left"
   },
   "footer": {
     "tmdb": "Show data and images are provided by",
@@ -347,7 +364,10 @@
     "pw_lower": "A lowercase letter",
     "pw_digit": "A digit",
     "pw_special": "A special character",
-    "pw_strong": "Strong password"
+    "pw_strong": "Strong password",
+    "marked_watched": "Marked as watched",
+    "marked_tip": "Marked as watched. Tip: rating an episode does the same.",
+    "rated": "Rated and marked as watched"
   },
   "genre": {
     "action_adventure": "Action & Adventure",
@@ -411,12 +431,12 @@
       "body": "Your password was changed. If this was not you, secure your account immediately.",
       "title": "Password changed"
     },
-    "push_devices": "Devices with push enabled: %d",
+    "push_devices": "Devices: %d",
     "push_disable": "Disable push on this device",
     "push_enable": "Enable push on this device",
     "push_hint": "Get alerts on this device even when the app is closed.",
     "push_title": "Push notifications",
-    "telegram_connect": "Connect Telegram",
+    "telegram_connect": "Connect",
     "telegram_connected": "Telegram notifications are connected.",
     "telegram_disconnect": "Disconnect",
     "telegram_dropped": {
@@ -431,7 +451,10 @@
     "telegram_oneclick": "Use my Telegram login",
     "telegram_title": "Telegram notifications",
     "telegram_waiting": "Waiting for you to press Start in Telegram...",
-    "test": "Test",
+    "test": {
+      "body": "If you can read this, this channel works.",
+      "title": "Test notification"
+    },
     "test_hint": "Send yourself a test on each channel to check it works.",
     "test_title": "Test your channels",
     "twofa_disabled": {
@@ -473,7 +496,9 @@
     "email_changed": {
       "title": "Email changed",
       "body": "Your email address is now {email}. If this was not you, secure your account immediately."
-    }
+    },
+    "test_btn": "Test",
+    "verify_first": "Verify email first"
   },
   "profile": {
     "bio": "Bio",
@@ -485,7 +510,7 @@
     "lifetime": "Lifetime",
     "month": "Last 30 days",
     "private": "This profile is private.",
-    "public": "Public profile",
+    "public": "Show my stats and favorites to everyone",
     "public_hint": "When off, only you can see your stats and favorites.",
     "recent": "Recently watched",
     "remove": "Remove",
@@ -560,9 +585,9 @@
   },
   "import": {
     "title": "Import from TV Time",
-    "intro": "Bring your followed shows, favorites and watch history over from TV Time.",
-    "how_title": "How to get your file",
-    "how_body": "In the TV Time app, request a copy of your data (GDPR export) and wait for the email with the download link. Upload that zip file here exactly as it is, without opening it.",
+    "intro": "Have a TV Time export? Upload it here to bring over your shows, favorites and watch history.",
+    "how_title": "Your export file",
+    "how_body": "TV Time has shut down, so this only works with a data export (zip) you already downloaded. Upload it exactly as it is, without opening it.",
     "what": "Imported: shows you follow, favorites, shows saved for later, and every watched episode with its original date. Movies, comments and emotion votes are not imported.",
     "keeps": "Nothing you already track here is changed or removed. Your file is read on the server to build the import and is not kept afterwards.",
     "file_label": "TV Time export (.zip)",

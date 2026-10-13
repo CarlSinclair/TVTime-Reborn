@@ -283,6 +283,16 @@ func (a *App) handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 		}
 		if u, err := a.Store.UserByID(uid); err == nil {
 			lang = u.Locale
+			if u.TelegramID == 0 && msg.From != nil && msg.From.ID != 0 {
+				switch err := a.Store.LinkTelegram(uid, msg.From.ID, msg.From.Username); {
+				case err == nil:
+					logger.Info("TELEGRAM sign-in identity linked with the chat uid=%d", uid)
+				case errors.Is(err, store.ErrTelegramTaken):
+					logger.Warn("TELEGRAM chat linked but the Telegram account already belongs to another user uid=%d", uid)
+				default:
+					logger.Error("TELEGRAM link sign-in identity uid=%d: %v", uid, err)
+				}
+			}
 		}
 		logger.Info("TELEGRAM linked uid=%d chat=%s", uid, chat)
 		reply(lang, "tg.linked")

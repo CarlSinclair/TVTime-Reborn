@@ -37,7 +37,7 @@ type Store interface {
 	PublicURL(key string) string
 }
 
-var keyRe = regexp.MustCompile(`^[a-z0-9][a-z0-9_./-]{0,200}$`)
+var keyRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_./-]{0,200}$`)
 
 // ValidKey rejects anything that could escape the store's root.
 func ValidKey(key string) bool {
