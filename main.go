@@ -20,6 +20,7 @@ import (
 	"tvt/auth"
 	"tvt/config"
 	"tvt/db"
+	"tvt/federation"
 	"tvt/handlers"
 	"tvt/i18n"
 	"tvt/logger"
@@ -103,6 +104,15 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	if cfg.Federation {
+		fed, err := federation.New(st, nt, baseURL.Host, cfg.JWTSecret, cfg.FedInsecure, cfg.FedBlock)
+		if err != nil {
+			logger.Fatal("federation: %v", err)
+		}
+		app.Fed = fed
+		go fed.Run(ctx)
+		logger.Info("federation on as %s", baseURL.Host)
+	}
 	go sy.Run(ctx)
 	nt.Start(ctx)
 	go nt.RunJobs(ctx)

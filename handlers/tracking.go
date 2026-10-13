@@ -172,6 +172,13 @@ func (a *App) apiWatch(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
+	if in.Watched || in.UpTo {
+		n := 1
+		if in.UpTo && marked > 1 {
+			n = marked
+		}
+		a.emitWatch(u, ep, n)
+	}
 	out := map[string]any{"marked": marked, "watched": p.Watched, "aired": p.Aired}
 	if in.Card {
 		out["next_html"] = a.upNextHTML(w, r, u, ep.ShowID)
@@ -233,6 +240,9 @@ func (a *App) apiWatchSeason(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if in.Watched {
+		a.emitSeason(u, sh, n, marked)
+	}
 	a.okJSON(w, map[string]any{"marked": marked})
 }
 
@@ -279,7 +289,9 @@ func (a *App) apiRate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		out["watched"] = true
+		a.emitWatch(u, ep, 1)
 	}
+	a.emitRating(u, ep, in.Rating)
 	if in.Card {
 		out["next_html"] = a.upNextHTML(w, r, u, ep.ShowID)
 	}

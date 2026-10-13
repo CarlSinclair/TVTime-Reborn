@@ -282,7 +282,7 @@
     "email_not_verified": "Vérifiez d'abord votre adresse e-mail.",
     "push_not_enabled": "Activez d'abord les notifications push sur cet appareil.",
     "friend_self": "Vous ne pouvez pas vous ajouter vous-même.",
-    "friend_remote": "Les autres serveurs ne sont pas encore pris en charge."
+    "friend_remote": "Impossible de joindre ce serveur ou de trouver cette personne."
   },
   "mail": {
     "login": {
@@ -561,7 +561,8 @@
     "week": "7 derniers jours",
     "share_activity": "Partager mon activité avec mes amis",
     "posts": "Publications",
-    "post_placeholder": "Partagez une nouvelle avec vos amis et fans"
+    "post_placeholder": "Partagez une nouvelle avec vos amis et fans",
+    "view_remote": "Voir sur leur serveur"
   },
   "tg": {
     "error": "Un problème est survenu. Réessayez.",
@@ -593,7 +594,7 @@
     },
     "third": {
       "title": "Autres services impliqués",
-      "body": "Les données des séries viennent de TMDB et TVmaze et, en option, de Trakt. Le serveur effectue ces requêtes et n'envoie rien sur vous. Les visuels sont récupérés une fois par le serveur et servis depuis ce site ou un stockage contrôlé par l'exploitant, si bien que votre navigateur ne contacte pas ces services. Si vous choisissez Telegram, il reçoit votre connexion et les notifications qui vous sont envoyées ; son script n'est chargé que lorsque vous appuyez sur le bouton Telegram. Les notifications push passent par le service push de l'éditeur de votre navigateur. L'e-mail passe par le fournisseur de messagerie de l'exploitant."
+      "body": "Les données des séries viennent de TMDB et TVmaze et, en option, de Trakt. Le serveur effectue ces requêtes et n'envoie rien sur vous. Les visuels sont récupérés une fois par le serveur et servis depuis ce site ou un stockage contrôlé par l'exploitant, si bien que votre navigateur ne contacte pas ces services. Si vous choisissez Telegram, il reçoit votre connexion et les notifications qui vous sont envoyées ; son script n'est chargé que lorsque vous appuyez sur le bouton Telegram. Les notifications push passent par le service push de l'éditeur de votre navigateur. L'e-mail passe par le fournisseur de messagerie de l'exploitant. Si vous ajoutez un ami sur un autre serveur TVT, vos demandes d'ami et l'activité que vous partagez avec vos amis (ce que vous regardez, vos notes, vos commentaires sans spoiler et vos publications) sont envoyées au serveur de cette personne et conservées 14 jours. Les commentaires avec spoiler ne sont jamais envoyés. Vous pouvez arrêter le partage dans les réglages du profil."
     },
     "public": {
       "title": "Ce que les autres peuvent voir",
@@ -653,6 +654,6 @@
     "tab": "Personnes",
     "prompt": "Saisissez le nom d'utilisateur exact, par exemple alice.",
     "none": "Personne avec ce nom d'utilisateur.",
-    "remote": "Les autres serveurs ne sont pas encore pris en charge."
+    "remote": "Impossible de joindre ce serveur ou de trouver cette personne."
   }
 }

@@ -282,7 +282,7 @@
     "email_not_verified": "Verify your email address first.",
     "push_not_enabled": "Enable push on this device first.",
     "friend_self": "You cannot add yourself.",
-    "friend_remote": "Other servers are not supported yet."
+    "friend_remote": "Could not reach that server or find that person."
   },
   "mail": {
     "login": {
@@ -561,7 +561,8 @@
     "week": "Last 7 days",
     "share_activity": "Share my activity with friends",
     "posts": "Posts",
-    "post_placeholder": "Share an update with your friends and fans"
+    "post_placeholder": "Share an update with your friends and fans",
+    "view_remote": "View on their server"
   },
   "tg": {
     "error": "Something went wrong. Please try again.",
@@ -593,7 +594,7 @@
     },
     "third": {
       "title": "Other services involved",
-      "body": "Show data comes from TMDB and TVmaze, and optionally Trakt. The server makes these requests and sends nothing about you. Artwork is fetched once by the server and served from this site or from storage the operator controls, so your browser does not contact those services. If you choose Telegram, Telegram receives your sign-in and the notifications sent to you; its script is loaded only when you press the Telegram button. Push notifications pass through your browser vendor's push service. Email passes through the operator's mail provider."
+      "body": "Show data comes from TMDB and TVmaze, and optionally Trakt. The server makes these requests and sends nothing about you. Artwork is fetched once by the server and served from this site or from storage the operator controls, so your browser does not contact those services. If you choose Telegram, Telegram receives your sign-in and the notifications sent to you; its script is loaded only when you press the Telegram button. Push notifications pass through your browser vendor's push service. Email passes through the operator's mail provider. If you befriend someone on another TVT server, your friend requests and the activity you share with friends (what you watch, your ratings, open comments and posts) are sent to that person's server and kept there for 14 days. Spoiler comments are never sent. You can stop sharing in your profile settings."
     },
     "public": {
       "title": "What others can see",
@@ -653,6 +654,6 @@
     "tab": "People",
     "prompt": "Type a username exactly, for example alice.",
     "none": "No one with that username.",
-    "remote": "Other servers are not supported yet."
+    "remote": "Could not reach that server or find that person."
   }
 }

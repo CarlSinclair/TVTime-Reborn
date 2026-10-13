@@ -38,6 +38,7 @@ type User struct {
 	NotifyOffsetMin  int
 	PendingEmail     string
 	ShareActivity    bool
+	RemoteHost       string
 	CreatedAt        string
 }
 
@@ -68,14 +69,14 @@ func ValidUsername(u string) bool { return usernameRe.MatchString(u) }
 
 const userCols = `id, COALESCE(email,''), username, display_name, bio, avatar_path, banner_path, password_hash, email_verified, locale, timezone,
   profile_public, is_admin, is_banned, totp_secret_enc, totp_enabled, totp_last_step, COALESCE(telegram_id,0), telegram_username, telegram_chat_id,
-  notify_in_app, notify_push, notify_email, notify_telegram, notify_offset_min, pending_email, share_activity, created_at`
+  notify_in_app, notify_push, notify_email, notify_telegram, notify_offset_min, pending_email, share_activity, remote_host, created_at`
 
 func scanUser(row interface{ Scan(...any) error }) (*User, error) {
 	var u User
 	var ev, pub, adm, ban, te, nIn, nPush, nMail, nTg, share int
 	if err := row.Scan(&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.Bio, &u.AvatarPath, &u.BannerPath, &u.PasswordHash, &ev, &u.Locale, &u.Timezone,
 		&pub, &adm, &ban, &u.TOTPSecretEnc, &te, &u.TOTPLastStep, &u.TelegramID, &u.TelegramUsername, &u.TelegramChatID,
-		&nIn, &nPush, &nMail, &nTg, &u.NotifyOffsetMin, &u.PendingEmail, &share, &u.CreatedAt); err != nil {
+		&nIn, &nPush, &nMail, &nTg, &u.NotifyOffsetMin, &u.PendingEmail, &share, &u.RemoteHost, &u.CreatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}

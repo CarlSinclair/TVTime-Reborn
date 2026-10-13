@@ -18,6 +18,7 @@ import (
 	"tvt/auth"
 	"tvt/config"
 	"tvt/db"
+	"tvt/federation"
 	"tvt/handlers"
 	"tvt/i18n"
 	"tvt/mailer"
@@ -172,6 +173,7 @@ type env struct {
 	nt    *notify.Service
 	sync  *syncer.Syncer
 	app   *handlers.App
+	fed   *federation.Service
 }
 
 type tgFake struct {
@@ -215,7 +217,8 @@ func newEnv(t *testing.T) *env {
 	}
 	t.Cleanup(func() { d.Close() })
 	st := store.New(d)
-	cfg := &config.Config{AppName: "TVT", BaseURL: "http://test", DefaultLang: "en", DevLogMail: true, JWTSecret: "0123456789abcdef0123456789abcdef", DataDir: t.TempDir(), ImageBase: "http://127.0.0.1:1"}
+	srv := httptest.NewUnstartedServer(nil)
+	cfg := &config.Config{AppName: "TVT", BaseURL: "http://" + srv.Listener.Addr().String(), FedInsecure: true, DefaultLang: "en", DevLogMail: true, JWTSecret: "0123456789abcdef0123456789abcdef", DataDir: t.TempDir(), ImageBase: "http://127.0.0.1:1"}
 	tm := tmdb.New("testkey")
 	tm.Base = fakeTMDB(t).URL
 	a := auth.New(st, cfg.JWTSecret, false)
@@ -241,9 +244,15 @@ func newEnv(t *testing.T) *env {
 	if err != nil {
 		t.Fatalf("app: %v", err)
 	}
-	srv := httptest.NewServer(app.Handler())
+	fed, err := federation.New(st, nt, srv.Listener.Addr().String(), cfg.JWTSecret, true, nil)
+	if err != nil {
+		t.Fatalf("federation: %v", err)
+	}
+	app.Fed = fed
+	srv.Config.Handler = app.Handler()
+	srv.Start()
 	t.Cleanup(srv.Close)
-	return &env{srv: srv, store: st, auth: a, cfg: cfg, tg: fake, bot: bot, nt: nt, sync: sy, app: app}
+	return &env{srv: srv, store: st, auth: a, cfg: cfg, tg: fake, bot: bot, nt: nt, sync: sy, app: app, fed: fed}
 }
 
 func (e *env) signup(t *testing.T, name string, verify bool) *client {

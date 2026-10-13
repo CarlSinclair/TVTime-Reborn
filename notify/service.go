@@ -277,7 +277,7 @@ func (s *Service) deliver(userID int64, event, link string, data map[string]any)
 		logger.Error("NOTIFY load user uid=%d event=%s: %v", userID, event, err)
 		return
 	}
-	if u.IsBanned {
+	if u.IsBanned || u.IsRemote() {
 		return
 	}
 	prefs, err := s.Store.NotificationPrefs(userID)

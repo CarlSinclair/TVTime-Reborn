@@ -282,7 +282,7 @@
     "email_not_verified": "Verifica tu correo primero.",
     "push_not_enabled": "Activa las notificaciones push en este dispositivo primero.",
     "friend_self": "No puedes añadirte a ti mismo.",
-    "friend_remote": "Otros servidores aún no son compatibles."
+    "friend_remote": "No se pudo contactar con ese servidor ni encontrar a esa persona."
   },
   "mail": {
     "login": {
@@ -561,7 +561,8 @@
     "week": "Últimos 7 días",
     "share_activity": "Compartir mi actividad con amigos",
     "posts": "Publicaciones",
-    "post_placeholder": "Comparte una novedad con tus amigos y fans"
+    "post_placeholder": "Comparte una novedad con tus amigos y fans",
+    "view_remote": "Ver en su servidor"
   },
   "tg": {
     "error": "Algo salió mal. Inténtalo de nuevo.",
@@ -593,7 +594,7 @@
     },
     "third": {
       "title": "Otros servicios implicados",
-      "body": "Los datos de las series vienen de TMDB y TVmaze y, opcionalmente, de Trakt. El servidor hace estas consultas y no envía nada sobre ti. Las imágenes las descarga una vez el servidor y se sirven desde este sitio o desde un almacenamiento controlado por el operador, así que tu navegador no contacta con esos servicios. Si eliges Telegram, este recibe tu inicio de sesión y las notificaciones que te envía; su script solo se carga cuando pulsas el botón de Telegram. Las notificaciones push pasan por el servicio push del fabricante de tu navegador. El correo pasa por el proveedor de correo del operador."
+      "body": "Los datos de las series vienen de TMDB y TVmaze y, opcionalmente, de Trakt. El servidor hace estas consultas y no envía nada sobre ti. Las imágenes las descarga una vez el servidor y se sirven desde este sitio o desde un almacenamiento controlado por el operador, así que tu navegador no contacta con esos servicios. Si eliges Telegram, este recibe tu inicio de sesión y las notificaciones que te envía; su script solo se carga cuando pulsas el botón de Telegram. Las notificaciones push pasan por el servicio push del fabricante de tu navegador. El correo pasa por el proveedor de correo del operador. Si añades a un amigo en otro servidor TVT, tus solicitudes de amistad y la actividad que compartes con amigos (lo que ves, tus valoraciones, comentarios abiertos y publicaciones) se envían al servidor de esa persona y se conservan allí 14 días. Los comentarios con spoiler nunca se envían. Puedes dejar de compartir en los ajustes del perfil."
     },
     "public": {
       "title": "Qué pueden ver los demás",
@@ -653,6 +654,6 @@
     "tab": "Personas",
     "prompt": "Escribe el nombre de usuario exacto, por ejemplo alice.",
     "none": "Nadie con ese nombre de usuario.",
-    "remote": "Otros servidores aún no son compatibles."
+    "remote": "No se pudo contactar con ese servidor ni encontrar a esa persona."
   }
 }

@@ -463,6 +463,17 @@ func (a *App) apiDeleteAccount(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, apiErr{http.StatusBadRequest, "err.confirm_username"})
 		return
 	}
+	if a.Fed != nil {
+		if friends, err := a.Store.RemoteFriends(u.ID); err != nil {
+			logger.Error("ACCOUNT delete: remote friends uid=%d: %v", u.ID, err)
+		} else {
+			for _, f := range friends {
+				if peer, err := a.Store.UserByID(f.UserID); err == nil {
+					a.Fed.SendFriendEnd(u, peer)
+				}
+			}
+		}
+	}
 	if err := a.Store.DeleteUser(u.ID); err != nil {
 		a.fail(w, r, err)
 		return

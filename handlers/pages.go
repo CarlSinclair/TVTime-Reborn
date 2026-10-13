@@ -118,6 +118,11 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/account/export", a.apiExport)
 
 	mux.HandleFunc("GET /api/search", a.apiSearch)
+	if a.Fed != nil {
+		mux.HandleFunc("GET /.well-known/tvt", a.Fed.WellKnown)
+		mux.HandleFunc("GET /federation/user/{name}", a.Fed.UserInfo)
+		mux.HandleFunc("POST /federation/inbox", a.Fed.Inbox)
+	}
 	mux.HandleFunc("GET /api/people", a.apiPeople)
 	mux.HandleFunc("GET /api/friends", a.apiFriendsList)
 	mux.HandleFunc("POST /api/friends/request", a.apiFriendRequest)

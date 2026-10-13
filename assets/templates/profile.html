@@ -6,17 +6,18 @@
     {{if .AvatarPath}}<img class="avatar xl" src="{{avatar .AvatarPath}}" alt="">{{else}}<span class="avatar xl fallback">{{initial .Name}}</span>{{end}}
     <div>
       <h1>{{.Name}}</h1>
-      <p class="muted">@{{.Username}} &middot; {{$.T "profile.joined" (slice .CreatedAt 0 10)}}</p>
+      <p class="muted">@{{$.Data.Handle}}{{if $.Data.Remote}} &middot; <a href="{{$.Data.RemoteURL}}" rel="noopener noreferrer" target="_blank">{{$.T "profile.view_remote"}}</a>{{else}} &middot; {{$.T "profile.joined" (slice .CreatedAt 0 10)}}{{end}}</p>
     </div>
     {{if $.Data.IsOwn}}<a class="btn ghost small push-end" href="/settings?tab=profile">{{$.T "profile.edit"}}</a>{{else if $.User}}<span class="push-end profile-actions"><span data-friend-box>{{template "friend_button" (dict "Username" .Username "State" $.Data.Friend "V" $)}}</span><button class="icon-btn no" type="button" data-block-user="{{.Username}}" aria-label="{{$.T "js.block"}}" title="{{$.T "js.block"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-block"></use></svg></button><button class="icon-btn no" type="button" data-report-user="{{.Username}}" aria-label="{{$.T "js.report_abuse"}}" title="{{$.T "js.report_abuse"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-flag"></use></svg></button></span>{{end}}
   </div>
-  {{if $.Data.Private}}
+  {{if $.Data.Remote}}
+  {{else if $.Data.Private}}
   <p class="notice">{{$.T "profile.private"}}</p>
   {{else}}
   {{if .Bio}}<p class="bio">{{.Bio}}</p>{{end}}
   {{end}}
 </section>
-{{if not $.Data.Private}}
+{{if and (not $.Data.Private) (not $.Data.Remote)}}
 <section>
   <h2>{{$.T "profile.watch_time"}}</h2>
   <div class="stats four">

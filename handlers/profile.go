@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"net/http"
+	"net/url"
 	"time"
 
 	"tvt/auth"
@@ -38,6 +39,39 @@ func (a *App) pageProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	isOwn := viewer != nil && viewer.ID == p.ID
 	data := map[string]any{"Profile": p, "IsOwn": isOwn, "ProfileURL": a.Cfg.BaseURL + "/u/" + p.Username}
+	if bu, perr := url.Parse(a.Cfg.BaseURL); perr == nil && !p.IsRemote() {
+		data["Handle"] = p.Username + "@" + bu.Host
+	}
+	if p.IsRemote() {
+		data["Remote"] = true
+		data["Handle"] = p.Username
+		scheme := "https"
+		if a.Cfg.FedInsecure {
+			scheme = "http"
+		}
+		data["RemoteURL"] = scheme + "://" + p.RemoteHost + "/u/" + p.LocalPart()
+		if viewer != nil {
+			blocked, err := a.Store.BlockedEither(viewer.ID, p.ID)
+			if err != nil {
+				logger.Error("PAGE profile block check: %v", err)
+				a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
+				return
+			}
+			if blocked {
+				a.errorPage(w, r, http.StatusNotFound, "err.not_found")
+				return
+			}
+			state, err := a.Store.FriendState(viewer.ID, p.ID)
+			if err != nil {
+				logger.Error("PAGE profile friend state: %v", err)
+				a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
+				return
+			}
+			data["Friend"] = state
+		}
+		a.render(w, r, "profile", http.StatusOK, p.Name(), data)
+		return
+	}
 	if viewer != nil && !isOwn {
 		blocked, err := a.Store.BlockedEither(viewer.ID, p.ID)
 		if err != nil {

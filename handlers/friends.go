@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"tvt/auth"
+	"tvt/federation"
 	"tvt/logger"
 	"tvt/store"
 )
@@ -27,46 +30,70 @@ func (a *App) personJSON(p store.Person) personView {
 	return v
 }
 
-// localHandle reads what someone typed to find a person. A bare name, "@name"
-// and "name@here" all mean a person on this server; the host of the base URL
-// works too. Anything else names another server, which is not supported yet.
-func (a *App) localHandle(q string) (name string, local bool) {
+// parseHandle reads what someone typed to find a person. A bare name, "@name"
+// and "name@here" all mean a person on this server, and so does the host of the
+// base URL; anything else names a person on another server.
+func (a *App) parseHandle(q string) (name, host string, local bool) {
 	q = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(q), "@"))
 	if q == "" {
-		return "", true
+		return "", "", true
 	}
 	name, host, hasHost := strings.Cut(q, "@")
+	name = strings.TrimSpace(name)
 	if !hasHost {
-		return strings.TrimSpace(name), true
+		return name, "", true
 	}
 	host = strings.ToLower(strings.TrimSpace(host))
 	own := ""
 	if u, err := url.Parse(a.Cfg.BaseURL); err == nil {
-		own = strings.ToLower(u.Hostname())
+		own = strings.ToLower(u.Host)
 	}
 	if host == "here" || host == "" || (own != "" && host == own) {
-		return strings.TrimSpace(name), true
+		return name, "", true
 	}
-	return strings.TrimSpace(name), false
+	return name, host, false
 }
 
 // findPerson is an exact username lookup that hides banned people and anyone
 // in a block with the viewer, so a blocked person sees an account that does not
 // exist.
 func (a *App) findPerson(viewer *store.User, q string) (*store.User, bool, error) {
-	name, local := a.localHandle(q)
+	name, host, local := a.parseHandle(q)
+	var u *store.User
+	var err error
 	if !local {
-		return nil, true, nil
-	}
-	if !store.ValidUsername(name) {
-		return nil, false, nil
-	}
-	u, err := a.Store.UserByUsername(name)
-	if err != nil {
-		if errors.Is(err, store.ErrNotFound) {
+		if a.Fed == nil {
+			return nil, true, nil
+		}
+		if known, kerr := a.Store.UserByUsername(store.RemoteHandle(name, host)); kerr == nil && known.IsRemote() {
+			u = known
+		} else {
+			ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
+			defer cancel()
+			u, err = a.Fed.ResolveUser(ctx, name, host)
+			switch {
+			case err == nil:
+			case errors.Is(err, federation.ErrNotFound):
+				return nil, false, nil
+			default:
+				logger.Warn("PEOPLE could not resolve %s@%s: %v", name, host, err)
+				return nil, true, nil
+			}
+		}
+	} else {
+		if !store.ValidUsername(name) {
 			return nil, false, nil
 		}
-		return nil, false, err
+		u, err = a.Store.UserByUsername(name)
+		if err != nil {
+			if errors.Is(err, store.ErrNotFound) {
+				return nil, false, nil
+			}
+			return nil, false, err
+		}
+		if u.IsRemote() {
+			return nil, false, nil
+		}
 	}
 	if u.IsBanned {
 		return nil, false, nil
@@ -194,10 +221,17 @@ func (a *App) apiFriendRequest(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	switch state {
-	case "outgoing":
+	switch {
+	case target.IsRemote() && a.Fed != nil:
+		switch state {
+		case "outgoing":
+			a.Fed.SendFriendRequest(viewer, target)
+		case "friends":
+			a.Fed.SendFriendAccept(viewer, target)
+		}
+	case state == "outgoing":
 		a.Notif.Send(target.ID, "friend_request", "/?friends=1", map[string]any{"user": viewer.Name(), "username": viewer.Username})
-	case "friends":
+	case state == "friends":
 		a.Notif.Send(target.ID, "friend_accepted", "/u/"+viewer.Username, map[string]any{"user": viewer.Name()})
 	}
 	logger.Info("FRIENDS request uid=%d target=%d state=%s", viewer.ID, target.ID, state)
@@ -234,6 +268,9 @@ func (a *App) apiFriendRespond(w http.ResponseWriter, r *http.Request) {
 				a.fail(w, r, err)
 				return
 			}
+			if target.IsRemote() && a.Fed != nil {
+				a.Fed.SendFriendEnd(viewer, target)
+			}
 		}
 		a.okJSON(w, nil)
 		return
@@ -246,7 +283,11 @@ func (a *App) apiFriendRespond(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	a.Notif.Send(target.ID, "friend_accepted", "/u/"+viewer.Username, map[string]any{"user": viewer.Name()})
+	if target.IsRemote() && a.Fed != nil {
+		a.Fed.SendFriendAccept(viewer, target)
+	} else {
+		a.Notif.Send(target.ID, "friend_accepted", "/u/"+viewer.Username, map[string]any{"user": viewer.Name()})
+	}
 	a.okJSON(w, map[string]any{"state": "friends"})
 }
 
@@ -258,6 +299,9 @@ func (a *App) apiFriendRemove(w http.ResponseWriter, r *http.Request) {
 	if err := a.Store.EndFriendship(viewer.ID, target.ID); err != nil {
 		a.fail(w, r, err)
 		return
+	}
+	if target.IsRemote() && a.Fed != nil {
+		a.Fed.SendFriendEnd(viewer, target)
 	}
 	a.okJSON(w, nil)
 }
@@ -273,9 +317,16 @@ func (a *App) apiBlockUser(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
+	var remote *store.User
+	if t, err := a.Store.UserByUsername(in.Username); err == nil && t.IsRemote() {
+		remote = t
+	}
 	switch err := a.Store.Block(viewer.ID, in.Username); {
 	case err == nil:
 		logger.Info("BLOCK uid=%d blocked %q", viewer.ID, in.Username)
+		if remote != nil && a.Fed != nil {
+			a.Fed.SendFriendEnd(viewer, remote)
+		}
 		a.okJSON(w, nil)
 	case errors.Is(err, store.ErrNotFound):
 		a.fail(w, r, errNotFound)

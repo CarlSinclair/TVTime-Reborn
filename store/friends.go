@@ -252,6 +252,33 @@ func (s *Store) FriendFeed(viewerID int64, before string, limit int) ([]FeedEven
 	}
 	rrows.Close()
 
+	xargs := append([]any{viewerID}, inArgs...)
+	xargs = append(xargs, Now(), before, limit)
+	xrows, err := s.DB.Query(`SELECT re.user_id, u.username, u.display_name, re.kind, re.show_tmdb, re.show_name, re.poster, re.season, re.episode, re.count, re.stars, re.excerpt, re.at,
+	    EXISTS (SELECT 1 FROM watched vw JOIN episodes e ON e.id = vw.episode_id JOIN shows s ON s.id = e.show_id
+	      WHERE vw.user_id = ? AND s.tmdb_id = re.show_tmdb AND e.season_number = re.season AND e.episode_number = re.episode)
+	  FROM remote_events re JOIN users u ON u.id = re.user_id
+	  WHERE re.user_id IN (`+in+`) AND re.expires_at > ? AND re.at < ? AND u.is_banned = 0
+	  ORDER BY re.at DESC LIMIT ?`, xargs...)
+	if err != nil {
+		return nil, fmt.Errorf("feed remote uid=%d: %w", viewerID, err)
+	}
+	for xrows.Next() {
+		var ev FeedEvent
+		var seen int
+		if err := xrows.Scan(&ev.UserID, &ev.Username, &ev.DisplayName, &ev.Kind, &ev.ShowTMDB, &ev.ShowName, &ev.PosterPath, &ev.Season, &ev.Episode, &ev.Count, &ev.Stars, &ev.Excerpt, &ev.At, &seen); err != nil {
+			xrows.Close()
+			return nil, err
+		}
+		ev.ViewerWatched = seen == 1
+		all = append(all, ev)
+	}
+	if err := xrows.Err(); err != nil {
+		xrows.Close()
+		return nil, err
+	}
+	xrows.Close()
+
 	cargs := append([]any{}, inArgs...)
 	cargs = append(cargs, before, viewerID, viewerID, limit)
 	crows, err := s.DB.Query(`SELECT c.user_id, u.username, u.display_name, u.avatar_path, s.id, s.tmdb_id, s.name, s.poster_path, e.id, e.season_number, e.episode_number, c.body, c.created_at

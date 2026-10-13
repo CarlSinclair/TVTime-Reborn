@@ -54,6 +54,17 @@ bucket and none of the rest of this section applies. With a bucket:
   watching), with or without a bucket;
 - deletion is real: removing a user's images removes the objects in the bucket.
 
+## Federation
+
+If an account befriends someone on another TVT server, that server receives the friend
+requests and the activity the account shares with friends: episodes watched, ratings,
+open (non-spoiler) comments and profile posts, each with show title, episode numbers
+and a timestamp. It keeps them for 14 days and drops them sooner when the friendship
+ends. Nothing is sent to servers where the account has no friend, spoiler comments are
+never sent, and "Share my activity with friends" in the profile settings stops all of
+it. Every message is signed by the sending server; the receiving server only accepts
+activity from people who are friends with someone on it.
+
 ## Imports
 
 An import reads the uploaded export in memory, keeps only the shows, watched episodes and

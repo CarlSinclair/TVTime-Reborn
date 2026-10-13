@@ -18,6 +18,7 @@ import (
 	"tvt/assets"
 	"tvt/auth"
 	"tvt/config"
+	"tvt/federation"
 	"tvt/i18n"
 	"tvt/importer"
 	"tvt/logger"
@@ -43,6 +44,7 @@ type App struct {
 	Media media.Store
 
 	Importer *importer.Runner
+	Fed      *federation.Service
 
 	tmpl     map[string]*template.Template
 	mfaLimit *auth.Limiter
@@ -344,7 +346,8 @@ var publicPages = map[string]bool{
 // recovery pages, the legal pages, static files and the machine endpoints.
 // Everything else needs an account.
 func publicRoute(p string) bool {
-	return isStatic(p) || publicPages[p] || strings.HasPrefix(p, "/t/") || strings.HasPrefix(p, "/api/auth/") || p == "/api/telegram/webhook"
+	return isStatic(p) || publicPages[p] || strings.HasPrefix(p, "/t/") || strings.HasPrefix(p, "/api/auth/") || p == "/api/telegram/webhook" ||
+		p == "/.well-known/tvt" || strings.HasPrefix(p, "/federation/")
 }
 
 // SetMedia swaps the object store (used by tests).
@@ -424,7 +427,7 @@ func (a *App) middleware(next http.Handler) http.Handler {
 			http.Redirect(sw, r, target, http.StatusSeeOther)
 			return
 		}
-		if !isStatic(r.URL.Path) && r.URL.Path != "/api/telegram/webhook" {
+		if !isStatic(r.URL.Path) && r.URL.Path != "/api/telegram/webhook" && !isFederation(r.URL.Path) {
 			if err := a.allow(a.pageLimit, "g:"+auth.ClientIP(r)); err != nil {
 				logger.Warn("RATE page limit from=%s %s %s", auth.ClientCountry(r), r.Method, r.URL.Path)
 				a.fail(sw, r, err)
@@ -442,7 +445,7 @@ func (a *App) middleware(next http.Handler) http.Handler {
 				}
 			}
 		}
-		if r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions && r.URL.Path != "/api/telegram/webhook" {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions && r.URL.Path != "/api/telegram/webhook" && !isFederation(r.URL.Path) {
 			if !a.Auth.CSRFValid(r) {
 				logger.Warn("CSRF rejected %s %s from=%s", r.Method, r.URL.Path, auth.ClientCountry(r))
 				a.fail(sw, r, errForbidden)
@@ -495,3 +498,7 @@ func withTimeout(r *http.Request, d time.Duration) (context.Context, context.Can
 }
 
 func (v *View) JSStrings() map[string]string { return v.App.I18n.Prefix(v.Lang, "js.") }
+
+func isFederation(p string) bool {
+	return p == "/.well-known/tvt" || strings.HasPrefix(p, "/federation/")
+}

@@ -227,6 +227,7 @@ func (a *App) apiAddComment() http.HandlerFunc {
 		if in.ParentID != 0 {
 			a.notifyReply(u, t, in.ParentID, body)
 		}
+		a.emitComment(u, t, in.ParentID, cid, body, in.Spoiler)
 		a.okJSON(w, map[string]any{"id": cid})
 	}
 }
@@ -291,6 +292,9 @@ func (a *App) apiEditComment(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	if c, err := a.Store.CommentByID(id); err == nil {
+		a.emitComment(u, c.Target, c.ParentID, id, body, in.Spoiler)
+	}
 	a.okJSON(w, nil)
 }
 
@@ -311,6 +315,9 @@ func (a *App) apiDeleteComment(w http.ResponseWriter, r *http.Request) {
 			a.fail(w, r, err)
 		}
 		return
+	}
+	if a.Fed != nil {
+		a.Fed.Retract(u, "c:"+itoa(id))
 	}
 	a.okJSON(w, nil)
 }
