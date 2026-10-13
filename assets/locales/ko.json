@@ -170,7 +170,8 @@
     "passkey_last_used": "마지막 사용 %s",
     "passkey_never": "사용한 적 없음",
     "passkey_remove": "삭제",
-    "telegram_link_btn": "내 Telegram 계정 연결"
+    "telegram_link_btn": "내 Telegram 계정 연결",
+    "tab_import": "가져오기"
   },
   "footer": {
     "tmdb": "작품 데이터와 이미지 제공:",
@@ -234,7 +235,11 @@
     "passkey_failed": "패스키 확인에 실패했습니다. 다시 시도해 주세요.",
     "passkey_expired": "패스키 요청이 만료되었습니다. 다시 시도해 주세요.",
     "passkey_last_method": "마지막 패스키를 삭제하기 전에 로그인 방법을 하나 이상 남겨 두세요. 비밀번호를 설정하거나, 이메일을 인증하거나, Telegram을 연결하세요.",
-    "invalid_timing": "7일 이내의 오프셋과 올바른 시각을 선택하세요."
+    "invalid_timing": "7일 이내의 오프셋과 올바른 시각을 선택하세요.",
+    "import_invalid": "TV Time 내보내기 zip 파일이 아닌 것 같습니다.",
+    "import_empty": "내보내기 파일에 작품이나 시청한 에피소드가 없습니다.",
+    "import_busy": "이미 진행 중인 가져오기가 있습니다.",
+    "import_too_big": "파일이 너무 큽니다."
   },
   "mail": {
     "login": {
@@ -295,7 +300,19 @@
     "passkey_remove_confirm": "이 패스키를 삭제할까요?",
     "invalid_timing": "올바른 숫자를 입력하세요.",
     "telegram_failed": "Telegram 로그인이 취소되었거나 차단되었습니다. 다시 시도해 주세요.",
-    "telegram_open": "Telegram 열기"
+    "telegram_open": "Telegram 열기",
+    "import_uploading": "업로드 중",
+    "import_started": "가져오기를 시작했습니다. 이 페이지를 떠나도 됩니다.",
+    "import_pending": "순서를 기다리는 중",
+    "import_running": "가져오는 중: %d / %d 작품",
+    "import_done": "가져오기가 완료되었습니다",
+    "import_failed": "가져오기에 실패했습니다. 나중에 다시 시도하세요.",
+    "import_shows": "찾은 작품: %d / %d",
+    "import_follows": "라이브러리에 추가됨: %d",
+    "import_episodes": "시청 완료로 표시한 에피소드: %d",
+    "import_skipped": "찾지 못한 에피소드: %d",
+    "import_reason_not_found": "찾을 수 없음",
+    "import_reason_error": "조회 실패"
   },
   "genre": {
     "action_adventure": "액션 & 어드벤처",
@@ -410,7 +427,11 @@
     "timing_unit": "단위",
     "timing_unit_min": "분",
     "timing_unit_hour": "시간",
-    "timing_unit_day": "일"
+    "timing_unit_day": "일",
+    "import_done": {
+      "title": "가져오기 완료",
+      "body": "작품 {shows}개와 시청한 에피소드 {episodes}개를 가져왔습니다."
+    }
   },
   "profile": {
     "bio": "소개",
@@ -494,5 +515,16 @@
       "title": "문의",
       "body": "운영자: {operator}. {contact}"
     }
+  },
+  "import": {
+    "title": "TV Time에서 가져오기",
+    "intro": "TV Time에서 팔로우하던 작품, 즐겨찾기, 시청 기록을 옮겨 오세요.",
+    "how_title": "파일을 받는 방법",
+    "how_body": "TV Time 앱에서 내 데이터 사본(GDPR 내보내기)을 요청하고, 다운로드 링크가 담긴 이메일을 기다리세요. 받은 zip 파일을 열지 말고 그대로 여기에 업로드하세요.",
+    "what": "가져오는 항목: 팔로우 중인 작품, 즐겨찾기, 나중에 볼 작품, 시청한 모든 에피소드(원래 날짜 포함). 영화, 댓글, 감정 투표는 가져오지 않습니다.",
+    "keeps": "여기서 이미 기록한 내용은 바뀌거나 삭제되지 않습니다. 파일은 가져오기를 만들기 위해 서버에서 읽히며 이후 보관되지 않습니다.",
+    "file_label": "TV Time 내보내기 파일 (.zip)",
+    "progress": "가져오기 진행 상황",
+    "unmatched": "찾지 못한 작품"
   }
 }

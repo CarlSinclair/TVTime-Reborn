@@ -18,6 +18,7 @@ import (
 	"tvt/auth"
 	"tvt/config"
 	"tvt/i18n"
+	"tvt/importer"
 	"tvt/logger"
 	"tvt/mailer"
 	"tvt/media"
@@ -39,6 +40,8 @@ type App struct {
 	Notif *notify.Service
 	Bot   *telegram.Bot
 	Media media.Store
+
+	Importer *importer.Runner
 
 	tmpl     map[string]*template.Template
 	mfaLimit *auth.Limiter
@@ -70,6 +73,15 @@ func New(cfg *config.Config, st *store.Store, a *auth.Service, sy *syncer.Syncer
 		imgLimit:     auth.NewLimiter(600, time.Minute),
 		pageLimit:    auth.NewLimiter(600, time.Minute),
 		writeLimit:   auth.NewLimiter(120, time.Minute),
+	}
+	app.Importer = &importer.Runner{Store: st, Sync: sy, TMDB: tm, Notify: nt}
+	if n, err := st.FailInterruptedImports(); err != nil {
+		logger.Error("IMPORT could not clear interrupted jobs: %v", err)
+	} else if n > 0 {
+		logger.Warn("IMPORT marked %d interrupted job(s) as failed", n)
+	}
+	if err := st.PruneImports(180 * 24 * time.Hour); err != nil {
+		logger.Error("IMPORT prune: %v", err)
 	}
 	if err := app.loadTemplates(); err != nil {
 		return nil, err

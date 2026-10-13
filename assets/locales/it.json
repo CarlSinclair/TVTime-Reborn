@@ -170,7 +170,8 @@
     "passkey_last_used": "Ultimo uso il %s",
     "passkey_never": "Mai usata",
     "passkey_remove": "Rimuovi",
-    "telegram_link_btn": "Collega il mio account Telegram"
+    "telegram_link_btn": "Collega il mio account Telegram",
+    "tab_import": "Importa"
   },
   "footer": {
     "tmdb": "Dati e immagini delle serie forniti da",
@@ -234,7 +235,11 @@
     "passkey_failed": "Verifica della passkey non riuscita. Riprova.",
     "passkey_expired": "La richiesta della passkey è scaduta. Riprova.",
     "passkey_last_method": "Mantieni almeno un modo per accedere: imposta una password, verifica un'e-mail o collega Telegram prima di rimuovere l'ultima passkey.",
-    "invalid_timing": "Scegli uno scostamento entro 7 giorni e un orario valido."
+    "invalid_timing": "Scegli uno scostamento entro 7 giorni e un orario valido.",
+    "import_invalid": "Questo non sembra uno zip di esportazione di TV Time.",
+    "import_empty": "L'esportazione non contiene serie né episodi visti.",
+    "import_busy": "Hai già un'importazione in corso.",
+    "import_too_big": "Il file è troppo grande."
   },
   "mail": {
     "login": {
@@ -295,7 +300,19 @@
     "passkey_remove_confirm": "Rimuovere questa passkey?",
     "invalid_timing": "Inserisci un numero valido.",
     "telegram_failed": "L'accesso con Telegram è stato annullato o bloccato. Riprova.",
-    "telegram_open": "Apri Telegram"
+    "telegram_open": "Apri Telegram",
+    "import_uploading": "Caricamento",
+    "import_started": "Importazione avviata. Puoi lasciare questa pagina.",
+    "import_pending": "In attesa del proprio turno",
+    "import_running": "Importazione: %d di %d serie",
+    "import_done": "Importazione completata",
+    "import_failed": "Importazione non riuscita. Riprova più tardi.",
+    "import_shows": "Serie riconosciute: %d di %d",
+    "import_follows": "Aggiunte alla tua libreria: %d",
+    "import_episodes": "Episodi segnati come visti: %d",
+    "import_skipped": "Episodi non riconosciuti: %d",
+    "import_reason_not_found": "non trovata",
+    "import_reason_error": "ricerca non riuscita"
   },
   "genre": {
     "action_adventure": "Azione e avventura",
@@ -410,7 +427,11 @@
     "timing_unit": "Unità",
     "timing_unit_min": "minuti",
     "timing_unit_hour": "ore",
-    "timing_unit_day": "giorni"
+    "timing_unit_day": "giorni",
+    "import_done": {
+      "title": "Importazione completata",
+      "body": "Sono state importate {shows} serie e {episodes} episodi visti."
+    }
   },
   "profile": {
     "bio": "Bio",
@@ -494,5 +515,16 @@
       "title": "Contatti",
       "body": "Operatore: {operator}. {contact}"
     }
+  },
+  "import": {
+    "title": "Importa da TV Time",
+    "intro": "Porta qui le serie che segui, i preferiti e la cronologia di TV Time.",
+    "how_title": "Come ottenere il file",
+    "how_body": "Nell'app TV Time, richiedi una copia dei tuoi dati (esportazione GDPR) e attendi l'e-mail con il link di download. Carica qui il file zip così com'è, senza aprirlo.",
+    "what": "Vengono importati: le serie che segui, i preferiti, le serie salvate per dopo e ogni episodio visto con la data originale. Film, commenti e voti emozione non vengono importati.",
+    "keeps": "Nulla di ciò che già segui qui viene modificato o rimosso. Il file viene letto sul server per preparare l'importazione e non viene conservato.",
+    "file_label": "Esportazione di TV Time (.zip)",
+    "progress": "Avanzamento dell'importazione",
+    "unmatched": "Serie non riconosciute"
   }
 }

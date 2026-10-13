@@ -21,6 +21,7 @@ server as a proxy (SSRF) are all in scope.
   from `TVT_JWT_SECRET`; rotating that secret requires re-enrolling 2FA.
 - All state-changing requests need a CSRF token (double-submit cookie). The only
   exception is the Telegram webhook, which authenticates with a secret header.
+- Uploaded import archives are read in memory only: upload size, per-file and total uncompressed size and row counts are capped, only the few expected CSV files are opened, no path from inside the archive is ever used, and imports never overwrite what a user already tracks.
 - Telegram's script is loaded only after the user clicks the Telegram button, and artwork is proxied so visitors never contact third parties.
 - Every secret is read from the environment; nothing is committed. If you find a
   credential in this repository or its history, report it.

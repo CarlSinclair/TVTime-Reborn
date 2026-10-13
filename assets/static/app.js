@@ -494,8 +494,73 @@
       if (!data) return;
       toast(t("saved"), "ok");
       window.location.reload();
+    } else if (el.matches("[data-import]")) {
+      const file = el.files && el.files[0];
+      if (!file) return;
+      toast(t("import_uploading"));
+      const data = await run(el, () => upload("/api/import/tvtime", file));
+      el.value = "";
+      if (!data) return;
+      toast(t("import_started"), "ok");
+      pollImport();
     }
   });
+
+  const importBox = document.getElementById("import-status");
+  let importTimer = null;
+
+  const renderImport = (job) => {
+    if (!importBox || !job) return false;
+    importBox.hidden = false;
+    const line = document.getElementById("import-line");
+    const bar = document.getElementById("import-bar");
+    const details = document.getElementById("import-details");
+    const list = document.getElementById("import-unmatched");
+    const listTitle = document.getElementById("import-un-title");
+    const pct = job.total > 0 ? Math.round((job.shows_done / job.total) * 100) : 0;
+    bar.value = job.status === "done" ? 100 : pct;
+    if (job.status === "pending") line.textContent = t("import_pending");
+    else if (job.status === "running") line.textContent = fmt("import_running", job.shows_done, job.total);
+    else if (job.status === "done") line.textContent = t("import_done");
+    else line.textContent = t("import_failed");
+    details.replaceChildren();
+    const rows = [];
+    if (job.status === "done" || job.status === "running") {
+      rows.push(fmt("import_shows", job.matched, job.total));
+      rows.push(fmt("import_follows", job.follows_added));
+      rows.push(fmt("import_episodes", job.episodes_added));
+      rows.push(fmt("import_skipped", job.episodes_skipped));
+    }
+    rows.forEach((text) => {
+      const li = document.createElement("li");
+      li.textContent = text;
+      details.appendChild(li);
+    });
+    list.replaceChildren();
+    const un = job.unmatched || [];
+    listTitle.hidden = un.length === 0;
+    un.forEach((item) => {
+      const li = document.createElement("li");
+      li.textContent = item.name + " (" + t("import_reason_" + item.reason) + ")";
+      list.appendChild(li);
+    });
+    return job.active;
+  };
+
+  const pollImport = async () => {
+    clearTimeout(importTimer);
+    let data;
+    try {
+      data = await api("/api/import/status", null, "GET");
+    } catch (err) {
+      console.error("import status", err);
+      importTimer = setTimeout(pollImport, 5000);
+      return;
+    }
+    if (renderImport(data.job)) importTimer = setTimeout(pollImport, 2000);
+  };
+
+  if (importBox) pollImport();
 
   const themeBtn = document.getElementById("theme-toggle");
   if (themeBtn) {

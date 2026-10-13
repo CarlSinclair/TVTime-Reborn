@@ -55,6 +55,14 @@ bucket and none of the rest of this section applies. With a bucket:
   watching), with or without a bucket;
 - deletion is real: removing a user's images removes the objects in the bucket.
 
+## Imports
+
+An import reads the uploaded export in memory, keeps only the shows, watched episodes and
+follow states it needs in a job record while it runs, and deletes that data when it
+finishes. Everything else in the export (IP addresses, device data, comments, messages) is
+never read or stored. Only TVDB show and episode ids and show titles are sent to TMDB to
+find the matching shows.
+
 ## What the operator still sees
 
 The operator's reverse proxy, CDN or tunnel (for example Cloudflare) and server

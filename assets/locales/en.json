@@ -170,7 +170,8 @@
     "passkey_last_used": "Last used %s",
     "passkey_never": "Never used",
     "passkey_remove": "Remove",
-    "telegram_link_btn": "Link my Telegram account"
+    "telegram_link_btn": "Link my Telegram account",
+    "tab_import": "Import"
   },
   "footer": {
     "tmdb": "Show data and images are provided by",
@@ -234,7 +235,11 @@
     "passkey_failed": "Passkey verification failed. Please try again.",
     "passkey_expired": "The passkey request expired. Please try again.",
     "passkey_last_method": "Keep at least one way to sign in: set a password, verify an email or link Telegram before removing your last passkey.",
-    "invalid_timing": "Choose an offset within 7 days and a valid time."
+    "invalid_timing": "Choose an offset within 7 days and a valid time.",
+    "import_invalid": "That does not look like a TV Time export zip.",
+    "import_empty": "The export has no shows or watched episodes in it.",
+    "import_busy": "You already have an import running.",
+    "import_too_big": "That file is too large."
   },
   "mail": {
     "login": {
@@ -295,7 +300,19 @@
     "passkey_remove_confirm": "Remove this passkey?",
     "invalid_timing": "Enter a valid number.",
     "telegram_failed": "Telegram sign-in was cancelled or blocked. Please try again.",
-    "telegram_open": "Open Telegram"
+    "telegram_open": "Open Telegram",
+    "import_uploading": "Uploading",
+    "import_started": "Import started. You can leave this page.",
+    "import_pending": "Waiting for its turn",
+    "import_running": "Importing: %d of %d shows",
+    "import_done": "Import finished",
+    "import_failed": "The import failed. Try again later.",
+    "import_shows": "Shows matched: %d of %d",
+    "import_follows": "Added to your library: %d",
+    "import_episodes": "Episodes marked watched: %d",
+    "import_skipped": "Episodes that could not be matched: %d",
+    "import_reason_not_found": "not found",
+    "import_reason_error": "lookup failed"
   },
   "genre": {
     "action_adventure": "Action & Adventure",
@@ -410,7 +427,11 @@
     "timing_unit": "Unit",
     "timing_unit_min": "minutes",
     "timing_unit_hour": "hours",
-    "timing_unit_day": "days"
+    "timing_unit_day": "days",
+    "import_done": {
+      "title": "Import finished",
+      "body": "{shows} shows and {episodes} watched episodes were imported."
+    }
   },
   "profile": {
     "bio": "Bio",
@@ -494,5 +515,16 @@
       "title": "Contact",
       "body": "Operator: {operator}. {contact}"
     }
+  },
+  "import": {
+    "title": "Import from TV Time",
+    "intro": "Bring your followed shows, favorites and watch history over from TV Time.",
+    "how_title": "How to get your file",
+    "how_body": "In the TV Time app, request a copy of your data (GDPR export) and wait for the email with the download link. Upload that zip file here exactly as it is, without opening it.",
+    "what": "Imported: shows you follow, favorites, shows saved for later, and every watched episode with its original date. Movies, comments and emotion votes are not imported.",
+    "keeps": "Nothing you already track here is changed or removed. Your file is read on the server to build the import and is not kept afterwards.",
+    "file_label": "TV Time export (.zip)",
+    "progress": "Import progress",
+    "unmatched": "Shows that could not be matched"
   }
 }

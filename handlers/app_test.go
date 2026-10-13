@@ -53,6 +53,17 @@ func fakeTMDB(t *testing.T) *httptest.Server {
 		}
 		json.NewEncoder(w).Encode(out)
 	})
+	mux.HandleFunc("/find/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.TrimPrefix(r.URL.Path, "/find/") == "70001" && r.URL.Query().Get("external_source") == "tvdb_id" {
+			json.NewEncoder(w).Encode(map[string]any{"tv_results": []any{}, "tv_episode_results": []map[string]any{{"id": 12, "show_id": 555, "season_number": 1, "episode_number": 2}}})
+			return
+		}
+		if strings.TrimPrefix(r.URL.Path, "/find/") == "5550" && r.URL.Query().Get("external_source") == "tvdb_id" {
+			json.NewEncoder(w).Encode(map[string]any{"tv_results": []map[string]any{{"id": 555, "name": "Fake Show"}}})
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]any{"tv_results": []any{}})
+	})
 	mux.HandleFunc("/search/tv", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]any{"results": []map[string]any{{"id": 555, "name": "Fake Show"}}})
 	})

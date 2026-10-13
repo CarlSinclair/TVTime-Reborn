@@ -317,7 +317,28 @@ func (c *Client) changed(ctx context.Context, path string, start, end time.Time)
 }
 
 type FindResponse struct {
-	TVResults []SearchItem `json:"tv_results"`
+	TVResults        []SearchItem  `json:"tv_results"`
+	TVEpisodeResults []EpisodeFind `json:"tv_episode_results"`
+}
+
+type EpisodeFind struct {
+	ID            int64 `json:"id"`
+	ShowID        int64 `json:"show_id"`
+	SeasonNumber  int   `json:"season_number"`
+	EpisodeNumber int   `json:"episode_number"`
+}
+
+// FindEpisodeByExternal resolves an external (for example TVDB) episode id to
+// the TMDB episode, which carries its show and numbering.
+func (c *Client) FindEpisodeByExternal(ctx context.Context, id, source string) (*EpisodeFind, error) {
+	var out FindResponse
+	if err := c.get(ctx, "/find/"+url.PathEscape(id), url.Values{"external_source": {source}}, &out); err != nil {
+		return nil, err
+	}
+	if len(out.TVEpisodeResults) == 0 {
+		return nil, ErrNotFound
+	}
+	return &out.TVEpisodeResults[0], nil
 }
 
 // FindByExternal resolves an IMDb or TVDB id to a TMDB show, used by importers.

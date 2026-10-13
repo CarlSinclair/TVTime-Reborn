@@ -67,6 +67,7 @@ var Events = map[string]Event{
 	"passkey_added":    {"passkey_added", "security"},
 	"telegram_dropped": {"telegram_dropped", "system"},
 	"abuse_report":     {"abuse_report", "moderation"},
+	"import_done":      {"import_done", "system"},
 	"test":             {"test", "system"},
 }
 

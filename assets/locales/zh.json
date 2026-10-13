@@ -170,7 +170,8 @@
     "passkey_last_used": "最后使用于 %s",
     "passkey_never": "从未使用",
     "passkey_remove": "移除",
-    "telegram_link_btn": "绑定我的 Telegram 账号"
+    "telegram_link_btn": "绑定我的 Telegram 账号",
+    "tab_import": "导入"
   },
   "footer": {
     "tmdb": "剧集数据和图片由以下平台提供：",
@@ -234,7 +235,11 @@
     "passkey_failed": "通行密钥验证失败，请重试。",
     "passkey_expired": "通行密钥请求已过期，请重试。",
     "passkey_last_method": "请至少保留一种登录方式：在移除最后一个通行密钥前，先设置密码、验证邮箱或绑定 Telegram。",
-    "invalid_timing": "请选择 7 天以内的偏移量和有效的时间。"
+    "invalid_timing": "请选择 7 天以内的偏移量和有效的时间。",
+    "import_invalid": "这看起来不是 TV Time 的导出 zip 文件。",
+    "import_empty": "导出文件中没有剧集或已看剧集。",
+    "import_busy": "你已有一个正在进行的导入。",
+    "import_too_big": "文件太大。"
   },
   "mail": {
     "login": {
@@ -295,7 +300,19 @@
     "passkey_remove_confirm": "要移除这个通行密钥吗？",
     "invalid_timing": "请输入有效的数字。",
     "telegram_failed": "Telegram 登录已取消或被拦截，请重试。",
-    "telegram_open": "打开 Telegram"
+    "telegram_open": "打开 Telegram",
+    "import_uploading": "上传中",
+    "import_started": "导入已开始，你可以离开此页面。",
+    "import_pending": "排队等待中",
+    "import_running": "正在导入：%d / %d 部剧集",
+    "import_done": "导入完成",
+    "import_failed": "导入失败，请稍后再试。",
+    "import_shows": "已匹配剧集：%d / %d",
+    "import_follows": "已加入你的资料库：%d",
+    "import_episodes": "已标记为已看的剧集：%d",
+    "import_skipped": "未能匹配的剧集集数：%d",
+    "import_reason_not_found": "未找到",
+    "import_reason_error": "查询失败"
   },
   "genre": {
     "action_adventure": "动作冒险",
@@ -410,7 +427,11 @@
     "timing_unit": "单位",
     "timing_unit_min": "分钟",
     "timing_unit_hour": "小时",
-    "timing_unit_day": "天"
+    "timing_unit_day": "天",
+    "import_done": {
+      "title": "导入完成",
+      "body": "已导入 {shows} 部剧集和 {episodes} 集观看记录。"
+    }
   },
   "profile": {
     "bio": "简介",
@@ -494,5 +515,16 @@
       "title": "联系方式",
       "body": "运营者：{operator}。{contact}"
     }
+  },
+  "import": {
+    "title": "从 TV Time 导入",
+    "intro": "把你在 TV Time 的关注剧集、收藏和观看记录带过来。",
+    "how_title": "如何获取文件",
+    "how_body": "在 TV Time 应用中申请获取你的数据副本（GDPR 导出），等待带下载链接的邮件。把该 zip 文件原样上传到这里，不要解压。",
+    "what": "会导入：你关注的剧集、收藏、稍后观看的剧集，以及每一集的观看记录（保留原日期）。电影、评论和情绪投票不会导入。",
+    "keeps": "你在这里已有的记录不会被修改或删除。文件只在服务器上读取以生成导入内容，之后不会保留。",
+    "file_label": "TV Time 导出文件（.zip）",
+    "progress": "导入进度",
+    "unmatched": "未能匹配的剧集"
   }
 }

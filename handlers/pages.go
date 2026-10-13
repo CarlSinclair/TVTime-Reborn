@@ -101,6 +101,8 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/notifications/stream", a.apiNotificationsStream)
 	mux.HandleFunc("POST /api/notifications/read-all", a.apiNotificationsReadAll)
 	mux.HandleFunc("POST /api/notifications/settings", a.apiNotificationSettings)
+	mux.HandleFunc("POST /api/import/tvtime", a.apiImportTVTime)
+	mux.HandleFunc("GET /api/import/status", a.apiImportStatus)
 	mux.HandleFunc("POST /api/notifications/test", a.apiNotificationTest)
 	mux.HandleFunc("POST /api/notifications/timing", a.apiNotificationTiming)
 	mux.HandleFunc("POST /api/notifications/{id}/read", a.apiNotificationRead)

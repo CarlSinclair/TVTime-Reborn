@@ -55,7 +55,7 @@ func (a *App) pageSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tab := r.URL.Query().Get("tab")
-	if tab != "profile" && tab != "notifications" {
+	if tab != "profile" && tab != "notifications" && tab != "import" {
 		tab = "account"
 	}
 	data := map[string]any{"Tab": tab, "Timezones": timezones, "Flash": r.URL.Query().Get("linked")}

@@ -8,6 +8,7 @@ Licensed under the [GNU AGPL v3](LICENSE); see [NOTICE](NOTICE) for attribution,
 
 - Exact per-episode air times from TVmaze, then Trakt if configured, where a real broadcast time is known (placeholders are ignored); otherwise the air date at midday in the user's own time zone. Users never have to enter an air time; they only choose how long before or after it to be alerted.
 - Show catalogue from TMDB: synopses, ratings, posters and per-episode stills, kept fresh by a changes-feed poller; titles and synopses are always stored in each user's own language: every followed show is fetched in the language of each user who follows it, in the background, and refreshed weekly.
+- Import from TV Time: upload the GDPR export zip in Settings. Shows are matched through TMDB's TVDB lookup, watched episodes keep their original dates, followed, favorite and saved-for-later shows come across, and nothing you already track is changed. Movies are not imported. The zip is read in memory and not kept.
 - Tracking: follow, status, favorites, mark episode / season / everything-up-to-here, ratings, up-next, calendar.
 - Episode comments with a spoiler model built around one-click reports, plus abuse reports, blocking and an admin queue.
 - Accounts: first factor by password, passkey, magic link or Telegram; optional TOTP two-step verification (with recovery codes) as a second factor on top of any of them.
@@ -58,7 +59,8 @@ See `SECURITY.md`. Highlights: hashed refresh tokens with reuse detection, CSRF 
 ## Roadmap
 
 - Leased replication: opt-in sharing of episode comments between instances without federation's permanence. Each comment is signed by its home instance and copied to peers on a short lease (about a day); peers must re-fetch to renew it, and a deleted comment answers "410 Gone", so deletions propagate within one lease and nothing is immutable. Needs peer allowlists, cross-instance blocking and reporting, and signed identities.
-- Importers: TV Time export, Trakt, Simkl, Letterboxd, IMDb.
+- More importers: Trakt, Simkl, Letterboxd, IMDb (the TV Time importer is done).
+- Operator announcements: a way for the operator to send one message to every user (in-app, with optional email, push and Telegram), paced so identical messages are never sent in a burst.
 - Support for sending messages to Telegram group chats.
 - Translated documentation.
 

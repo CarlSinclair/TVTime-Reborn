@@ -170,7 +170,8 @@
     "passkey_last_used": "最終使用日：%s",
     "passkey_never": "未使用",
     "passkey_remove": "削除",
-    "telegram_link_btn": "Telegramアカウントを連携"
+    "telegram_link_btn": "Telegramアカウントを連携",
+    "tab_import": "インポート"
   },
   "footer": {
     "tmdb": "作品データと画像の提供元：",
@@ -234,7 +235,11 @@
     "passkey_failed": "パスキーの検証に失敗しました。もう一度お試しください。",
     "passkey_expired": "パスキーのリクエストが期限切れです。もう一度お試しください。",
     "passkey_last_method": "最後のパスキーを削除する前に、パスワードの設定、メールの確認、またはTelegramの連携など、ログイン方法を最低1つ残してください。",
-    "invalid_timing": "7日以内のオフセットと有効な時刻を選択してください。"
+    "invalid_timing": "7日以内のオフセットと有効な時刻を選択してください。",
+    "import_invalid": "TV Timeのエクスポートzipではないようです。",
+    "import_empty": "エクスポートに作品も視聴済みエピソードも含まれていません。",
+    "import_busy": "インポートはすでに実行中です。",
+    "import_too_big": "ファイルが大きすぎます。"
   },
   "mail": {
     "login": {
@@ -295,7 +300,19 @@
     "passkey_remove_confirm": "このパスキーを削除しますか？",
     "invalid_timing": "有効な数値を入力してください。",
     "telegram_failed": "Telegramでのログインがキャンセルまたはブロックされました。もう一度お試しください。",
-    "telegram_open": "Telegramを開く"
+    "telegram_open": "Telegramを開く",
+    "import_uploading": "アップロード中",
+    "import_started": "インポートを開始しました。このページを離れても大丈夫です。",
+    "import_pending": "順番待ち",
+    "import_running": "インポート中：%d / %d 作品",
+    "import_done": "インポートが完了しました",
+    "import_failed": "インポートに失敗しました。後でもう一度お試しください。",
+    "import_shows": "一致した作品：%d / %d",
+    "import_follows": "ライブラリに追加：%d",
+    "import_episodes": "視聴済みにしたエピソード：%d",
+    "import_skipped": "一致しなかったエピソード：%d",
+    "import_reason_not_found": "見つかりません",
+    "import_reason_error": "検索に失敗"
   },
   "genre": {
     "action_adventure": "アクション＆アドベンチャー",
@@ -410,7 +427,11 @@
     "timing_unit": "単位",
     "timing_unit_min": "分",
     "timing_unit_hour": "時間",
-    "timing_unit_day": "日"
+    "timing_unit_day": "日",
+    "import_done": {
+      "title": "インポート完了",
+      "body": "{shows}作品と視聴済み{episodes}エピソードをインポートしました。"
+    }
   },
   "profile": {
     "bio": "自己紹介",
@@ -494,5 +515,16 @@
       "title": "連絡先",
       "body": "運営者：{operator}。{contact}"
     }
+  },
+  "import": {
+    "title": "TV Timeからインポート",
+    "intro": "TV Timeでフォローしていた作品、お気に入り、視聴履歴を引き継ぎます。",
+    "how_title": "ファイルの入手方法",
+    "how_body": "TV Timeアプリでデータのコピー（GDPRエクスポート）をリクエストし、ダウンロードリンクが記載されたメールを待ちます。そのzipファイルを開かずにそのままここにアップロードしてください。",
+    "what": "インポートされるもの：フォロー中の作品、お気に入り、後で見る作品、そして視聴済みの全エピソード（元の日付つき）。映画、コメント、感情の投票はインポートされません。",
+    "keeps": "ここで既に記録している内容は変更も削除もされません。ファイルはインポート作成のためサーバー上で読み取られ、その後は保存されません。",
+    "file_label": "TV Timeのエクスポート（.zip）",
+    "progress": "インポートの進捗",
+    "unmatched": "一致しなかった作品"
   }
 }
