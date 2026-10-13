@@ -201,6 +201,7 @@ func (a *App) lang(w http.ResponseWriter, r *http.Request, u *store.User) string
 func (a *App) loadTemplates() error {
 	funcs := template.FuncMap{
 		"img":      imgURL,
+		"imgset":   imgSet,
 		"loveHref": loveHref,
 		"starsOf":  starsOf,
 		"code":     episodeCode,

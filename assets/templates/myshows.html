@@ -8,7 +8,7 @@
 <div class="grid">
   {{range .Data.Entries}}
   <a class="card" href="/show/{{.Show.TMDBID}}">
-    <img loading="lazy" src="{{img "w342" .Show.PosterPath}}" alt="">
+    <img loading="lazy" src="{{img "w342" .Show.PosterPath}}" {{with imgset .Show.PosterPath "w342" "w500" "w780"}}srcset="{{.}}" sizes="(max-width: 720px) 45vw, 220px"{{end}} alt="">
     <span class="card-title">{{if .Follow.Favorite}}&#9829; {{end}}{{.Show.Name}}</span>
     <progress {{if .Progress.Done}}class="done"{{end}} max="{{.Progress.Aired}}" value="{{.Progress.Watched}}"></progress>
     <span class="card-sub">{{$.T "show.progress" .Progress.Watched .Progress.Aired}}</span>

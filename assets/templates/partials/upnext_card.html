@@ -1,6 +1,6 @@
 {{define "upnext_card"}}
 <article class="upnext-item" data-show="{{.It.Show.ID}}">
-  <a href="/show/{{.It.Show.TMDBID}}"><img loading="lazy" src="{{img "w300" .It.Episode.StillPath}}" alt=""></a>
+  <a href="/show/{{.It.Show.TMDBID}}"><img loading="lazy" src="{{img "w300" .It.Episode.StillPath}}" {{with imgset .It.Episode.StillPath "w300" "w500" "w780"}}srcset="{{.}}" sizes="(max-width: 720px) 45vw, 230px"{{end}} alt=""></a>
   <div class="upnext-body">
     <a class="upnext-show" href="/show/{{.It.Show.TMDBID}}">{{.It.Show.Name}}</a>
     <a href="/episode/{{.It.Episode.ID}}">{{code .It.Episode.SeasonNumber .It.Episode.EpisodeNumber}} {{.It.Episode.Name}}</a>
