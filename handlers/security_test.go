@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -54,7 +55,7 @@ func TestTwoFactorFlowAndReplayProtection(t *testing.T) {
 	}
 
 	login := newClient(t, e.srv.URL)
-	code, out = login.post("/api/auth/login", map[string]string{"email": "erin@example.com", "password": "password123"})
+	code, out = login.post("/api/auth/login", map[string]string{"email": "erin@example.com", "password": "Passw0rd!x1"})
 	if code != 200 || out["mfa"] != true {
 		t.Fatalf("login should require mfa: %d %v", code, out)
 	}
@@ -73,13 +74,13 @@ func TestTwoFactorFlowAndReplayProtection(t *testing.T) {
 	}
 
 	again := newClient(t, e.srv.URL)
-	again.post("/api/auth/login", map[string]string{"email": "erin@example.com", "password": "password123"})
+	again.post("/api/auth/login", map[string]string{"email": "erin@example.com", "password": "Passw0rd!x1"})
 	rc := codes[0].(string)
 	if code, out := again.post("/api/auth/2fa", map[string]string{"code": rc}); code != 200 {
 		t.Fatalf("recovery code rejected: %d %v", code, out)
 	}
 	third := newClient(t, e.srv.URL)
-	third.post("/api/auth/login", map[string]string{"email": "erin@example.com", "password": "password123"})
+	third.post("/api/auth/login", map[string]string{"email": "erin@example.com", "password": "Passw0rd!x1"})
 	if code, _ := third.post("/api/auth/2fa", map[string]string{"code": rc}); code != 401 {
 		t.Fatalf("a recovery code must work only once, got %d", code)
 	}
@@ -212,7 +213,7 @@ func TestAdminCannotBeClaimedByRegisteringFirst(t *testing.T) {
 	e := newEnv(t)
 	e.cfg.AdminEmail = "boss@example.com"
 	c := newClient(t, e.srv.URL)
-	if code, out := c.post("/api/auth/register", map[string]string{"email": "boss@example.com", "username": "imposter", "password": "password123"}); code != 200 {
+	if code, out := c.post("/api/auth/register", map[string]string{"email": "boss@example.com", "username": "imposter", "password": "Passw0rd!x1"}); code != 200 {
 		t.Fatalf("register: %d %v", code, out)
 	}
 	if e.mustUser(t, "imposter").IsAdmin {
@@ -234,7 +235,7 @@ func TestAdminCannotBeClaimedByRegisteringFirst(t *testing.T) {
 func TestMagicLinkClaimsUnverifiedAccountAndWipesRegistrantAccess(t *testing.T) {
 	e := newEnv(t)
 	attacker := newClient(t, e.srv.URL)
-	attacker.post("/api/auth/register", map[string]string{"email": "victim@example.com", "username": "squatter", "password": "attackerpass1"})
+	attacker.post("/api/auth/register", map[string]string{"email": "victim@example.com", "username": "squatter", "password": "Attack3r!pass1"})
 	if status, _ := attacker.get("/settings"); status != 200 {
 		t.Fatalf("setup: attacker should be signed in")
 	}
@@ -251,7 +252,7 @@ func TestMagicLinkClaimsUnverifiedAccountAndWipesRegistrantAccess(t *testing.T) 
 		t.Fatalf("the squatter's password survived the owner claiming the account")
 	}
 	again := newClient(t, e.srv.URL)
-	if code, _ := again.post("/api/auth/login", map[string]string{"email": "victim@example.com", "password": "attackerpass1"}); code != 401 {
+	if code, _ := again.post("/api/auth/login", map[string]string{"email": "victim@example.com", "password": "Attack3r!pass1"}); code != 401 {
 		t.Fatalf("squatter can still log in with the old password")
 	}
 }
@@ -259,7 +260,7 @@ func TestMagicLinkClaimsUnverifiedAccountAndWipesRegistrantAccess(t *testing.T) 
 func TestReservedUsernamesRefused(t *testing.T) {
 	e := newEnv(t)
 	c := newClient(t, e.srv.URL)
-	if code, _ := c.post("/api/auth/register", map[string]string{"email": "a@example.com", "username": "Admin", "password": "password123"}); code != 409 {
+	if code, _ := c.post("/api/auth/register", map[string]string{"email": "a@example.com", "username": "Admin", "password": "Passw0rd!x1"}); code != 409 {
 		t.Fatalf("reserved username accepted: %d", code)
 	}
 }
@@ -655,9 +656,9 @@ func TestNoThirdPartyContactOnPageLoad(t *testing.T) {
 	signed := e.signup(t, "wynn", true)
 	anon := newClient(t, e.srv.URL)
 	ext := regexp.MustCompile(`(?i)(src|href)="https?://[^"]*"`)
-	allowedLinks := []string{"themoviedb.org", "tvmaze.com", "trakt.tv", "github.com/CarlSinclair/tvt"}
+	allowedLinks := []string{"themoviedb.org", "tvmaze.com", "trakt.tv", "github.com/CarlSinclair/tvt", "carl-sinclair.com"}
 	pages := map[string]*client{
-		"/": anon, "/login": anon, "/register": anon, "/forgot": anon, "/privacy": anon,
+		"/": signed, "/login": anon, "/register": anon, "/forgot": anon, "/privacy": anon, "/about": anon,
 		"/settings?tab=account": signed, "/settings?tab=notifications": signed, "/search?q=fake": signed, "/show/555": signed,
 	}
 	for p, c := range pages {
@@ -711,10 +712,17 @@ func TestPrivacyPageAndAGPLSourceLink(t *testing.T) {
 		t.Fatalf("the AGPL requires a source link on every page")
 	}
 	for _, l := range []string{"pt", "es", "it", "fr", "zh", "ru", "ja", "ko", "ar"} {
-		c.post("/api/account/locale", map[string]string{"locale": l})
-		status, b := c.get("/privacy")
-		if status != 200 || strings.Contains(b, "Privacy policy") || !strings.Contains(b, `lang="`+l+`"`) {
-			t.Fatalf("privacy page not localized for %s (status %d)", l, status)
+		req, _ := http.NewRequest("GET", e.srv.URL+"/privacy", nil)
+		req.Header.Set("Accept-Language", l+",en;q=0.5")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		raw, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		b := string(raw)
+		if resp.StatusCode != 200 || strings.Contains(b, "Privacy policy") || !strings.Contains(b, `lang="`+l+`"`) {
+			t.Fatalf("privacy page not localized for %s (status %d)", l, resp.StatusCode)
 		}
 	}
 }

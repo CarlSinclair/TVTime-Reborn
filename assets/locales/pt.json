@@ -8,7 +8,11 @@
     "settings": "Configurações",
     "theme": "Alternar tema",
     "language": "Idioma",
-    "notifications": "Notificações"
+    "notifications": "Notificações",
+    "about": "Sobre",
+    "profile": "Perfil",
+    "account": "Menu da conta",
+    "menu": "Menu principal"
   },
   "auth": {
     "login": "Entrar",
@@ -43,7 +47,11 @@
       "title": "Confirme seu e-mail",
       "text": "Clique no botão para confirmar seu endereço de e-mail."
     },
-    "continue": "Continuar"
+    "continue": "Continuar",
+    "emailchange": {
+      "title": "Confirme seu novo e-mail",
+      "text": "Toque no botão para confirmar seu novo e-mail."
+    }
   },
   "home": {
     "hero_title": "Acompanhe todas as séries que você assiste",
@@ -171,14 +179,21 @@
     "passkey_never": "Nunca usada",
     "passkey_remove": "Remover",
     "telegram_link_btn": "Vincular minha conta do Telegram",
-    "tab_import": "Importar"
+    "tab_import": "Importar",
+    "email_title": "Endereço de e-mail",
+    "email_pending": "Aguardando você confirmar %s. Abra o link que enviamos para lá.",
+    "email_new": "Novo e-mail",
+    "email_change_btn": "Alterar e-mail",
+    "email_change_sent": "Veja sua nova caixa de entrada: enviamos um link de confirmação."
   },
   "footer": {
     "tmdb": "Os dados e imagens das séries são fornecidos por",
     "unofficial": "%s é um projeto independente e não é afiliado ao TMDB.",
     "tvmaze": "Horários de exibição dos episódios fornecidos por",
     "privacy": "Privacidade",
-    "source": "Código-fonte (AGPL-3.0)"
+    "source": "Código-fonte (AGPL-3.0)",
+    "made_with": "Feito com",
+    "by": "por"
   },
   "admin": {
     "reports": "Denúncias",
@@ -207,7 +222,7 @@
     "metadata_not_configured": "O serviço de dados das séries não está configurado.",
     "invalid_email": "Digite um e-mail válido.",
     "invalid_username": "Nomes de usuário têm 3 a 20 letras, números ou sublinhados.",
-    "weak_password": "As senhas devem ter de 8 a 72 caracteres.",
+    "weak_password": "Use pelo menos 8 caracteres com uma letra maiúscula, uma minúscula, um dígito e um símbolo.",
     "email_taken": "Esse e-mail já está cadastrado.",
     "username_taken": "Esse nome de usuário já existe.",
     "bad_credentials": "E-mail ou senha incorretos.",
@@ -239,7 +254,11 @@
     "import_invalid": "Isso não parece ser um zip de exportação do TV Time.",
     "import_empty": "A exportação não tem séries nem episódios assistidos.",
     "import_busy": "Você já tem uma importação em andamento.",
-    "import_too_big": "Esse arquivo é grande demais."
+    "import_too_big": "Esse arquivo é grande demais.",
+    "email_same": "Esse já é o seu e-mail.",
+    "telegram_not_linked": "Conecte o Telegram primeiro.",
+    "email_not_verified": "Verifique seu e-mail primeiro.",
+    "push_not_enabled": "Ative o push neste dispositivo primeiro."
   },
   "mail": {
     "login": {
@@ -255,7 +274,15 @@
       "body": "Bem-vindo ao %s. Confirme seu endereço de e-mail com este link, que expira em 30 minutos:\n\n%s\n\nSe você não criou uma conta, ignore este e-mail."
     },
     "button_open": "Abrir",
-    "footer": "Você recebeu isto por causa das suas configurações de notificação do {app}."
+    "footer": "Você recebeu isto por causa das suas configurações de notificação do {app}.",
+    "emailchange": {
+      "subject": "Confirme seu novo e-mail do %s",
+      "body": "Confirme que este é o seu novo e-mail no %s. O link expira em 30 minutos:\n\n%s\n\nSe você não pediu isso, ignore esta mensagem. Nada muda até o link ser aberto."
+    },
+    "emailchanged": {
+      "subject": "Seu e-mail do %s foi alterado",
+      "body": "O e-mail da sua conta no %s foi alterado para %s. Se não foi você, redefina sua senha imediatamente."
+    }
   },
   "js": {
     "network_error": "Erro de rede. Tente novamente.",
@@ -312,7 +339,14 @@
     "import_episodes": "Episódios marcados como assistidos: %d",
     "import_skipped": "Episódios não encontrados: %d",
     "import_reason_not_found": "não encontrada",
-    "import_reason_error": "falha na consulta"
+    "import_reason_error": "falha na consulta",
+    "pw_toggle": "Mostrar ou ocultar a senha",
+    "pw_min": "Pelo menos 8 caracteres",
+    "pw_upper": "Uma letra maiúscula",
+    "pw_lower": "Uma letra minúscula",
+    "pw_digit": "Um dígito",
+    "pw_special": "Um caractere especial",
+    "pw_strong": "Senha forte"
   },
   "genre": {
     "action_adventure": "Ação e Aventura",
@@ -396,10 +430,7 @@
     "telegram_oneclick": "Usar meu login do Telegram",
     "telegram_title": "Notificações do Telegram",
     "telegram_waiting": "Aguardando você tocar em Iniciar no Telegram...",
-    "test": {
-      "body": "Se você consegue ler isto, este canal funciona.",
-      "title": "Notificação de teste"
-    },
+    "test": "Testar",
     "test_hint": "Envie um teste para cada canal para verificar se funciona.",
     "test_title": "Teste seus canais",
     "twofa_disabled": {
@@ -416,7 +447,7 @@
       "body": "Uma nova passkey foi adicionada à sua conta. Se não foi você, proteja sua conta imediatamente."
     },
     "timing_title": "Horário do alerta de episódios",
-    "timing_hint": "Quando o horário exato de exibição de um episódio é conhecido (pelo TVmaze, com o Trakt como reserva), os alertas o usam. Se só a data for conhecida, os alertas contam a partir do meio-dia dessa data no seu fuso horário.",
+    "timing_hint": "Quando ser avisado, em relação ao horário de exibição.",
     "timing_when": "Quando me avisar",
     "timing_before30": "30 minutos antes",
     "timing_release": "Quando for ao ar",
@@ -431,6 +462,16 @@
     "import_done": {
       "title": "Importação concluída",
       "body": "{shows} séries e {episodes} episódios assistidos foram importados."
+    },
+    "push_off_hint": "Ative o push neste dispositivo para ligar isto.",
+    "telegram_off_hint": "Conecte o Telegram para ligar isto.",
+    "email_change_requested": {
+      "title": "Alteração de e-mail solicitada",
+      "body": "Foi solicitada a troca do seu e-mail para {email}. Se não foi você, altere sua senha agora."
+    },
+    "email_changed": {
+      "title": "E-mail alterado",
+      "body": "Seu e-mail agora é {email}. Se não foi você, proteja sua conta imediatamente."
     }
   },
   "profile": {
@@ -526,5 +567,10 @@
     "file_label": "Exportação do TV Time (.zip)",
     "progress": "Progresso da importação",
     "unmatched": "Séries que não foram encontradas"
+  },
+  "about": {
+    "title": "Sobre",
+    "license": "O TVT é software livre sob a GNU Affero General Public License v3.",
+    "data_title": "Fontes de dados"
   }
 }

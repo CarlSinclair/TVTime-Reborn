@@ -8,7 +8,11 @@
     "settings": "설정",
     "theme": "테마 전환",
     "language": "언어",
-    "notifications": "알림"
+    "notifications": "알림",
+    "about": "소개",
+    "profile": "프로필",
+    "account": "계정 메뉴",
+    "menu": "메인 메뉴"
   },
   "auth": {
     "login": "로그인",
@@ -43,7 +47,11 @@
       "title": "이메일 인증",
       "text": "버튼을 눌러 이메일 주소를 확인하세요."
     },
-    "continue": "계속"
+    "continue": "계속",
+    "emailchange": {
+      "title": "새 이메일 확인",
+      "text": "버튼을 눌러 새 이메일 주소를 확인하세요."
+    }
   },
   "home": {
     "hero_title": "보고 있는 모든 드라마를 기록하세요",
@@ -171,14 +179,21 @@
     "passkey_never": "사용한 적 없음",
     "passkey_remove": "삭제",
     "telegram_link_btn": "내 Telegram 계정 연결",
-    "tab_import": "가져오기"
+    "tab_import": "가져오기",
+    "email_title": "이메일 주소",
+    "email_pending": "%s 확인을 기다리는 중입니다. 해당 주소로 보낸 링크를 열어 주세요.",
+    "email_new": "새 이메일 주소",
+    "email_change_btn": "이메일 변경",
+    "email_change_sent": "새 받은편지함을 확인하세요. 확인 링크를 보냈습니다."
   },
   "footer": {
     "tmdb": "작품 데이터와 이미지 제공:",
     "unofficial": "%s은(는) 독립 프로젝트이며 TMDB와 제휴 관계가 아닙니다.",
     "tvmaze": "에피소드 방영 시각 제공:",
     "privacy": "개인정보",
-    "source": "소스 코드 (AGPL-3.0)"
+    "source": "소스 코드 (AGPL-3.0)",
+    "made_with": "사랑을 담아",
+    "by": "제작:"
   },
   "admin": {
     "reports": "신고",
@@ -207,7 +222,7 @@
     "metadata_not_configured": "작품 데이터 서비스가 설정되지 않았습니다.",
     "invalid_email": "올바른 이메일 주소를 입력하세요.",
     "invalid_username": "사용자 이름은 영문, 숫자, 밑줄 3~20자여야 합니다.",
-    "weak_password": "비밀번호는 8~72자여야 합니다.",
+    "weak_password": "대문자, 소문자, 숫자, 기호를 포함해 8자 이상으로 만드세요.",
     "email_taken": "이미 등록된 이메일입니다.",
     "username_taken": "이미 사용 중인 사용자 이름입니다.",
     "bad_credentials": "이메일 또는 비밀번호가 올바르지 않습니다.",
@@ -239,7 +254,11 @@
     "import_invalid": "TV Time 내보내기 zip 파일이 아닌 것 같습니다.",
     "import_empty": "내보내기 파일에 작품이나 시청한 에피소드가 없습니다.",
     "import_busy": "이미 진행 중인 가져오기가 있습니다.",
-    "import_too_big": "파일이 너무 큽니다."
+    "import_too_big": "파일이 너무 큽니다.",
+    "email_same": "이미 사용 중인 이메일 주소입니다.",
+    "telegram_not_linked": "먼저 Telegram을 연결하세요.",
+    "email_not_verified": "먼저 이메일 주소를 인증하세요.",
+    "push_not_enabled": "먼저 이 기기에서 푸시를 켜세요."
   },
   "mail": {
     "login": {
@@ -255,7 +274,15 @@
       "body": "%s에 오신 것을 환영합니다. 아래 링크로 이메일 주소를 확인해 주세요(30분 후 만료):\n\n%s\n\n가입하지 않으셨다면 이 이메일을 무시하세요."
     },
     "button_open": "열기",
-    "footer": "{app}의 알림 설정에 따라 이 메일을 받으셨습니다."
+    "footer": "{app}의 알림 설정에 따라 이 메일을 받으셨습니다.",
+    "emailchange": {
+      "subject": "%s 새 이메일을 확인하세요",
+      "body": "%s의 새 이메일 주소가 맞는지 확인하세요. 링크는 30분 후 만료됩니다:\n\n%s\n\n요청한 적이 없다면 이 메시지를 무시하세요. 링크를 열기 전에는 아무것도 바뀌지 않습니다."
+    },
+    "emailchanged": {
+      "subject": "%s 이메일이 변경되었습니다",
+      "body": "%s 계정의 이메일 주소가 %s(으)로 변경되었습니다. 본인이 아니라면 즉시 비밀번호를 재설정하세요."
+    }
   },
   "js": {
     "network_error": "네트워크 오류입니다. 다시 시도해 주세요.",
@@ -312,7 +339,14 @@
     "import_episodes": "시청 완료로 표시한 에피소드: %d",
     "import_skipped": "찾지 못한 에피소드: %d",
     "import_reason_not_found": "찾을 수 없음",
-    "import_reason_error": "조회 실패"
+    "import_reason_error": "조회 실패",
+    "pw_toggle": "비밀번호 표시/숨기기",
+    "pw_min": "8자 이상",
+    "pw_upper": "대문자",
+    "pw_lower": "소문자",
+    "pw_digit": "숫자",
+    "pw_special": "특수문자",
+    "pw_strong": "강력한 비밀번호"
   },
   "genre": {
     "action_adventure": "액션 & 어드벤처",
@@ -396,10 +430,7 @@
     "telegram_oneclick": "내 Telegram 로그인 사용",
     "telegram_title": "Telegram 알림",
     "telegram_waiting": "Telegram에서 시작을 누르기를 기다리는 중...",
-    "test": {
-      "body": "이 메시지가 보인다면 이 채널은 정상입니다.",
-      "title": "테스트 알림"
-    },
+    "test": "테스트",
     "test_hint": "각 채널로 테스트를 보내 정상 작동하는지 확인하세요.",
     "test_title": "채널 테스트",
     "twofa_disabled": {
@@ -416,7 +447,7 @@
       "body": "계정에 새 패스키가 추가되었습니다. 본인이 아니라면 즉시 계정을 보호하세요."
     },
     "timing_title": "에피소드 알림 시점",
-    "timing_hint": "에피소드의 정확한 방영 시각을 알 수 있으면(TVmaze, 예비로 Trakt) 알림이 그 시각을 사용합니다. 날짜만 알 수 있으면 해당 날짜 정오(내 시간대)를 기준으로 계산합니다.",
+    "timing_hint": "방영 시각을 기준으로 언제 알림을 받을지 정합니다.",
     "timing_when": "알림 받을 시점",
     "timing_before30": "30분 전",
     "timing_release": "방영 시",
@@ -431,6 +462,16 @@
     "import_done": {
       "title": "가져오기 완료",
       "body": "작품 {shows}개와 시청한 에피소드 {episodes}개를 가져왔습니다."
+    },
+    "push_off_hint": "이 기기에서 푸시를 켜면 사용할 수 있습니다.",
+    "telegram_off_hint": "Telegram을 연결하면 사용할 수 있습니다.",
+    "email_change_requested": {
+      "title": "이메일 변경 요청",
+      "body": "이메일을 {email}(으)로 변경하라는 요청이 있었습니다. 본인이 아니라면 지금 바로 비밀번호를 변경하세요."
+    },
+    "email_changed": {
+      "title": "이메일이 변경되었습니다",
+      "body": "이메일 주소가 이제 {email}입니다. 본인이 아니라면 즉시 계정을 보호하세요."
     }
   },
   "profile": {
@@ -526,5 +567,10 @@
     "file_label": "TV Time 내보내기 파일 (.zip)",
     "progress": "가져오기 진행 상황",
     "unmatched": "찾지 못한 작품"
+  },
+  "about": {
+    "title": "소개",
+    "license": "TVT는 GNU Affero General Public License v3에 따른 자유 소프트웨어입니다.",
+    "data_title": "데이터 출처"
   }
 }

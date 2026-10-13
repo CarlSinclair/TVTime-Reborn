@@ -21,7 +21,6 @@ import (
 )
 
 const (
-	CookieMFA         = "tt_mfa"
 	MFATokenDuration  = 5 * time.Minute
 	recoveryCodeCount = 10
 	totpLabel         = "totp-secret"
@@ -180,16 +179,16 @@ func (s *Service) BeginMFA(w http.ResponseWriter, userID int64) error {
 	if err != nil {
 		return fmt.Errorf("sign mfa token uid=%d: %w", userID, err)
 	}
-	s.setCookie(w, CookieMFA, tok, int(MFATokenDuration.Seconds()))
+	s.setField(w, fieldMFA, tok)
 	return nil
 }
 
 func (s *Service) PendingMFAUser(r *http.Request) (int64, error) {
-	c, err := r.Cookie(CookieMFA)
-	if err != nil {
+	tok := s.field(r, fieldMFA)
+	if tok == "" {
 		return 0, ErrBadToken
 	}
-	return s.parseToken(c.Value, "mfa")
+	return s.parseToken(tok, "mfa")
 }
 
-func (s *Service) ClearMFA(w http.ResponseWriter) { s.setCookie(w, CookieMFA, "", -1) }
+func (s *Service) ClearMFA(w http.ResponseWriter) { s.setField(w, fieldMFA, "") }

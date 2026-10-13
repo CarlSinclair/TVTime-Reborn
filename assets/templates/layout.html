@@ -15,22 +15,27 @@
 <body data-user="{{if .User}}1{{else}}0{{end}}">
 <header class="topbar">
   <a class="brand" href="/">{{.AppName}}</a>
+  {{if .User}}
   <nav class="nav">
     <a href="/" {{if eq .Path "/"}}aria-current="page"{{end}}>{{.T "nav.home"}}</a>
-    {{if .User}}
     <a href="/shows" {{if eq .Path "/shows"}}aria-current="page"{{end}}>{{.T "nav.shows"}}</a>
     <a href="/calendar" {{if eq .Path "/calendar"}}aria-current="page"{{end}}>{{.T "nav.calendar"}}</a>
-    {{end}}
   </nav>
   <form class="search" action="/search" method="get" role="search">
     <input id="q" name="q" type="search" autocomplete="off" placeholder="{{.T "nav.search_placeholder"}}" aria-label="{{.T "nav.search"}}" value="{{index .Data "Query"}}">
     <div class="suggest" id="suggest" hidden></div>
   </form>
-  <div class="account">
-    <button class="icon-btn" type="button" id="theme-toggle" aria-label="{{.T "nav.theme"}}">&#9680;</button>
-    <select id="lang-select" aria-label="{{.T "nav.language"}}">
-      {{range .Langs}}<option value="{{.}}" {{if eq . $.Lang}}selected{{end}}>{{$.LangName .}}</option>{{end}}
-    </select>
+  {{end}}
+  <div class="actions">
+    {{if not .User}}<a class="source-link" href="{{.SourceURL}}" rel="noopener noreferrer" target="_blank">{{.T "footer.source"}}</a>{{end}}
+    <div id="dark-switch">
+      <input type="checkbox" class="dswitch" id="dswitch" aria-label="{{.T "nav.theme"}}">
+      <label for="dswitch" class="dswitch-label">
+        <svg class="icon fa-moon" aria-hidden="true"><use href="/static/icons.svg#fa-moon"></use></svg>
+        <svg class="icon fa-sun" aria-hidden="true"><use href="/static/icons.svg#fa-sun"></use></svg>
+        <span class="ball"></span>
+      </label>
+    </div>
     {{if .User}}
     <div class="bell-wrap">
       <button class="icon-btn bell" type="button" id="bell" aria-label="{{.T "nav.notifications"}}" aria-expanded="false">
@@ -43,16 +48,22 @@
         <a class="dropdown-foot" href="/notifications">{{.T "notif.view_all"}}</a>
       </div>
     </div>
-    <a class="user-link" href="/u/{{.User.Username}}">
-      {{if .User.AvatarPath}}<img class="avatar xs" src="{{avatar .User.AvatarPath}}" alt="">{{else}}<span class="avatar xs fallback">{{initial .User.Name}}</span>{{end}}
-      <span class="user-name">{{.User.Name}}</span>
-    </a>
-    <a href="/settings">{{.T "nav.settings"}}</a>
-    {{if .User.IsAdmin}}<a href="/admin/reports">{{.T "admin.reports"}}</a>{{end}}
-    <button class="btn ghost" type="button" data-logout>{{.T "auth.logout"}}</button>
-    {{else}}
-    <a class="btn ghost" href="/login">{{.T "auth.login"}}</a>
-    <a class="btn" href="/register">{{.T "auth.register"}}</a>
+    <details class="account-menu" id="account-menu">
+      <summary aria-label="{{.T "nav.account"}}">
+        {{if .User.AvatarPath}}<img class="avatar xs" src="{{avatar .User.AvatarPath}}" alt="">{{else}}<span class="avatar xs fallback">{{initial .User.Name}}</span>{{end}}
+        <span class="user-name">{{.User.Name}}</span>
+        <svg class="icon caret" aria-hidden="true"><use href="/static/icons.svg#fa-chevron-down"></use></svg>
+      </summary>
+      <div class="menu">
+        <a href="/u/{{.User.Username}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-user"></use></svg>{{.T "nav.profile"}}</a>
+        <a href="/settings"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-gear"></use></svg>{{.T "nav.settings"}}</a>
+        {{if .User.IsAdmin}}<a href="/admin/reports">{{.T "admin.reports"}}</a>{{end}}
+        <a href="/about">{{.T "nav.about"}}</a>
+        <a href="{{.SourceURL}}" rel="noopener noreferrer" target="_blank">{{.T "footer.source"}}</a>
+        <hr>
+        <button type="button" data-logout><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-logout"></use></svg>{{.T "auth.logout"}}</button>
+      </div>
+    </details>
     {{end}}
   </div>
 </header>
@@ -65,11 +76,20 @@
 <main class="container">
 {{template "content" .}}
 </main>
+{{if .User}}
+<nav class="bottomnav" aria-label="{{.T "nav.menu"}}">
+  <a href="/" {{if eq .Path "/"}}aria-current="page"{{end}}>{{.T "nav.home"}}</a>
+  <a href="/shows" {{if eq .Path "/shows"}}aria-current="page"{{end}}>{{.T "nav.shows"}}</a>
+  <a href="/calendar" {{if eq .Path "/calendar"}}aria-current="page"{{end}}>{{.T "nav.calendar"}}</a>
+</nav>
+{{end}}
 <footer class="footer">
-  <p>{{.T "footer.tmdb"}} <a href="https://www.themoviedb.org/" rel="noopener noreferrer" target="_blank">TMDB</a>.</p>
-  <p>{{.T "footer.tvmaze"}} <a href="https://www.tvmaze.com/" rel="noopener noreferrer" target="_blank">TVmaze</a>{{if .TraktEnabled}}, <a href="https://trakt.tv/" rel="noopener noreferrer" target="_blank">Trakt</a>{{end}}.</p>
-  <p>{{.T "footer.unofficial" .AppName}}</p>
-  <p><a href="{{.SourceURL}}" rel="noopener noreferrer" target="_blank">{{.T "footer.source"}}</a> &middot; <a href="/privacy">{{.T "footer.privacy"}}</a></p>
+  <span class="cslove" translate="no">
+    <span class="cslove-t">{{.T "footer.made_with"}}</span>
+    <svg class="cslove-h" viewBox="0 0 24 24" width="1em" height="1em" role="img" aria-label="love" focusable="false" fill="#03c03c"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+    <span class="cslove-t">{{.T "footer.by"}}</span>
+    <a class="cslove-a" href="{{loveHref .Lang}}" rel="author noopener" target="_blank">Carl Sinclair</a>
+  </span>
 </footer>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <script type="application/json" id="i18n">{{.JSStrings}}</script>

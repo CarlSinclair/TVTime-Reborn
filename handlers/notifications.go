@@ -223,6 +223,25 @@ func (a *App) apiNotificationSettings(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
+	if in.Master[notify.ChanTelegram] && u.TelegramChatID == "" {
+		a.fail(w, r, apiErr{http.StatusBadRequest, "err.telegram_not_linked"})
+		return
+	}
+	if in.Master[notify.ChanEmail] && !(u.Email != "" && u.EmailVerified) {
+		a.fail(w, r, apiErr{http.StatusBadRequest, "err.email_not_verified"})
+		return
+	}
+	if in.Master[notify.ChanPush] {
+		subs, err := a.Store.PushSubs(u.ID)
+		if err != nil {
+			a.fail(w, r, err)
+			return
+		}
+		if len(subs) == 0 {
+			a.fail(w, r, apiErr{http.StatusBadRequest, "err.push_not_enabled"})
+			return
+		}
+	}
 	if err := a.Store.SetNotifyFlags(u.ID, in.Master[notify.ChanInApp], in.Master[notify.ChanPush], in.Master[notify.ChanEmail], in.Master[notify.ChanTelegram]); err != nil {
 		a.fail(w, r, err)
 		return

@@ -324,14 +324,16 @@ func (a *App) apiSetLocale(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, errBadRequest)
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: "tt_lang", Value: in.Locale, Path: "/", MaxAge: 60 * 60 * 24 * 365, SameSite: http.SameSiteLaxMode, Secure: a.Cfg.CookieSecure})
-	if u := auth.UserFrom(r.Context()); u != nil {
-		if err := a.Store.SetLocale(u.ID, in.Locale); err != nil {
-			a.fail(w, r, err)
-			return
-		}
-		a.Sync.PrefetchLanguages()
+	u := auth.UserFrom(r.Context())
+	if u == nil {
+		a.fail(w, r, errUnauth)
+		return
 	}
+	if err := a.Store.SetLocale(u.ID, in.Locale); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	a.Sync.PrefetchLanguages()
 	a.okJSON(w, nil)
 }
 

@@ -57,6 +57,7 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /register", a.pageSimple("register", "auth.register"))
 	mux.HandleFunc("GET /forgot", a.pageSimple("forgot", "auth.forgot"))
 	mux.HandleFunc("GET /privacy", a.pagePrivacy)
+	mux.HandleFunc("GET /about", a.pageSimple("about", "about.title"))
 	mux.HandleFunc("GET /offline", a.pageSimple("offline", "offline.title"))
 	mux.HandleFunc("GET /t/{purpose}", a.pageToken)
 	mux.HandleFunc("GET /admin/reports", a.pageAdminReports)
@@ -80,6 +81,8 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/account/locale", a.apiSetLocale)
 	mux.HandleFunc("POST /api/account/password", a.apiChangePassword)
 	mux.HandleFunc("POST /api/account/email", a.apiAddEmail)
+	mux.HandleFunc("POST /api/account/email/change", a.apiChangeEmail)
+	mux.HandleFunc("POST /api/auth/emailchange/consume", a.apiEmailChangeConsume)
 	mux.HandleFunc("POST /api/account/timezone", a.apiSetTimezone)
 	mux.HandleFunc("POST /api/account/logout-everywhere", a.apiLogoutEverywhere)
 	mux.HandleFunc("POST /api/account/2fa/setup", a.apiTOTPSetup)
@@ -194,7 +197,7 @@ func (a *App) pageSimple(name, titleKey string) http.HandlerFunc {
 
 func (a *App) pageToken(w http.ResponseWriter, r *http.Request) {
 	purpose := r.PathValue("purpose")
-	if purpose != auth.PurposeLogin && purpose != auth.PurposeReset && purpose != auth.PurposeVerify {
+	if purpose != auth.PurposeLogin && purpose != auth.PurposeReset && purpose != auth.PurposeVerify && purpose != auth.PurposeEmail {
 		a.errorPage(w, r, http.StatusNotFound, "err.not_found")
 		return
 	}

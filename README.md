@@ -2,6 +2,8 @@
 
 A free, self-hostable TV show tracker: follow shows, mark episodes watched, see what is next, get notified when new episodes air, and talk about each episode with spoiler protection. One Go binary (templates, assets and 10 languages embedded), SQLite storage, installable PWA.
 
+See it in action at [tvt.carl-sinclair.com](https://tvt.carl-sinclair.com).
+
 Licensed under the [GNU AGPL v3](LICENSE); see [NOTICE](NOTICE) for attribution, [PRIVACY.md](PRIVACY.md) for what the software stores, and [SECURITY.md](SECURITY.md) to report a problem.
 
 ## Features
@@ -19,6 +21,8 @@ Licensed under the [GNU AGPL v3](LICENSE); see [NOTICE](NOTICE) for attribution,
 - Optional S3-compatible object storage (Cloudflare R2, AWS S3, MinIO, Backblaze B2) for uploads and cached artwork.
 
 ## Run
+
+Build from source:
 
     cp tvt.env.example tvt.env      # set TVT_JWT_SECRET (32+ chars) and TVT_TMDB_KEY
     set -a; . ./tvt.env; set +a
@@ -60,7 +64,7 @@ See `SECURITY.md`. Highlights: hashed refresh tokens with reuse detection, CSRF 
 
 - Leased replication: opt-in sharing of episode comments between instances without federation's permanence. Each comment is signed by its home instance and copied to peers on a short lease (about a day); peers must re-fetch to renew it, and a deleted comment answers "410 Gone", so deletions propagate within one lease and nothing is immutable. Needs peer allowlists, cross-instance blocking and reporting, and signed identities.
 - More importers: Trakt, Simkl, Letterboxd, IMDb (the TV Time importer is done).
-- Operator announcements: a way for the operator to send one message to every user (in-app, with optional email, push and Telegram), paced so identical messages are never sent in a burst.
+- Operator announcements to all users.
 - Support for sending messages to Telegram group chats.
 - Translated documentation.
 

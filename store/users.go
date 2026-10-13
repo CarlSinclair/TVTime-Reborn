@@ -36,6 +36,7 @@ type User struct {
 	NotifyEmail      bool
 	NotifyTelegram   bool
 	NotifyOffsetMin  int
+	PendingEmail     string
 	CreatedAt        string
 }
 
@@ -66,14 +67,14 @@ func ValidUsername(u string) bool { return usernameRe.MatchString(u) }
 
 const userCols = `id, COALESCE(email,''), username, display_name, bio, avatar_path, banner_path, password_hash, email_verified, locale, timezone,
   profile_public, is_admin, is_banned, totp_secret_enc, totp_enabled, totp_last_step, COALESCE(telegram_id,0), telegram_username, telegram_chat_id,
-  notify_in_app, notify_push, notify_email, notify_telegram, notify_offset_min, created_at`
+  notify_in_app, notify_push, notify_email, notify_telegram, notify_offset_min, pending_email, created_at`
 
 func scanUser(row interface{ Scan(...any) error }) (*User, error) {
 	var u User
 	var ev, pub, adm, ban, te, nIn, nPush, nMail, nTg int
 	if err := row.Scan(&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.Bio, &u.AvatarPath, &u.BannerPath, &u.PasswordHash, &ev, &u.Locale, &u.Timezone,
 		&pub, &adm, &ban, &u.TOTPSecretEnc, &te, &u.TOTPLastStep, &u.TelegramID, &u.TelegramUsername, &u.TelegramChatID,
-		&nIn, &nPush, &nMail, &nTg, &u.NotifyOffsetMin, &u.CreatedAt); err != nil {
+		&nIn, &nPush, &nMail, &nTg, &u.NotifyOffsetMin, &u.PendingEmail, &u.CreatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -227,6 +228,42 @@ func (s *Store) AddEmail(userID int64, email string) error {
 		return ErrForbidden
 	}
 	return nil
+}
+
+// SetPendingEmail records an address waiting for confirmation. It fails with
+// ErrEmailTaken when someone already owns it or is waiting to.
+func (s *Store) SetPendingEmail(userID int64, email string) error {
+	var n int
+	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM users WHERE id <> ? AND (email = ? OR pending_email = ?)`, userID, email, email).Scan(&n); err != nil {
+		return fmt.Errorf("check pending email uid=%d: %w", userID, err)
+	}
+	if n > 0 {
+		return ErrEmailTaken
+	}
+	return s.exec("set pending email", userID, `UPDATE users SET pending_email = ? WHERE id = ?`, email, userID)
+}
+
+// ConfirmEmailChange swaps in the pending address, already proven by the link,
+// and returns the previous one so it can be told.
+func (s *Store) ConfirmEmailChange(userID int64) (oldEmail, newEmail string, err error) {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return "", "", fmt.Errorf("begin email change uid=%d: %w", userID, err)
+	}
+	defer tx.Rollback()
+	if err := tx.QueryRow(`SELECT COALESCE(email,''), pending_email FROM users WHERE id = ?`, userID).Scan(&oldEmail, &newEmail); err != nil {
+		return "", "", fmt.Errorf("read email change uid=%d: %w", userID, err)
+	}
+	if newEmail == "" {
+		return "", "", ErrNotFound
+	}
+	if _, err := tx.Exec(`UPDATE users SET email = ?, email_verified = 1, pending_email = '' WHERE id = ?`, newEmail, userID); err != nil {
+		if isUnique(err, "users.email") {
+			return "", "", ErrEmailTaken
+		}
+		return "", "", fmt.Errorf("apply email change uid=%d: %w", userID, err)
+	}
+	return oldEmail, newEmail, tx.Commit()
 }
 
 func (s *Store) UpdateProfile(userID int64, displayName, bio string, public bool) error {

@@ -14,3 +14,6 @@ Third-party data and services: show metadata and artwork come from TMDB
 (https://www.themoviedb.org/), episode air times from TVmaze
 (https://www.tvmaze.com/, CC BY-SA) and, optionally, Trakt (https://trakt.tv/).
 This product uses the TMDB API but is not endorsed or certified by TMDB.
+
+The interface icons in assets/static/icons.svg are from Font Awesome Free
+(https://fontawesome.com), licensed CC BY 4.0.

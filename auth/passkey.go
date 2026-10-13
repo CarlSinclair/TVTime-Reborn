@@ -17,8 +17,6 @@ import (
 	"github.com/go-webauthn/webauthn/webauthn"
 )
 
-const CookieWebAuthn = "tt_wa"
-
 var (
 	ErrPasskeyUnavailable = errors.New("passkeys are not configured")
 	ErrPasskeyFailed      = errors.New("passkey verification failed")
@@ -97,19 +95,19 @@ func (s *Service) putChallenge(w http.ResponseWriter, sd webauthn.SessionData, u
 	}
 	s.pk.challenges[id] = challenge{session: sd, userID: userID, expires: now.Add(5 * time.Minute)}
 	s.pk.mu.Unlock()
-	s.setCookie(w, CookieWebAuthn, id, 300)
+	s.setField(w, fieldWebAuthn, id)
 	return nil
 }
 
 func (s *Service) takeChallenge(r *http.Request) (challenge, error) {
-	c, err := r.Cookie(CookieWebAuthn)
-	if err != nil {
+	id := s.field(r, fieldWebAuthn)
+	if id == "" {
 		return challenge{}, ErrChallengeExpired
 	}
 	s.pk.mu.Lock()
 	defer s.pk.mu.Unlock()
-	ch, ok := s.pk.challenges[c.Value]
-	delete(s.pk.challenges, c.Value)
+	ch, ok := s.pk.challenges[id]
+	delete(s.pk.challenges, id)
 	if !ok || time.Now().After(ch.expires) {
 		return challenge{}, ErrChallengeExpired
 	}

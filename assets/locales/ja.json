@@ -8,7 +8,11 @@
     "settings": "設定",
     "theme": "テーマを切り替え",
     "language": "言語",
-    "notifications": "通知"
+    "notifications": "通知",
+    "about": "このサービスについて",
+    "profile": "プロフィール",
+    "account": "アカウントメニュー",
+    "menu": "メインメニュー"
   },
   "auth": {
     "login": "ログイン",
@@ -43,7 +47,11 @@
       "title": "メールアドレスの確認",
       "text": "ボタンを押してメールアドレスを確認してください。"
     },
-    "continue": "続ける"
+    "continue": "続ける",
+    "emailchange": {
+      "title": "新しいメールアドレスの確認",
+      "text": "ボタンを押して新しいメールアドレスを確認してください。"
+    }
   },
   "home": {
     "hero_title": "観ているドラマをすべて記録",
@@ -171,14 +179,21 @@
     "passkey_never": "未使用",
     "passkey_remove": "削除",
     "telegram_link_btn": "Telegramアカウントを連携",
-    "tab_import": "インポート"
+    "tab_import": "インポート",
+    "email_title": "メールアドレス",
+    "email_pending": "%s の確認待ちです。そちらに送ったリンクを開いてください。",
+    "email_new": "新しいメールアドレス",
+    "email_change_btn": "メールを変更",
+    "email_change_sent": "新しい受信箱を確認してください。確認リンクを送りました。"
   },
   "footer": {
     "tmdb": "作品データと画像の提供元：",
     "unofficial": "%s は独立したプロジェクトであり、TMDB とは提携していません。",
     "tvmaze": "エピソードの放送時刻の提供元：",
     "privacy": "プライバシー",
-    "source": "ソースコード（AGPL-3.0）"
+    "source": "ソースコード（AGPL-3.0）",
+    "made_with": "愛を込めて",
+    "by": "制作:"
   },
   "admin": {
     "reports": "通報",
@@ -207,7 +222,7 @@
     "metadata_not_configured": "作品データサービスが設定されていません。",
     "invalid_email": "有効なメールアドレスを入力してください。",
     "invalid_username": "ユーザー名は英数字とアンダースコアで3〜20文字です。",
-    "weak_password": "パスワードは8〜72文字にしてください。",
+    "weak_password": "大文字、小文字、数字、記号を含む8文字以上にしてください。",
     "email_taken": "このメールアドレスは既に登録されています。",
     "username_taken": "このユーザー名は既に使われています。",
     "bad_credentials": "メールアドレスまたはパスワードが違います。",
@@ -239,7 +254,11 @@
     "import_invalid": "TV Timeのエクスポートzipではないようです。",
     "import_empty": "エクスポートに作品も視聴済みエピソードも含まれていません。",
     "import_busy": "インポートはすでに実行中です。",
-    "import_too_big": "ファイルが大きすぎます。"
+    "import_too_big": "ファイルが大きすぎます。",
+    "email_same": "すでにそのメールアドレスです。",
+    "telegram_not_linked": "先にTelegramを連携してください。",
+    "email_not_verified": "先にメールアドレスを確認してください。",
+    "push_not_enabled": "先にこの端末でプッシュを有効にしてください。"
   },
   "mail": {
     "login": {
@@ -255,7 +274,15 @@
       "body": "%s へようこそ。次のリンクでメールアドレスを確認してください（有効期限30分）：\n\n%s\n\n登録に心当たりがない場合は、このメールを無視してください。"
     },
     "button_open": "開く",
-    "footer": "このメールは {app} の通知設定に基づいて送信されています。"
+    "footer": "このメールは {app} の通知設定に基づいて送信されています。",
+    "emailchange": {
+      "subject": "%sの新しいメールアドレスを確認してください",
+      "body": "これが%sの新しいメールアドレスであることを確認してください。リンクの有効期限は30分です:\n\n%s\n\n心当たりがない場合は、このメッセージを無視してください。リンクを開くまで何も変更されません。"
+    },
+    "emailchanged": {
+      "subject": "%sのメールアドレスが変更されました",
+      "body": "%sアカウントのメールアドレスが %s に変更されました。心当たりがない場合は、すぐにパスワードをリセットしてください。"
+    }
   },
   "js": {
     "network_error": "ネットワークエラーです。もう一度お試しください。",
@@ -312,7 +339,14 @@
     "import_episodes": "視聴済みにしたエピソード：%d",
     "import_skipped": "一致しなかったエピソード：%d",
     "import_reason_not_found": "見つかりません",
-    "import_reason_error": "検索に失敗"
+    "import_reason_error": "検索に失敗",
+    "pw_toggle": "パスワードの表示/非表示",
+    "pw_min": "8文字以上",
+    "pw_upper": "大文字",
+    "pw_lower": "小文字",
+    "pw_digit": "数字",
+    "pw_special": "記号",
+    "pw_strong": "強力なパスワード"
   },
   "genre": {
     "action_adventure": "アクション＆アドベンチャー",
@@ -396,10 +430,7 @@
     "telegram_oneclick": "Telegramログインを使う",
     "telegram_title": "Telegram通知",
     "telegram_waiting": "Telegramで「開始」を押すのを待っています...",
-    "test": {
-      "body": "これが読めていれば、このチャンネルは正常です。",
-      "title": "テスト通知"
-    },
+    "test": "テスト",
     "test_hint": "各チャンネルにテストを送って動作を確認できます。",
     "test_title": "チャンネルをテスト",
     "twofa_disabled": {
@@ -416,7 +447,7 @@
       "body": "アカウントに新しいパスキーが追加されました。心当たりがない場合は、すぐにアカウントを保護してください。"
     },
     "timing_title": "エピソード通知のタイミング",
-    "timing_hint": "エピソードの正確な放送時刻がわかる場合（TVmaze、予備としてTrakt）は、通知にその時刻を使います。日付のみの場合は、その日の正午（あなたのタイムゾーン）を基準にします。",
+    "timing_hint": "放送時刻を基準に、いつ通知するか。",
     "timing_when": "通知するタイミング",
     "timing_before30": "30分前",
     "timing_release": "配信時",
@@ -431,6 +462,16 @@
     "import_done": {
       "title": "インポート完了",
       "body": "{shows}作品と視聴済み{episodes}エピソードをインポートしました。"
+    },
+    "push_off_hint": "この端末でプッシュを有効にするとオンにできます。",
+    "telegram_off_hint": "Telegramを連携するとオンにできます。",
+    "email_change_requested": {
+      "title": "メールアドレスの変更がリクエストされました",
+      "body": "メールアドレスを {email} に変更するリクエストがありました。心当たりがない場合は、今すぐパスワードを変更してください。"
+    },
+    "email_changed": {
+      "title": "メールアドレスが変更されました",
+      "body": "メールアドレスは {email} になりました。心当たりがない場合は、すぐにアカウントを保護してください。"
     }
   },
   "profile": {
@@ -526,5 +567,10 @@
     "file_label": "TV Timeのエクスポート（.zip）",
     "progress": "インポートの進捗",
     "unmatched": "一致しなかった作品"
+  },
+  "about": {
+    "title": "このサービスについて",
+    "license": "TVTは、GNU Affero General Public License v3の下で公開されているフリーソフトウェアです。",
+    "data_title": "データの提供元"
   }
 }

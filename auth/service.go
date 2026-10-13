@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode"
 
 	"tvt/logger"
 	"tvt/store"
@@ -25,13 +26,10 @@ const (
 	RotationGrace        = 60 * time.Second
 	EmailTokenDuration   = 30 * time.Minute
 
-	CookieAccess  = "tt_access"
-	CookieRefresh = "tt_refresh"
-	CookieCSRF    = "tt_csrf"
-
 	PurposeLogin  = "login"
 	PurposeReset  = "reset"
 	PurposeVerify = "verify"
+	PurposeEmail  = "emailchange"
 )
 
 var (
@@ -65,8 +63,29 @@ func randomToken() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
+const passwordSpecials = "!@#$%^&*()-_+=[]{}|;:'\",.<>/?`~"
+
+// ValidPassword enforces the same rules as the other products: at least eight
+// characters with an upper case letter, a lower case letter, a digit and a
+// symbol. The upper limit is bcrypt's 72 bytes.
 func ValidPassword(p string) error {
 	if len(p) < 8 || len(p) > 72 {
+		return ErrPasswordRules
+	}
+	var upper, lower, digit, special bool
+	for _, c := range p {
+		switch {
+		case unicode.IsUpper(c):
+			upper = true
+		case unicode.IsLower(c):
+			lower = true
+		case unicode.IsDigit(c):
+			digit = true
+		case strings.ContainsRune(passwordSpecials, c):
+			special = true
+		}
+	}
+	if !upper || !lower || !digit || !special {
 		return ErrPasswordRules
 	}
 	return nil
@@ -112,6 +131,13 @@ func (s *Service) CheckPassword(u *store.User, password string) bool {
 }
 
 func (s *Service) signToken(userID int64, scope string, ttl time.Duration) (string, error) {
+	return s.signSessionToken(userID, scope, ttl, "")
+}
+
+// signSessionToken adds the session id. Access tokens are only honoured while
+// their session still has a row in refresh_tokens, so logging out, changing the
+// password or revoking sessions ends them at once instead of at expiry.
+func (s *Service) signSessionToken(userID int64, scope string, ttl time.Duration, sid string) (string, error) {
 	now := time.Now()
 	claims := jwt.MapClaims{
 		"user_id": userID,
@@ -120,10 +146,18 @@ func (s *Service) signToken(userID int64, scope string, ttl time.Duration) (stri
 		"iat":     now.Unix(),
 		"exp":     now.Add(ttl).Unix(),
 	}
+	if sid != "" {
+		claims["sid"] = sid
+	}
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(s.Secret)
 }
 
 func (s *Service) parseToken(raw, scope string) (int64, error) {
+	uid, _, err := s.parseSessionToken(raw, scope)
+	return uid, err
+}
+
+func (s *Service) parseSessionToken(raw, scope string) (int64, string, error) {
 	tok, err := jwt.Parse(raw, func(t *jwt.Token) (any, error) {
 		if t.Method != jwt.SigningMethodHS256 {
 			return nil, errors.New("unexpected signing method")
@@ -131,51 +165,56 @@ func (s *Service) parseToken(raw, scope string) (int64, error) {
 		return s.Secret, nil
 	})
 	if err != nil || !tok.Valid {
-		return 0, ErrBadToken
+		return 0, "", ErrBadToken
 	}
 	claims, ok := tok.Claims.(jwt.MapClaims)
 	if !ok {
-		return 0, ErrBadToken
+		return 0, "", ErrBadToken
 	}
 	if sc, _ := claims["scope"].(string); sc != scope {
-		return 0, ErrBadToken
+		return 0, "", ErrBadToken
 	}
 	uid, ok := claims["user_id"].(float64)
 	if !ok {
-		return 0, ErrBadToken
+		return 0, "", ErrBadToken
 	}
-	return int64(uid), nil
-}
-
-func (s *Service) setCookie(w http.ResponseWriter, name, value string, maxAge int) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     name,
-		Value:    value,
-		Path:     "/",
-		MaxAge:   maxAge,
-		HttpOnly: true,
-		Secure:   s.Secure,
-		SameSite: http.SameSiteLaxMode,
-	})
+	sid, _ := claims["sid"].(string)
+	return int64(uid), sid, nil
 }
 
 func (s *Service) ClearCookies(w http.ResponseWriter) {
-	s.setCookie(w, CookieAccess, "", -1)
-	s.setCookie(w, CookieRefresh, "", -1)
+	s.setField(w, fieldAccess, "")
+	s.setField(w, fieldRefresh, "")
 }
 
-func (s *Service) storeRefresh(tx *sql.Tx, userID int64, raw string, exp time.Time) error {
-	_, err := tx.Exec(`INSERT INTO refresh_tokens (user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?)`,
-		userID, hashToken(raw), store.Ts(exp), store.Now())
+func (s *Service) storeRefresh(tx *sql.Tx, userID int64, sid, raw string, exp time.Time) error {
+	_, err := tx.Exec(`INSERT INTO refresh_tokens (user_id, sid, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)`,
+		userID, sid, hashToken(raw), store.Ts(exp), store.Now())
 	return err
 }
 
+func (s *Service) sessionAlive(uid int64, sid string) bool {
+	if sid == "" {
+		return false
+	}
+	var n int
+	if err := s.Store.DB.QueryRow(`SELECT COUNT(*) FROM refresh_tokens WHERE sid = ? AND user_id = ? AND expires_at > ?`, sid, uid, store.Now()).Scan(&n); err != nil {
+		logger.Error("AUTH session lookup uid=%d: %v", uid, err)
+		return false
+	}
+	return n > 0
+}
+
 func (s *Service) StartSession(w http.ResponseWriter, userID int64) error {
-	refresh, err := s.signToken(userID, "refresh", RefreshTokenDuration)
+	sid, err := randomToken()
+	if err != nil {
+		return fmt.Errorf("session id uid=%d: %w", userID, err)
+	}
+	refresh, err := s.signSessionToken(userID, "refresh", RefreshTokenDuration, sid)
 	if err != nil {
 		return fmt.Errorf("sign refresh uid=%d: %w", userID, err)
 	}
-	access, err := s.signToken(userID, "access", AccessTokenDuration)
+	access, err := s.signSessionToken(userID, "access", AccessTokenDuration, sid)
 	if err != nil {
 		return fmt.Errorf("sign access uid=%d: %w", userID, err)
 	}
@@ -184,7 +223,7 @@ func (s *Service) StartSession(w http.ResponseWriter, userID int64) error {
 		return fmt.Errorf("begin session uid=%d: %w", userID, err)
 	}
 	defer tx.Rollback()
-	if err := s.storeRefresh(tx, userID, refresh, time.Now().Add(RefreshTokenDuration)); err != nil {
+	if err := s.storeRefresh(tx, userID, sid, refresh, time.Now().Add(RefreshTokenDuration)); err != nil {
 		return fmt.Errorf("store refresh uid=%d: %w", userID, err)
 	}
 	if _, err := tx.Exec(`DELETE FROM refresh_tokens WHERE user_id = ? AND (expires_at < ? OR (superseded_at IS NOT NULL AND superseded_at < ?))`,
@@ -194,8 +233,8 @@ func (s *Service) StartSession(w http.ResponseWriter, userID int64) error {
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit session uid=%d: %w", userID, err)
 	}
-	s.setCookie(w, CookieAccess, access, int(AccessTokenDuration.Seconds()))
-	s.setCookie(w, CookieRefresh, refresh, int(RefreshTokenDuration.Seconds()))
+	s.setField(w, fieldAccess, access)
+	s.setField(w, fieldRefresh, refresh)
 	return nil
 }
 
@@ -206,21 +245,21 @@ func (s *Service) StartSession(w http.ResponseWriter, userID int64) error {
 // and only receive a fresh access token (the winner's Set-Cookie carries the
 // new refresh token). A superseded token outside the window is rejected.
 func (s *Service) Authenticate(w http.ResponseWriter, r *http.Request) (*store.User, error) {
-	if c, err := r.Cookie(CookieAccess); err == nil {
-		if uid, err := s.parseToken(c.Value, "access"); err == nil {
+	if tok := s.field(r, fieldAccess); tok != "" {
+		if uid, sid, err := s.parseSessionToken(tok, "access"); err == nil && s.sessionAlive(uid, sid) {
 			return s.loadUser(uid)
 		}
 	}
-	rc, err := r.Cookie(CookieRefresh)
-	if err != nil {
+	refreshTok := s.field(r, fieldRefresh)
+	if refreshTok == "" {
 		return nil, ErrBadToken
 	}
-	uid, err := s.parseToken(rc.Value, "refresh")
+	uid, sid, err := s.parseSessionToken(refreshTok, "refresh")
 	if err != nil {
 		s.ClearCookies(w)
 		return nil, ErrBadToken
 	}
-	oldHash := hashToken(rc.Value)
+	oldHash := hashToken(refreshTok)
 
 	var supersededAt sql.NullString
 	var expires string
@@ -242,7 +281,7 @@ func (s *Service) Authenticate(w http.ResponseWriter, r *http.Request) (*store.U
 		return nil, err
 	}
 
-	newRefresh, err := s.signToken(uid, "refresh", RefreshTokenDuration)
+	newRefresh, err := s.signSessionToken(uid, "refresh", RefreshTokenDuration, sid)
 	if err != nil {
 		return nil, fmt.Errorf("sign refresh uid=%d: %w", uid, err)
 	}
@@ -262,13 +301,13 @@ func (s *Service) Authenticate(w http.ResponseWriter, r *http.Request) (*store.U
 		return nil, fmt.Errorf("rotation rows uid=%d: %w", uid, err)
 	}
 	if won == 1 {
-		if err := s.storeRefresh(tx, uid, newRefresh, time.Now().Add(RefreshTokenDuration)); err != nil {
+		if err := s.storeRefresh(tx, uid, sid, newRefresh, time.Now().Add(RefreshTokenDuration)); err != nil {
 			return nil, fmt.Errorf("store rotated refresh uid=%d: %w", uid, err)
 		}
 		if err := tx.Commit(); err != nil {
 			return nil, fmt.Errorf("commit rotate uid=%d: %w", uid, err)
 		}
-		s.setCookie(w, CookieRefresh, newRefresh, int(RefreshTokenDuration.Seconds()))
+		s.setField(w, fieldRefresh, newRefresh)
 	} else {
 		tx.Rollback()
 		var sup string
@@ -284,11 +323,11 @@ func (s *Service) Authenticate(w http.ResponseWriter, r *http.Request) (*store.U
 			return nil, ErrBadToken
 		}
 	}
-	access, err := s.signToken(uid, "access", AccessTokenDuration)
+	access, err := s.signSessionToken(uid, "access", AccessTokenDuration, sid)
 	if err != nil {
 		return nil, fmt.Errorf("sign access uid=%d: %w", uid, err)
 	}
-	s.setCookie(w, CookieAccess, access, int(AccessTokenDuration.Seconds()))
+	s.setField(w, fieldAccess, access)
 	return u, nil
 }
 
@@ -308,9 +347,10 @@ func (s *Service) loadUser(uid int64) (*store.User, error) {
 
 func (s *Service) EndSession(w http.ResponseWriter, r *http.Request) error {
 	var firstErr error
-	if rc, err := r.Cookie(CookieRefresh); err == nil {
-		if _, err := s.Store.DB.Exec(`DELETE FROM refresh_tokens WHERE token_hash = ?`, hashToken(rc.Value)); err != nil {
-			firstErr = fmt.Errorf("delete refresh on logout: %w", err)
+	if tok := s.field(r, fieldRefresh); tok != "" {
+		_, sid, _ := s.parseSessionToken(tok, "refresh")
+		if _, err := s.Store.DB.Exec(`DELETE FROM refresh_tokens WHERE token_hash = ? OR (sid <> '' AND sid = ?)`, hashToken(tok), sid); err != nil {
+			firstErr = fmt.Errorf("delete session on logout: %w", err)
 		}
 	}
 	s.ClearCookies(w)

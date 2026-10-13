@@ -84,8 +84,8 @@ type client struct {
 func (c *client) csrf() string {
 	u, _ := url.Parse(c.base)
 	for _, ck := range c.http.Jar.Cookies(u) {
-		if ck.Name == auth.CookieCSRF {
-			return ck.Value
+		if ck.Name == auth.CookieSession {
+			return auth.BagField(ck.Value, "c")
 		}
 	}
 	return ""
@@ -122,7 +122,7 @@ func (c *client) post(path string, body any) (int, map[string]any) {
 func newClient(t *testing.T, base string) *client {
 	jar, _ := cookiejar.New(nil)
 	c := &client{t: t, base: base, http: &http.Client{Jar: jar, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}
-	c.get("/")
+	c.get("/login")
 	return c
 }
 
@@ -208,7 +208,7 @@ func newEnv(t *testing.T) *env {
 
 func (e *env) signup(t *testing.T, name string, verify bool) *client {
 	c := newClient(t, e.srv.URL)
-	code, out := c.post("/api/auth/register", map[string]string{"email": name + "@example.com", "username": name, "password": "password123"})
+	code, out := c.post("/api/auth/register", map[string]string{"email": name + "@example.com", "username": name, "password": "Passw0rd!x1"})
 	if code != 200 || out["ok"] != true {
 		t.Fatalf("register %s: %d %v", name, code, out)
 	}
@@ -226,8 +226,28 @@ func (e *env) signup(t *testing.T, name string, verify bool) *client {
 
 func TestPagesRenderForVisitor(t *testing.T) {
 	e := newEnv(t)
-	c := newClient(t, e.srv.URL)
-	for _, p := range []string{"/", "/login", "/register", "/forgot", "/search?q=fake", "/show/555", "/show/555/season/1", "/offline", "/t/verify?token=x"} {
+	anon := newClient(t, e.srv.URL)
+	for _, p := range []string{"/login", "/register", "/forgot", "/privacy", "/about", "/offline", "/t/verify?token=x"} {
+		code, body := anon.get(p)
+		if code != 200 || !strings.Contains(body, "</html>") {
+			t.Errorf("anonymous GET %s: status %d", p, code)
+		}
+	}
+	for _, p := range []string{"/", "/shows", "/calendar", "/settings", "/search?q=fake", "/show/555", "/u/someone", "/nope"} {
+		resp, err := anon.http.Get(anon.base + p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusSeeOther || !strings.HasPrefix(resp.Header.Get("Location"), "/login") {
+			t.Errorf("anonymous GET %s: status %d location %q, want redirect to /login", p, resp.StatusCode, resp.Header.Get("Location"))
+		}
+	}
+	if code, out := anon.get("/api/search?q=fake"); code != 401 {
+		t.Errorf("anonymous API search: %d %v", code, out)
+	}
+	c := e.signup(t, "viewer", true)
+	for _, p := range []string{"/", "/shows", "/calendar", "/search?q=fake", "/show/555", "/show/555/season/1", "/settings", "/about"} {
 		code, body := c.get(p)
 		if code != 200 || !strings.Contains(body, "</html>") {
 			t.Errorf("GET %s: status %d", p, code)
@@ -348,7 +368,7 @@ func TestLoginErrorsAreGeneric(t *testing.T) {
 	if code1 != 401 || code2 != 401 || out1["error"] != out2["error"] {
 		t.Fatalf("login failures should be identical: %d %v / %d %v", code1, out1, code2, out2)
 	}
-	if code, out := c.post("/api/auth/login", map[string]string{"email": "dave@example.com", "password": "password123"}); code != 200 {
+	if code, out := c.post("/api/auth/login", map[string]string{"email": "dave@example.com", "password": "Passw0rd!x1"}); code != 200 {
 		t.Fatalf("good login: %d %v", code, out)
 	}
 }

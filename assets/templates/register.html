@@ -4,11 +4,12 @@
   <form class="stack" data-api="/api/auth/register">
     <label>{{.T "auth.email"}}<input type="email" name="email" autocomplete="email" required></label>
     <label>{{.T "auth.username"}}<input type="text" name="username" autocomplete="username" pattern="[A-Za-z0-9_]{3,20}" minlength="3" maxlength="20" required><small class="muted">{{.T "auth.username_hint"}}</small></label>
-    <label>{{.T "auth.password"}}<input type="password" name="password" autocomplete="new-password" minlength="8" maxlength="72" required><small class="muted">{{.T "auth.password_hint"}}</small></label>
+    <label>{{.T "auth.password"}}<input type="password" name="password" autocomplete="new-password" minlength="8" maxlength="72" data-pw-rules required></label>
     <p class="form-error" role="alert" hidden></p>
     <button class="btn" type="submit">{{.T "auth.register"}}</button>
   </form>
   {{if .TelegramBot}}{{template "telegram_widget" (dict "BotID" .TelegramBotID "Label" (.T "auth.telegram_login") "Action" "login")}}{{end}}
   <p class="muted"><a href="/login">{{.T "auth.have_account"}}</a></p>
+<p class="muted"><a href="/privacy">{{.T "footer.privacy"}}</a> &middot; <a href="/about">{{.T "nav.about"}}</a></p>
 </section>
 {{end}}

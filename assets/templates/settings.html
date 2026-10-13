@@ -36,11 +36,26 @@
   <h2>{{.T "settings.password"}}</h2>
   <form class="stack" data-api="/api/account/password" data-success="{{.T "settings.password_changed"}}">
     {{if .User.HasPassword}}<label>{{.T "settings.current_password"}}<input type="password" name="current" autocomplete="current-password" required></label>{{end}}
-    <label>{{.T "settings.new_password"}}<input type="password" name="new" autocomplete="new-password" minlength="8" maxlength="72" required></label>
+    <label>{{.T "settings.new_password"}}<input type="password" name="new" autocomplete="new-password" minlength="8" maxlength="72" data-pw-rules required></label>
     <p class="form-error" role="alert" hidden></p>
     <button class="btn" type="submit">{{.T "settings.save"}}</button>
   </form>
 </section>
+
+{{if .User.Email}}
+<section class="panel">
+  <h2>{{.T "settings.email_title"}}</h2>
+  <p>{{.User.Email}}</p>
+  {{if .User.PendingEmail}}<p class="notice">{{.T "settings.email_pending" .User.PendingEmail}}</p>{{end}}
+  <form class="stack" data-api="/api/account/email/change" data-success="{{.T "settings.email_change_sent"}}" data-reload="1">
+    <label>{{.T "settings.email_new"}}<input type="email" name="email" autocomplete="email" required></label>
+    {{if .User.HasPassword}}<label>{{.T "auth.password"}}<input type="password" name="password" autocomplete="current-password" required></label>{{end}}
+    {{if .User.TOTPEnabled}}<label>{{.T "mfa.code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>{{end}}
+    <p class="form-error" role="alert" hidden></p>
+    <button class="btn" type="submit">{{.T "settings.email_change_btn"}}</button>
+  </form>
+</section>
+{{end}}
 
 {{if not .User.Email}}
 <section class="panel">
@@ -209,14 +224,42 @@
 </section>
 
 {{else}}
-<section class="panel">
+<section class="panel" id="channels-box">
   <h2>{{.T "notif.channels"}}</h2>
-  <div class="stack">
-    <label class="check"><input type="checkbox" data-master="in_app" {{if .User.NotifyInApp}}checked{{end}}> {{.T "notif.ch.in_app"}}</label>
-    <label class="check"><input type="checkbox" data-master="push" {{if .User.NotifyPush}}checked{{end}}> {{.T "notif.ch.push"}}</label>
-    <label class="check"><input type="checkbox" data-master="email" {{if .User.NotifyEmail}}checked{{end}}> {{.T "notif.ch.email"}}</label>
-    <label class="check"><input type="checkbox" data-master="telegram" {{if .User.NotifyTelegram}}checked{{end}}> {{.T "notif.ch.telegram"}}</label>
+  <div class="notify-row">
+    <div class="tswitch"><input type="checkbox" class="tswitch-input" id="ch-in_app" data-master="in_app" aria-label="{{.T "notif.ch.in_app"}}" {{if .User.NotifyInApp}}checked{{end}}><label for="ch-in_app" class="tswitch-label"><span class="ball"></span></label></div>
+    <div class="notify-text"><strong>{{.T "notif.ch.in_app"}}</strong></div>
+    <div class="notify-actions"><button class="btn ghost small" type="button" data-test-channel="in_app">{{.T "notif.test"}}</button></div>
   </div>
+  <div class="notify-row {{if eq .Data.PushDevices 0}}off{{end}}">
+    <div class="tswitch"><input type="checkbox" class="tswitch-input" id="ch-push" data-master="push" aria-label="{{.T "notif.ch.push"}}" {{if and .User.NotifyPush (gt .Data.PushDevices 0)}}checked{{end}} {{if eq .Data.PushDevices 0}}disabled title="{{.T "notif.push_off_hint"}}"{{end}}><label for="ch-push" class="tswitch-label"><span class="ball"></span></label></div>
+    <div class="notify-text"><strong>{{.T "notif.ch.push"}}</strong><span class="notify-sub" id="push-count">{{if eq .Data.PushDevices 0}}{{.T "notif.push_off_hint"}}{{else}}{{.T "notif.push_devices" .Data.PushDevices}}{{end}}</span></div>
+    <div class="notify-actions">
+      <button class="btn small" type="button" id="push-enable">{{.T "notif.push_enable"}}</button>
+      <button class="btn ghost small" type="button" id="push-disable" hidden>{{.T "notif.push_disable"}}</button>
+      <button class="btn ghost small" type="button" data-test-channel="push" {{if eq .Data.PushDevices 0}}disabled{{end}}>{{.T "notif.test"}}</button>
+    </div>
+  </div>
+  <div class="notify-row {{if not .Data.EmailReady}}off{{end}}">
+    <div class="tswitch"><input type="checkbox" class="tswitch-input" id="ch-email" data-master="email" aria-label="{{.T "notif.ch.email"}}" {{if and .User.NotifyEmail .Data.EmailReady}}checked{{end}} {{if not .Data.EmailReady}}disabled title="{{.T "notif.email_needs_verified"}}"{{end}}><label for="ch-email" class="tswitch-label"><span class="ball"></span></label></div>
+    <div class="notify-text"><strong>{{.T "notif.ch.email"}}</strong><span class="notify-sub">{{if .Data.EmailReady}}{{.User.Email}}{{else}}{{.T "notif.email_needs_verified"}}{{end}}</span></div>
+    <div class="notify-actions"><button class="btn ghost small" type="button" data-test-channel="email" {{if not .Data.EmailReady}}disabled{{end}}>{{.T "notif.test"}}</button></div>
+  </div>
+  {{if .Data.TelegramReady}}
+  <div class="notify-row {{if not .User.TelegramChatID}}off{{end}}" id="telegram-box">
+    <div class="tswitch"><input type="checkbox" class="tswitch-input" id="ch-telegram" data-master="telegram" aria-label="{{.T "notif.ch.telegram"}}" {{if and .User.NotifyTelegram .User.TelegramChatID}}checked{{end}} {{if not .User.TelegramChatID}}disabled title="{{.T "notif.telegram_off_hint"}}"{{end}}><label for="ch-telegram" class="tswitch-label"><span class="ball"></span></label></div>
+    <div class="notify-text"><strong>{{.T "notif.ch.telegram"}}</strong><span class="notify-sub">{{if .User.TelegramChatID}}{{.T "notif.telegram_connected"}}{{else}}{{.T "notif.telegram_off_hint"}}{{end}}</span><span class="notify-sub" id="telegram-waiting" hidden>{{.T "notif.telegram_waiting"}}</span></div>
+    <div class="notify-actions">
+      {{if .User.TelegramChatID}}
+      <button class="btn ghost small" type="button" data-telegram-unlink-chat>{{.T "notif.telegram_disconnect"}}</button>
+      {{else}}
+      <button class="btn small" type="button" id="telegram-connect">{{.T "notif.telegram_connect"}}</button>
+      {{if .User.TelegramID}}<button class="btn ghost small" type="button" id="telegram-dm">{{.T "notif.telegram_oneclick"}}</button>{{end}}
+      {{end}}
+      <button class="btn ghost small" type="button" data-test-channel="telegram" {{if not .User.TelegramChatID}}disabled{{end}}>{{.T "notif.test"}}</button>
+    </div>
+  </div>
+  {{end}}
 </section>
 
 <section class="panel" id="timing-box" data-offset="{{.User.NotifyOffsetMin}}">
@@ -251,62 +294,20 @@
   <h2>{{.T "notif.categories"}}</h2>
   <div class="table-wrap">
   <table class="matrix">
-    <thead><tr><th></th><th>{{.T "notif.ch.in_app"}}</th><th>{{.T "notif.ch.push"}}</th><th>{{.T "notif.ch.email"}}</th><th>{{.T "notif.ch.telegram"}}</th></tr></thead>
+    <thead><tr><th></th><th>{{.T "notif.ch.in_app"}}</th><th>{{.T "notif.ch.push"}}</th><th>{{.T "notif.ch.email"}}</th>{{if .Data.TelegramReady}}<th>{{.T "notif.ch.telegram"}}</th>{{end}}</tr></thead>
     <tbody>
       {{range .Data.Prefs}}
       <tr>
         <th scope="row">{{$.T .LabelKey}}{{if .Security}} <small class="muted">{{$.T "notif.always"}}</small>{{end}}</th>
-        <td><input type="checkbox" data-cat="{{.ID}}" data-ch="in_app" {{if .Pref.InApp}}checked{{end}} {{if .Security}}disabled{{end}}></td>
-        <td><input type="checkbox" data-cat="{{.ID}}" data-ch="push" {{if .Pref.Push}}checked{{end}}></td>
-        <td><input type="checkbox" data-cat="{{.ID}}" data-ch="email" {{if .Pref.Email}}checked{{end}} {{if .Security}}disabled{{end}}></td>
-        <td><input type="checkbox" data-cat="{{.ID}}" data-ch="telegram" {{if .Pref.Telegram}}checked{{end}}></td>
+        <td><div class="tswitch sm"><input type="checkbox" class="tswitch-input" id="m-{{.ID}}-in_app" data-cat="{{.ID}}" data-ch="in_app" aria-label="{{$.T "notif.ch.in_app"}}" {{if .Pref.InApp}}checked{{end}} {{if .Security}}disabled{{end}}><label for="m-{{.ID}}-in_app" class="tswitch-label"><span class="ball"></span></label></div></td>
+        <td><div class="tswitch sm"><input type="checkbox" class="tswitch-input" id="m-{{.ID}}-push" data-cat="{{.ID}}" data-ch="push" aria-label="{{$.T "notif.ch.push"}}" {{if .Pref.Push}}checked{{end}} {{if eq $.Data.PushDevices 0}}disabled{{end}}><label for="m-{{.ID}}-push" class="tswitch-label"><span class="ball"></span></label></div></td>
+        <td><div class="tswitch sm"><input type="checkbox" class="tswitch-input" id="m-{{.ID}}-email" data-cat="{{.ID}}" data-ch="email" aria-label="{{$.T "notif.ch.email"}}" {{if .Pref.Email}}checked{{end}} {{if or .Security (not $.Data.EmailReady)}}disabled{{end}}><label for="m-{{.ID}}-email" class="tswitch-label"><span class="ball"></span></label></div></td>
+        {{if $.Data.TelegramReady}}<td><div class="tswitch sm"><input type="checkbox" class="tswitch-input" id="m-{{.ID}}-telegram" data-cat="{{.ID}}" data-ch="telegram" aria-label="{{$.T "notif.ch.telegram"}}" {{if .Pref.Telegram}}checked{{end}} {{if not $.User.TelegramChatID}}disabled{{end}}><label for="m-{{.ID}}-telegram" class="tswitch-label"><span class="ball"></span></label></div></td>{{end}}
       </tr>
       {{end}}
     </tbody>
   </table>
   </div>
-  <p><button class="btn" type="button" id="notif-save">{{.T "settings.save"}}</button></p>
-</section>
-
-<section class="panel">
-  <h2>{{.T "notif.test_title"}}</h2>
-  <p class="muted">{{.T "notif.test_hint"}}</p>
-  <p class="actions">
-    <button class="btn ghost small" type="button" data-test-channel="in_app">{{.T "notif.ch.in_app"}}</button>
-    <button class="btn ghost small" type="button" data-test-channel="push">{{.T "notif.ch.push"}}</button>
-    <button class="btn ghost small" type="button" data-test-channel="email">{{.T "notif.ch.email"}}</button>
-    <button class="btn ghost small" type="button" data-test-channel="telegram">{{.T "notif.ch.telegram"}}</button>
-  </p>
-</section>
-
-<section class="panel" id="push-box">
-  <h2>{{.T "notif.push_title"}}</h2>
-  <p class="muted">{{.T "notif.push_hint"}}</p>
-  <p id="push-count" class="muted">{{.T "notif.push_devices" .Data.PushDevices}}</p>
-  <p class="actions">
-    <button class="btn" type="button" id="push-enable">{{.T "notif.push_enable"}}</button>
-    <button class="btn ghost" type="button" id="push-disable" hidden>{{.T "notif.push_disable"}}</button>
-  </p>
-</section>
-
-<section class="panel" id="telegram-box">
-  <h2>{{.T "notif.telegram_title"}}</h2>
-  {{if .Data.TelegramReady}}
-    {{if .User.TelegramChatID}}
-    <p class="notice">{{.T "notif.telegram_connected"}}</p>
-    <p><button class="btn ghost" type="button" data-telegram-unlink-chat>{{.T "notif.telegram_disconnect"}}</button></p>
-    {{else}}
-    <p class="muted">{{.T "notif.telegram_hint"}}</p>
-    <p class="actions">
-      <button class="btn" type="button" id="telegram-connect">{{.T "notif.telegram_connect"}}</button>
-      {{if .User.TelegramID}}<button class="btn ghost" type="button" id="telegram-dm">{{.T "notif.telegram_oneclick"}}</button>{{end}}
-    </p>
-    <p id="telegram-waiting" class="muted" hidden>{{.T "notif.telegram_waiting"}}</p>
-    {{end}}
-  {{else}}
-  <p class="muted">{{.T "settings.telegram_unavailable"}}</p>
-  {{end}}
-  {{if not .Data.EmailReady}}<p class="muted">{{.T "notif.email_needs_verified"}}</p>{{end}}
 </section>
 {{end}}
 {{end}}

@@ -1,0 +1,11 @@
+{{define "content"}}
+<section class="panel">
+  <h1>{{.T "about.title"}}</h1>
+  <p>{{.T "about.license"}} <a href="{{.SourceURL}}" rel="noopener noreferrer" target="_blank">{{.T "footer.source"}}</a></p>
+  <h2>{{.T "about.data_title"}}</h2>
+  <p>{{.T "footer.tmdb"}} <a href="https://www.themoviedb.org/" rel="noopener noreferrer" target="_blank">TMDB</a>.</p>
+  <p>{{.T "footer.tvmaze"}} <a href="https://www.tvmaze.com/" rel="noopener noreferrer" target="_blank">TVmaze</a>{{if .TraktEnabled}}, <a href="https://trakt.tv/" rel="noopener noreferrer" target="_blank">Trakt</a>{{end}}.</p>
+  <p class="muted">{{.T "footer.unofficial" .AppName}}</p>
+  <p><a href="/privacy">{{.T "footer.privacy"}}</a></p>
+</section>
+{{end}}

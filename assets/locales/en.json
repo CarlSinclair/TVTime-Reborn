@@ -8,7 +8,11 @@
     "settings": "Settings",
     "theme": "Toggle theme",
     "language": "Language",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "about": "About",
+    "profile": "Profile",
+    "account": "Account menu",
+    "menu": "Main menu"
   },
   "auth": {
     "login": "Log in",
@@ -43,7 +47,11 @@
       "title": "Verify your email",
       "text": "Press the button to confirm your email address."
     },
-    "continue": "Continue"
+    "continue": "Continue",
+    "emailchange": {
+      "title": "Confirm your new email",
+      "text": "Press the button to confirm your new email address."
+    }
   },
   "home": {
     "hero_title": "Track every show you watch",
@@ -171,14 +179,21 @@
     "passkey_never": "Never used",
     "passkey_remove": "Remove",
     "telegram_link_btn": "Link my Telegram account",
-    "tab_import": "Import"
+    "tab_import": "Import",
+    "email_title": "Email address",
+    "email_pending": "Waiting for you to confirm %s. Open the link we emailed there.",
+    "email_new": "New email address",
+    "email_change_btn": "Change email",
+    "email_change_sent": "Check your new inbox for a confirmation link."
   },
   "footer": {
     "tmdb": "Show data and images are provided by",
     "unofficial": "%s is an independent project and is not affiliated with TMDB.",
     "tvmaze": "Episode air times provided by",
     "privacy": "Privacy",
-    "source": "Source code (AGPL-3.0)"
+    "source": "Source code (AGPL-3.0)",
+    "made_with": "Made with",
+    "by": "by"
   },
   "admin": {
     "reports": "Reports",
@@ -207,7 +222,7 @@
     "metadata_not_configured": "The show data service is not configured.",
     "invalid_email": "Enter a valid email address.",
     "invalid_username": "Usernames use 3 to 20 letters, numbers or underscores.",
-    "weak_password": "Passwords must be 8 to 72 characters.",
+    "weak_password": "Use at least 8 characters with an uppercase letter, a lowercase letter, a digit and a symbol.",
     "email_taken": "That email is already registered.",
     "username_taken": "That username is taken.",
     "bad_credentials": "Wrong email or password.",
@@ -239,7 +254,11 @@
     "import_invalid": "That does not look like a TV Time export zip.",
     "import_empty": "The export has no shows or watched episodes in it.",
     "import_busy": "You already have an import running.",
-    "import_too_big": "That file is too large."
+    "import_too_big": "That file is too large.",
+    "email_same": "That is already your email address.",
+    "telegram_not_linked": "Connect Telegram first.",
+    "email_not_verified": "Verify your email address first.",
+    "push_not_enabled": "Enable push on this device first."
   },
   "mail": {
     "login": {
@@ -255,7 +274,15 @@
       "body": "Welcome to %s. Confirm your email address with this link, which expires in 30 minutes:\n\n%s\n\nIf you did not sign up, you can ignore this email."
     },
     "button_open": "Open",
-    "footer": "You are receiving this because of your {app} notification settings."
+    "footer": "You are receiving this because of your {app} notification settings.",
+    "emailchange": {
+      "subject": "Confirm your new %s email",
+      "body": "Confirm that this is your new email address for %s. The link expires in 30 minutes:\n\n%s\n\nIf you did not ask for this, ignore this message. Nothing changes until the link is opened."
+    },
+    "emailchanged": {
+      "subject": "Your %s email was changed",
+      "body": "The email address on your %s account was changed to %s. If this was not you, reset your password right away."
+    }
   },
   "js": {
     "network_error": "Network error. Please try again.",
@@ -312,7 +339,14 @@
     "import_episodes": "Episodes marked watched: %d",
     "import_skipped": "Episodes that could not be matched: %d",
     "import_reason_not_found": "not found",
-    "import_reason_error": "lookup failed"
+    "import_reason_error": "lookup failed",
+    "pw_toggle": "Show or hide password",
+    "pw_min": "At least 8 characters",
+    "pw_upper": "An uppercase letter",
+    "pw_lower": "A lowercase letter",
+    "pw_digit": "A digit",
+    "pw_special": "A special character",
+    "pw_strong": "Strong password"
   },
   "genre": {
     "action_adventure": "Action & Adventure",
@@ -396,10 +430,7 @@
     "telegram_oneclick": "Use my Telegram login",
     "telegram_title": "Telegram notifications",
     "telegram_waiting": "Waiting for you to press Start in Telegram...",
-    "test": {
-      "body": "If you can read this, this channel works.",
-      "title": "Test notification"
-    },
+    "test": "Test",
     "test_hint": "Send yourself a test on each channel to check it works.",
     "test_title": "Test your channels",
     "twofa_disabled": {
@@ -416,7 +447,7 @@
       "body": "A new passkey was added to your account. If this was not you, secure your account immediately."
     },
     "timing_title": "Episode alert timing",
-    "timing_hint": "Where an episode's exact broadcast time is known (from TVmaze, with Trakt as a backup), alerts use it. If only the air date is known, alerts are timed from midday on that date in your timezone.",
+    "timing_hint": "When to be alerted, relative to the air time.",
     "timing_when": "When to alert me",
     "timing_before30": "30 minutes before",
     "timing_release": "When it airs",
@@ -431,6 +462,16 @@
     "import_done": {
       "title": "Import finished",
       "body": "{shows} shows and {episodes} watched episodes were imported."
+    },
+    "push_off_hint": "Enable push on this device to turn this on.",
+    "telegram_off_hint": "Connect Telegram to turn this on.",
+    "email_change_requested": {
+      "title": "Email change requested",
+      "body": "A change of your email to {email} was requested. If this was not you, change your password now."
+    },
+    "email_changed": {
+      "title": "Email changed",
+      "body": "Your email address is now {email}. If this was not you, secure your account immediately."
     }
   },
   "profile": {
@@ -526,5 +567,10 @@
     "file_label": "TV Time export (.zip)",
     "progress": "Import progress",
     "unmatched": "Shows that could not be matched"
+  },
+  "about": {
+    "title": "About",
+    "license": "TVT is free software under the GNU Affero General Public License v3.",
+    "data_title": "Data sources"
   }
 }

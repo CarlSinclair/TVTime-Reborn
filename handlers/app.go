@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"regexp"
 	"runtime/debug"
 	"strings"
@@ -171,15 +172,13 @@ func (a *App) lang(w http.ResponseWriter, r *http.Request, u *store.User) string
 	if u != nil && a.I18n.Has(u.Locale) {
 		return u.Locale
 	}
-	if c, err := r.Cookie("tt_lang"); err == nil && a.I18n.Has(c.Value) {
-		return c.Value
-	}
 	return a.I18n.Pick(r.Header.Get("Accept-Language"))
 }
 
 func (a *App) loadTemplates() error {
 	funcs := template.FuncMap{
 		"img":      imgURL,
+		"loveHref": loveHref,
 		"code":     episodeCode,
 		"add":      func(x, y int) int { return x + y },
 		"seq":      seq,
@@ -327,6 +326,18 @@ func isStatic(p string) bool {
 	return strings.HasPrefix(p, "/static/") || strings.HasPrefix(p, "/media/") || strings.HasPrefix(p, "/img/") || p == "/sw.js" || p == "/manifest.webmanifest" || p == "/healthz"
 }
 
+var publicPages = map[string]bool{
+	"/login": true, "/login/2fa": true, "/register": true, "/forgot": true, "/privacy": true, "/about": true,
+	"/offline": true, "/auth/telegram": true,
+}
+
+// publicRoute lists everything reachable without signing in: the sign-in and
+// recovery pages, the legal pages, static files and the machine endpoints.
+// Everything else needs an account.
+func publicRoute(p string) bool {
+	return isStatic(p) || publicPages[p] || strings.HasPrefix(p, "/t/") || strings.HasPrefix(p, "/api/auth/") || p == "/api/telegram/webhook"
+}
+
 // SetMedia swaps the object store (used by tests).
 func (a *App) SetMedia(m media.Store) { a.Media = m }
 
@@ -357,7 +368,7 @@ func (s *statusWriter) WriteHeader(c int) {
 func (a *App) middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		sw := &statusWriter{ResponseWriter: w, status: 200}
+		sw := &statusWriter{ResponseWriter: a.Auth.WrapResponse(w, r), status: 200}
 		defer func() {
 			if rec := recover(); rec != nil {
 				logger.Error("PANIC %s %s: %v\n%s", r.Method, r.URL.Path, rec, debug.Stack())
@@ -392,6 +403,18 @@ func (a *App) middleware(next http.Handler) http.Handler {
 			}
 		}
 		r = r.WithContext(ctx)
+		if auth.UserFrom(ctx) == nil && !publicRoute(r.URL.Path) {
+			if strings.HasPrefix(r.URL.Path, "/api/") {
+				a.fail(sw, r, errUnauth)
+				return
+			}
+			target := "/login"
+			if r.Method == http.MethodGet && r.URL.Path != "/" {
+				target += "?next=" + url.QueryEscape(r.URL.RequestURI())
+			}
+			http.Redirect(sw, r, target, http.StatusSeeOther)
+			return
+		}
 		if !isStatic(r.URL.Path) && r.URL.Path != "/api/telegram/webhook" {
 			if err := a.allow(a.pageLimit, "g:"+auth.ClientIP(r)); err != nil {
 				logger.Warn("RATE page limit from=%s %s %s", auth.ClientCountry(r), r.Method, r.URL.Path)

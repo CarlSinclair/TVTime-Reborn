@@ -21,7 +21,7 @@ func newSvc(t *testing.T) (*Service, *store.User) {
 	}
 	t.Cleanup(func() { d.Close() })
 	st := store.New(d)
-	h, err := HashPassword("correct horse")
+	h, err := HashPassword("Correct-Horse9")
 	if err != nil {
 		t.Fatalf("hash: %v", err)
 	}
@@ -34,7 +34,7 @@ func newSvc(t *testing.T) (*Service, *store.User) {
 
 func TestLoginAndPasswordRules(t *testing.T) {
 	s, _ := newSvc(t)
-	if _, err := s.Login("a@example.com", "correct horse"); err != nil {
+	if _, err := s.Login("a@example.com", "Correct-Horse9"); err != nil {
 		t.Fatalf("good login: %v", err)
 	}
 	if _, err := s.Login("a@example.com", "nope nope"); err != ErrBadCredentials {
@@ -48,21 +48,64 @@ func TestLoginAndPasswordRules(t *testing.T) {
 	}
 }
 
-func cookiesOf(w *httptest.ResponseRecorder) map[string]*http.Cookie {
-	out := map[string]*http.Cookie{}
-	for _, c := range w.Result().Cookies() {
-		out[c.Name] = c
+func TestPasswordStrengthRules(t *testing.T) {
+	bad := []string{"alllowercase1!", "ALLUPPERCASE1!", "NoDigitsHere!", "NoSpecial123x", "Sh0rt!a", strings.Repeat("Aa1!", 19)}
+	for _, p := range bad {
+		if err := ValidPassword(p); err == nil {
+			t.Errorf("%q should be rejected", p)
+		}
 	}
-	return out
+	for _, p := range []string{"Passw0rd!x", "Correct-Horse9", "Zz9_aaaa"} {
+		if err := ValidPassword(p); err != nil {
+			t.Errorf("%q should be accepted: %v", p, err)
+		}
+	}
+}
+
+func sessionOf(rr *httptest.ResponseRecorder) *http.Cookie {
+	for _, c := range rr.Result().Cookies() {
+		if c.Name == CookieSession {
+			return c
+		}
+	}
+	return nil
+}
+
+func startSession(t *testing.T, s *Service, uid int64) string {
+	t.Helper()
+	rr := httptest.NewRecorder()
+	w := s.WrapResponse(rr, httptest.NewRequest("GET", "/", nil))
+	if err := s.StartSession(w, uid); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	w.WriteHeader(200)
+	c := sessionOf(rr)
+	if c == nil {
+		t.Fatalf("no session cookie issued")
+	}
+	if n := len(rr.Result().Cookies()); n != 1 {
+		t.Fatalf("one cookie expected, got %d", n)
+	}
+	return BagField(c.Value, fieldRefresh)
+}
+
+func requestWithRefresh(refresh string) *http.Request {
+	req := httptest.NewRequest("GET", "/", nil)
+	req.AddCookie(&http.Cookie{Name: CookieSession, Value: bag{fieldRefresh: refresh}.encode()})
+	return req
+}
+
+func authenticate(s *Service, req *http.Request) (*httptest.ResponseRecorder, error) {
+	rr := httptest.NewRecorder()
+	w := s.WrapResponse(rr, req)
+	_, err := s.Authenticate(w, req)
+	w.WriteHeader(200)
+	return rr, err
 }
 
 func TestConcurrentRefreshRotationDoesNotLogOut(t *testing.T) {
 	s, u := newSvc(t)
-	w := httptest.NewRecorder()
-	if err := s.StartSession(w, u.ID); err != nil {
-		t.Fatalf("start: %v", err)
-	}
-	refresh := cookiesOf(w)[CookieRefresh]
+	refresh := startSession(t, s, u.ID)
 
 	const n = 12
 	var wg sync.WaitGroup
@@ -72,11 +115,13 @@ func TestConcurrentRefreshRotationDoesNotLogOut(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			req := httptest.NewRequest("GET", "/", nil)
-			req.AddCookie(&http.Cookie{Name: CookieRefresh, Value: refresh.Value})
-			rec := httptest.NewRecorder()
-			_, results[i] = s.Authenticate(rec, req)
-			_, rotated[i] = cookiesOf(rec)[CookieRefresh]
+			rec, err := authenticate(s, requestWithRefresh(refresh))
+			results[i] = err
+			if c := sessionOf(rec); c != nil {
+				if r := BagField(c.Value, fieldRefresh); r != "" && r != refresh {
+					rotated[i] = true
+				}
+			}
 		}(i)
 	}
 	wg.Wait()
@@ -96,23 +141,15 @@ func TestConcurrentRefreshRotationDoesNotLogOut(t *testing.T) {
 
 func TestSupersededTokenReuseOutsideGraceRevokesSessions(t *testing.T) {
 	s, u := newSvc(t)
-	w := httptest.NewRecorder()
-	if err := s.StartSession(w, u.ID); err != nil {
-		t.Fatalf("start: %v", err)
-	}
-	refresh := cookiesOf(w)[CookieRefresh]
-	req := httptest.NewRequest("GET", "/", nil)
-	req.AddCookie(&http.Cookie{Name: CookieRefresh, Value: refresh.Value})
-	if _, err := s.Authenticate(httptest.NewRecorder(), req); err != nil {
+	refresh := startSession(t, s, u.ID)
+	if _, err := authenticate(s, requestWithRefresh(refresh)); err != nil {
 		t.Fatalf("first use: %v", err)
 	}
 	old := store.Ts(time.Now().Add(-2 * RotationGrace))
 	if _, err := s.Store.DB.Exec(`UPDATE refresh_tokens SET superseded_at = ? WHERE superseded_at IS NOT NULL`, old); err != nil {
 		t.Fatalf("age token: %v", err)
 	}
-	req2 := httptest.NewRequest("GET", "/", nil)
-	req2.AddCookie(&http.Cookie{Name: CookieRefresh, Value: refresh.Value})
-	if _, err := s.Authenticate(httptest.NewRecorder(), req2); err != ErrBadToken {
+	if _, err := authenticate(s, requestWithRefresh(refresh)); err != ErrBadToken {
 		t.Fatalf("stale reuse should be rejected, got %v", err)
 	}
 	var left int
@@ -185,5 +222,50 @@ func TestAuthCookiesAreHttpOnly(t *testing.T) {
 	}
 	if strings.Contains(w.Header().Get("Set-Cookie"), "password") {
 		t.Errorf("cookies must not carry credentials")
+	}
+}
+
+func sessionCookies(t *testing.T, s *Service, uid int64) (access, refresh string) {
+	t.Helper()
+	rr := httptest.NewRecorder()
+	w := s.WrapResponse(rr, httptest.NewRequest("GET", "/", nil))
+	if err := s.StartSession(w, uid); err != nil {
+		t.Fatal(err)
+	}
+	w.WriteHeader(200)
+	c := sessionOf(rr)
+	return BagField(c.Value, fieldAccess), BagField(c.Value, fieldRefresh)
+}
+
+func requestWith(access, refresh string) *http.Request {
+	req := httptest.NewRequest("GET", "/", nil)
+	req.AddCookie(&http.Cookie{Name: CookieSession, Value: bag{fieldAccess: access, fieldRefresh: refresh}.encode()})
+	return req
+}
+
+func TestAccessTokenDiesWithItsSession(t *testing.T) {
+	s, u := newSvc(t)
+	access, refresh := sessionCookies(t, s, u.ID)
+	if _, err := authenticate(s, requestWith(access, refresh)); err != nil {
+		t.Fatalf("fresh session rejected: %v", err)
+	}
+	if err := s.RevokeAll(u.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := authenticate(s, requestWith(access, "")); err != ErrBadToken {
+		t.Fatalf("a still-unexpired access token must stop working once sessions are revoked: %v", err)
+	}
+
+	access2, refresh2 := sessionCookies(t, s, u.ID)
+	otherAccess, otherRefresh := sessionCookies(t, s, u.ID)
+	req := requestWith(access2, refresh2)
+	if err := s.EndSession(httptest.NewRecorder(), req); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := authenticate(s, requestWith(access2, "")); err != ErrBadToken {
+		t.Fatalf("logout must end that session's access token immediately: %v", err)
+	}
+	if _, err := authenticate(s, requestWith(otherAccess, otherRefresh)); err != nil {
+		t.Fatalf("logging out one device must not end another: %v", err)
 	}
 }

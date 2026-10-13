@@ -130,7 +130,7 @@ func (r *Runner) byEpisodeID(ctx context.Context, tvdbEp int64, sh *store.Show, 
 	return id, ok
 }
 
-func statusFor(s Show) (status string, completedIfDone bool) {
+func statusFor(s Show, hasWatches bool) (status string, completedIfDone bool) {
 	switch {
 	case s.ForLater && !s.Followed:
 		return "plan", false
@@ -140,6 +140,8 @@ func statusFor(s Show) (status string, completedIfDone bool) {
 		return "watching", false
 	case s.Favorite:
 		return "paused", true
+	case hasWatches:
+		return "dropped", true
 	}
 	return "", false
 }
@@ -250,7 +252,7 @@ func (r *Runner) importShow(ctx context.Context, job *jobState, s Show, sh *stor
 		}
 		eps = append(eps, store.ImportedEpisode{EpisodeID: id, At: w.At})
 	}
-	status, done := statusFor(s)
+	status, done := statusFor(s, len(watches) > 0)
 	res, err := r.Store.ImportShow(store.ImportShowInput{
 		UserID: job.UserID, ShowID: sh.ID, Status: status, CompletedIfDone: done,
 		Favorite: s.Favorite, FollowedAt: s.FollowedAt, Episodes: eps,

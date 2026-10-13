@@ -79,9 +79,14 @@
     }
   };
 
+  const nextTarget = () => {
+    const n = new URLSearchParams(window.location.search).get("next");
+    return n && n.startsWith("/") && !n.startsWith("//") && !n.startsWith("/\\") ? n : null;
+  };
+
   const go = (data) => {
     if (data && data.redirect) {
-      window.location.href = data.redirect;
+      window.location.href = (data.redirect === "/" && nextTarget()) || data.redirect;
     } else {
       window.location.reload();
     }
@@ -191,7 +196,7 @@
   const telegramConnect = async (el) => {
     const data = await run(el, () => api("/api/account/telegram/link-token"));
     if (!data) return;
-    window.open(data.url, "_blank", "noopener");
+    window.location.href = data.url;
     const waiting = document.getElementById("telegram-waiting");
     if (waiting) waiting.hidden = false;
     clearInterval(tgPoll);
@@ -338,20 +343,6 @@
       if (data) toast(t("test_sent"), "ok");
       return;
     }
-    if (el.id === "notif-save") {
-      const master = {};
-      document.querySelectorAll("[data-master]").forEach((box) => {
-        master[box.dataset.master] = box.checked;
-      });
-      const prefs = {};
-      document.querySelectorAll("[data-cat]").forEach((box) => {
-        prefs[box.dataset.cat] = prefs[box.dataset.cat] || {};
-        prefs[box.dataset.cat][box.dataset.ch] = box.checked;
-      });
-      const data = await run(el, () => api("/api/notifications/settings", { master, prefs }));
-      if (data) toast(t("saved"), "ok");
-      return;
-    }
     if (el.id === "timing-save") {
       const preset = document.getElementById("timing-preset").value;
       let minutes;
@@ -486,6 +477,22 @@
     } else if (el.id === "settings-tz") {
       const data = await run(el, () => api("/api/account/timezone", { timezone: el.value }));
       if (data) toast(t("saved"), "ok");
+    } else if (el.matches("[data-master], [data-cat]")) {
+      const master = {};
+      document.querySelectorAll("[data-master]").forEach((box) => {
+        master[box.dataset.master] = box.checked;
+      });
+      const prefs = {};
+      document.querySelectorAll("[data-cat]").forEach((box) => {
+        prefs[box.dataset.cat] = prefs[box.dataset.cat] || {};
+        prefs[box.dataset.cat][box.dataset.ch] = box.checked;
+      });
+      const data = await run(null, () => api("/api/notifications/settings", { master, prefs }));
+      if (data) {
+        toast(t("saved"), "ok");
+      } else {
+        el.checked = !el.checked;
+      }
     } else if (el.matches("[data-upload]")) {
       const file = el.files && el.files[0];
       if (!file) return;
@@ -562,12 +569,26 @@
 
   if (importBox) pollImport();
 
-  const themeBtn = document.getElementById("theme-toggle");
-  if (themeBtn) {
-    themeBtn.addEventListener("click", () => {
-      const root = document.documentElement;
-      const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
-      root.setAttribute("data-theme", next);
+  const dswitch = document.getElementById("dswitch");
+  if (dswitch) {
+    dswitch.checked = document.documentElement.getAttribute("data-theme") === "dark";
+    const savedTheme = () => {
+      try {
+        return localStorage.getItem("tt-theme");
+      } catch (err) {
+        return null;
+      }
+    };
+    if (window.matchMedia) {
+      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (event) => {
+        if (savedTheme()) return;
+        document.documentElement.setAttribute("data-theme", event.matches ? "dark" : "light");
+        dswitch.checked = event.matches;
+      });
+    }
+    dswitch.addEventListener("change", () => {
+      const next = dswitch.checked ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", next);
       try {
         localStorage.setItem("tt-theme", next);
       } catch (err) {
@@ -575,6 +596,93 @@
       }
     });
   }
+
+  const accountMenu = document.getElementById("account-menu");
+  if (accountMenu) {
+    document.addEventListener("click", (event) => {
+      if (!accountMenu.contains(event.target)) accountMenu.open = false;
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") accountMenu.open = false;
+    });
+  }
+
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  const icon = (id) => {
+    const svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("class", "icon");
+    svg.setAttribute("aria-hidden", "true");
+    const use = document.createElementNS(SVG_NS, "use");
+    use.setAttribute("href", "/static/icons.svg#" + id);
+    svg.appendChild(use);
+    return svg;
+  };
+
+  const pwRules = [
+    ["pw_min", (v) => v.length >= 8],
+    ["pw_upper", (v) => /\p{Lu}/u.test(v)],
+    ["pw_lower", (v) => /\p{Ll}/u.test(v)],
+    ["pw_digit", (v) => /\p{Nd}/u.test(v)],
+    ["pw_special", (v) => /[!@#$%^&*()\-_+=[\]{}|;:'",.<>/?`~]/.test(v)],
+  ];
+
+  const setupPassword = (input) => {
+    const wrap = document.createElement("span");
+    wrap.className = "pw-wrap";
+    input.parentNode.insertBefore(wrap, input);
+    wrap.appendChild(input);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pw-toggle";
+    btn.setAttribute("aria-label", t("pw_toggle"));
+    let eye = icon("fa-eye");
+    btn.appendChild(eye);
+    btn.addEventListener("click", () => {
+      const show = input.type === "password";
+      input.type = show ? "text" : "password";
+      const next = icon(show ? "fa-eye-slash" : "fa-eye");
+      btn.replaceChild(next, eye);
+      eye = next;
+    });
+    wrap.appendChild(btn);
+    if (!("pwRules" in input.dataset)) return;
+    const box = document.createElement("div");
+    box.className = "pw-rules";
+    box.hidden = true;
+    const rows = pwRules.map(([key, test]) => {
+      const row = document.createElement("div");
+      row.appendChild(icon("fa-x-circle"));
+      const text = document.createElement("span");
+      text.textContent = t(key);
+      row.appendChild(text);
+      box.appendChild(row);
+      return { row, test };
+    });
+    const strong = document.createElement("div");
+    strong.className = "pw-strong";
+    strong.hidden = true;
+    strong.appendChild(icon("fa-check-circle"));
+    const strongText = document.createElement("span");
+    strongText.textContent = t("pw_strong");
+    strong.appendChild(strongText);
+    wrap.after(box);
+    box.after(strong);
+    input.addEventListener("input", () => {
+      const v = input.value;
+      box.hidden = v === "";
+      let all = v !== "";
+      rows.forEach(({ row, test }) => {
+        const ok = test(v);
+        if (!ok) all = false;
+        row.classList.toggle("ok", ok);
+        row.replaceChild(icon(ok ? "fa-check-circle" : "fa-x-circle"), row.firstChild);
+      });
+      strong.hidden = !all;
+      box.hidden = all || v === "";
+    });
+  };
+
+  document.querySelectorAll('input[type="password"]').forEach(setupPassword);
 
   const q = document.getElementById("q");
   const suggest = document.getElementById("suggest");
@@ -1090,7 +1198,7 @@
   const commentsRoot = document.getElementById("comments");
   if (commentsRoot) initComments(commentsRoot);
 
-  const pushBox = document.getElementById("push-box");
+  const pushBox = document.getElementById("channels-box");
   if (pushBox && pushSupported()) {
     navigator.serviceWorker.ready
       .then((reg) => reg.pushManager.getSubscription())
@@ -1106,10 +1214,8 @@
   } else if (pushBox) {
     const on = document.getElementById("push-enable");
     if (on) on.disabled = true;
-    const hint = document.createElement("p");
-    hint.className = "muted";
-    hint.textContent = t("push_unsupported");
-    pushBox.appendChild(hint);
+    const sub = document.getElementById("push-count");
+    if (sub) sub.textContent = t("push_unsupported");
   }
 
   if ("serviceWorker" in navigator) {

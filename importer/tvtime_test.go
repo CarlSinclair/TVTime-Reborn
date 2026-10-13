@@ -86,20 +86,22 @@ func TestParseTVTimeRejects(t *testing.T) {
 
 func TestStatusMapping(t *testing.T) {
 	cases := []struct {
-		s    Show
-		want string
-		done bool
+		s     Show
+		watch bool
+		want  string
+		done  bool
 	}{
-		{Show{Followed: true}, "watching", false},
-		{Show{Followed: true, Archived: true}, "paused", true},
-		{Show{ForLater: true}, "plan", false},
-		{Show{Favorite: true}, "paused", true},
-		{Show{}, "", false},
+		{Show{Followed: true}, false, "watching", false},
+		{Show{Followed: true, Archived: true}, true, "paused", true},
+		{Show{ForLater: true}, false, "plan", false},
+		{Show{Favorite: true}, false, "paused", true},
+		{Show{}, true, "dropped", true},
+		{Show{}, false, "", false},
 	}
 	for _, c := range cases {
-		got, done := statusFor(c.s)
+		got, done := statusFor(c.s, c.watch)
 		if got != c.want || done != c.done {
-			t.Errorf("statusFor(%+v) = %q,%v want %q,%v", c.s, got, done, c.want, c.done)
+			t.Errorf("statusFor(%+v,%v) = %q,%v want %q,%v", c.s, c.watch, got, done, c.want, c.done)
 		}
 	}
 }
