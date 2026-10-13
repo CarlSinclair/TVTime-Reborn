@@ -12,7 +12,8 @@
     "about": "Sobre",
     "profile": "Perfil",
     "account": "Menu da conta",
-    "menu": "Menu principal"
+    "menu": "Menu principal",
+    "admin": "Administração"
   },
   "auth": {
     "login": "Entrar",
@@ -382,7 +383,7 @@
     "marked_tip": "Marcado como assistido. Dica: avaliar um episódio faz o mesmo.",
     "rated": "Avaliado e marcado como assistido",
     "friend_add": "Adicionar amigo",
-    "friend_pending": "Pedido enviado",
+    "friend_pending": "Pendente",
     "friend_friends": "Amigos",
     "friend_accept": "Aceitar",
     "friend_decline": "Recusar",

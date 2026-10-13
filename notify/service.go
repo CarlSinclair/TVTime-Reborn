@@ -106,7 +106,7 @@ const duplicateWindow = 10 * time.Minute
 // was already delivered inside the window, so something that keeps failing and
 // reporting itself cannot flood a person with the same message.
 func (s *Service) duplicate(userID int64, event, title, body, link string) bool {
-	if event == "test" {
+	if event == "test" || event == "friend_request" {
 		return false
 	}
 	key := fmt.Sprintf("%d|%s|%s|%s|%s", userID, event, title, body, link)

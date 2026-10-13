@@ -12,7 +12,8 @@
     "about": "About",
     "profile": "Profile",
     "account": "Account menu",
-    "menu": "Main menu"
+    "menu": "Main menu",
+    "admin": "Admin"
   },
   "auth": {
     "login": "Log in",
@@ -382,7 +383,7 @@
     "marked_tip": "Marked as watched. Tip: rating an episode does the same.",
     "rated": "Rated and marked as watched",
     "friend_add": "Add friend",
-    "friend_pending": "Request sent",
+    "friend_pending": "Pending",
     "friend_friends": "Friends",
     "friend_accept": "Accept",
     "friend_decline": "Decline",

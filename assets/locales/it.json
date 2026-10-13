@@ -12,7 +12,8 @@
     "about": "Informazioni",
     "profile": "Profilo",
     "account": "Menu dell'account",
-    "menu": "Menu principale"
+    "menu": "Menu principale",
+    "admin": "Amministrazione"
   },
   "auth": {
     "login": "Accedi",
@@ -382,7 +383,7 @@
     "marked_tip": "Segnato come visto. Suggerimento: votare un episodio fa lo stesso.",
     "rated": "Votato e segnato come visto",
     "friend_add": "Aggiungi amico",
-    "friend_pending": "Richiesta inviata",
+    "friend_pending": "In attesa",
     "friend_friends": "Amici",
     "friend_accept": "Accetta",
     "friend_decline": "Rifiuta",

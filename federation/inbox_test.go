@@ -110,7 +110,7 @@ func TestReplayIsRejectedEvenAfterRestart(t *testing.T) {
 	}
 }
 
-func TestOnlyOnePendingRequestAndCaps(t *testing.T) {
+func TestOnlyOnePendingRequestPerPairButOthersAreNotBlocked(t *testing.T) {
 	h := newHarness(t)
 	alice := h.user("alice")
 	for i := 0; i < 3; i++ {
@@ -125,8 +125,8 @@ func TestOnlyOnePendingRequestAndCaps(t *testing.T) {
 		name := "user" + strconv.Itoa(100+i)
 		h.send(h.priv, h.from, h.msg("friend_request", name, "alice"))
 	}
-	if n, _ := h.st.PendingIncoming(alice.ID, h.from); n != maxPendingPerHost {
-		t.Fatalf("one server may leave at most %d requests waiting, got %d", maxPendingPerHost, n)
+	if n, _ := h.st.PendingIncoming(alice.ID, h.from); n != 13 {
+		t.Fatalf("other people must always be able to ask: %d pending, want 13", n)
 	}
 }
 

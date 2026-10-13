@@ -323,10 +323,48 @@ func TestOnlyOnePendingRequestUntilAnswered(t *testing.T) {
 			n++
 		}
 	}
-	if n != 1 {
-		t.Fatalf("an identical notification is not repeated within minutes, so a decline-and-ask-again loop cannot spam: %d", n)
+	if n != 2 {
+		t.Fatalf("every new friend request notifies, including one sent after a decline: %d", n)
 	}
 	if in := bob.getJSON("/api/friends")["incoming"].([]any); len(in) != 1 {
 		t.Fatalf("the new request must still be waiting in the list: %v", in)
+	}
+}
+
+func TestPendingRequestShowsAPendingTagNotAButton(t *testing.T) {
+	e := newEnv(t)
+	alice := e.signup(t, "alice", true)
+	e.signup(t, "bobby", true)
+	alice.post("/api/friends/request", map[string]string{"username": "bobby"})
+	_, page := alice.get("/u/bobby")
+	if !strings.Contains(page, `class="tag pending"`) || strings.Contains(page, `data-friend-add="bobby"`) {
+		t.Fatalf("a profile with a request waiting shows Pending instead of the add button")
+	}
+	_, found := alice.get("/search?kind=people&q=bobby")
+	if !strings.Contains(found, `class="tag pending"`) || strings.Contains(found, `data-friend-add="bobby"`) {
+		t.Fatalf("search results show Pending as well")
+	}
+	_, menu := alice.get("/")
+	if strings.Contains(menu, "/admin/reports") {
+		t.Fatalf("the admin link is only for admins")
+	}
+}
+
+func TestAdminLinkSitsBetweenSeparatorsBeforeLogout(t *testing.T) {
+	e := newEnv(t)
+	c := e.signup(t, "boss", true)
+	u := e.mustUser(t, "boss")
+	if _, err := e.store.DB.Exec(`UPDATE users SET is_admin = 1 WHERE id = ?`, u.ID); err != nil {
+		t.Fatal(err)
+	}
+	_, page := c.get("/")
+	i := strings.Index(page, `href="/admin/reports"`)
+	logout := strings.Index(page, `data-logout`)
+	if i < 0 || logout < 0 || i > logout {
+		t.Fatalf("the admin link must appear in the account menu before Log out")
+	}
+	between := page[i:logout]
+	if strings.Count(between, "<hr>") != 1 || !strings.Contains(page[i-60:i], "<hr>") {
+		t.Fatalf("separators must sit before and after the admin link")
 	}
 }

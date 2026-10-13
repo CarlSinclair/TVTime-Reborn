@@ -151,20 +151,6 @@ func (s *Service) onFriend(host string, m message) error {
 	}
 	switch m.Type {
 	case "friend_request":
-		if exists, _ := s.Store.FriendState(shadow.ID, target.ID); exists == "none" {
-			perHost, err := s.Store.PendingIncoming(target.ID, host)
-			if err != nil {
-				return err
-			}
-			total, err := s.Store.PendingIncoming(target.ID, "")
-			if err != nil {
-				return err
-			}
-			if perHost >= maxPendingPerHost || total >= maxPendingTotal {
-				logger.Warn("FEDERATION dropped a friend request for uid=%d from %s: too many waiting", target.ID, host)
-				return nil
-			}
-		}
 		state, created, err := s.Store.RequestFriend(shadow.ID, target.ID)
 		if err != nil && !errors.Is(err, store.ErrAlreadyFriends) {
 			return err
@@ -197,11 +183,6 @@ func (s *Service) onFriend(host string, m message) error {
 	}
 	return nil
 }
-
-const (
-	maxPendingPerHost = 5
-	maxPendingTotal   = 100
-)
 
 var kinds = map[string]bool{"watch": true, "rating": true, "comment": true, "post": true}
 

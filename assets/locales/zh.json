@@ -12,7 +12,8 @@
     "about": "关于",
     "profile": "个人资料",
     "account": "账户菜单",
-    "menu": "主菜单"
+    "menu": "主菜单",
+    "admin": "管理"
   },
   "auth": {
     "login": "登录",
@@ -382,7 +383,7 @@
     "marked_tip": "已标记为已看。提示：给一集评分也会标记为已看。",
     "rated": "已评分并标记为已看",
     "friend_add": "添加好友",
-    "friend_pending": "请求已发送",
+    "friend_pending": "待处理",
     "friend_friends": "好友",
     "friend_accept": "接受",
     "friend_decline": "拒绝",

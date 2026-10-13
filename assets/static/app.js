@@ -368,7 +368,7 @@
       else if ("friendAccept" in d) call = () => api("/api/friends/respond", { username, accept: true });
       else if ("friendDecline" in d) call = () => api("/api/friends/respond", { username, accept: false });
       else {
-        if (d.friendRemove && el.title === t("friend_remove") && !window.confirm(t("friend_remove_confirm"))) return;
+        if (!window.confirm(t("friend_remove_confirm"))) return;
         call = () => api("/api/friends/remove", { username });
       }
       const data = await run(el, call);
@@ -934,7 +934,13 @@
         iconButton("fa-x", "no", t("friend_decline"), "data-friend-decline", username),
       ];
     }
-    return [iconButton("fa-x", "no", t(state === "friends" ? "friend_remove" : "friend_cancel"), "data-friend-remove", username)];
+    if (state === "outgoing") {
+      const tag = document.createElement("span");
+      tag.className = "tag pending";
+      tag.textContent = t("friend_pending");
+      return [tag];
+    }
+    return [iconButton("fa-x", "no", t("friend_remove"), "data-friend-remove", username)];
   };
 
   const actionButton = (iconId, cls, label, handler) => {

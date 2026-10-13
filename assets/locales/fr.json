@@ -12,7 +12,8 @@
     "about": "À propos",
     "profile": "Profil",
     "account": "Menu du compte",
-    "menu": "Menu principal"
+    "menu": "Menu principal",
+    "admin": "Administration"
   },
   "auth": {
     "login": "Se connecter",
@@ -382,7 +383,7 @@
     "marked_tip": "Marqué comme vu. Astuce : noter un épisode fait la même chose.",
     "rated": "Noté et marqué comme vu",
     "friend_add": "Ajouter un ami",
-    "friend_pending": "Demande envoyée",
+    "friend_pending": "En attente",
     "friend_friends": "Amis",
     "friend_accept": "Accepter",
     "friend_decline": "Refuser",

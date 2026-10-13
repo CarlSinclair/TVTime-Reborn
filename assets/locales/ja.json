@@ -12,7 +12,8 @@
     "about": "このサービスについて",
     "profile": "プロフィール",
     "account": "アカウントメニュー",
-    "menu": "メインメニュー"
+    "menu": "メインメニュー",
+    "admin": "管理"
   },
   "auth": {
     "login": "ログイン",
@@ -382,7 +383,7 @@
     "marked_tip": "視聴済みにしました。ヒント：エピソードを評価しても同じ操作になります。",
     "rated": "評価して視聴済みにしました",
     "friend_add": "友達を追加",
-    "friend_pending": "リクエスト送信済み",
+    "friend_pending": "保留中",
     "friend_friends": "友達",
     "friend_accept": "承認",
     "friend_decline": "拒否",

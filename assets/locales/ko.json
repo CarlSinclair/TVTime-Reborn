@@ -12,7 +12,8 @@
     "about": "소개",
     "profile": "프로필",
     "account": "계정 메뉴",
-    "menu": "메인 메뉴"
+    "menu": "메인 메뉴",
+    "admin": "관리"
   },
   "auth": {
     "login": "로그인",
@@ -382,7 +383,7 @@
     "marked_tip": "시청 완료로 표시했습니다. 팁: 에피소드를 평가해도 같은 효과입니다.",
     "rated": "평가하고 시청 완료로 표시했습니다",
     "friend_add": "친구 추가",
-    "friend_pending": "요청 보냄",
+    "friend_pending": "대기 중",
     "friend_friends": "친구",
     "friend_accept": "수락",
     "friend_decline": "거절",
