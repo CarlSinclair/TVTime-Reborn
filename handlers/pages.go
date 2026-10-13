@@ -124,6 +124,9 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/friends/respond", a.apiFriendRespond)
 	mux.HandleFunc("POST /api/friends/remove", a.apiFriendRemove)
 	mux.HandleFunc("GET /api/feed", a.apiFeed)
+	mux.HandleFunc("POST /api/users/block", a.apiBlockUser)
+	mux.HandleFunc("POST /api/users/report", a.apiReportUser)
+	mux.HandleFunc("POST /api/admin/users/{id}/dismiss-reports", a.apiAdminDismissUser)
 	mux.HandleFunc("POST /api/show/{tmdb}/follow", a.apiFollow)
 	mux.HandleFunc("POST /api/show/{tmdb}/unfollow", a.apiUnfollow)
 	mux.HandleFunc("POST /api/show/{tmdb}/favorite", a.apiFavorite)
@@ -572,7 +575,13 @@ func (a *App) pageAdminReports(w http.ResponseWriter, r *http.Request) {
 		a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
 		return
 	}
-	a.page(w, r, "admin_reports", "admin.reports", map[string]any{"Reports": reports})
+	people, err := a.Store.OpenUserReports(100)
+	if err != nil {
+		logger.Error("PAGE admin user reports: %v", err)
+		a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
+		return
+	}
+	a.page(w, r, "admin_reports", "admin.reports", map[string]any{"Reports": reports, "PeopleReports": people})
 }
 
 const privacyUpdated = "2026-10-13"

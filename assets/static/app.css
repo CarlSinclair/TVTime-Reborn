@@ -355,3 +355,11 @@ code { background: var(--panel-2); padding: 2px 6px; border-radius: 4px; word-br
   .bell-wrap { position: static; }
   .notify-actions .btn { padding: 5px 9px; }
 }
+.icon-btn.ok { color: #22c55e; border-color: #22c55e; }
+.icon-btn.no { color: var(--danger); border-color: var(--danger); }
+.icon-btn.ok:hover, .icon-btn.no:hover { background: color-mix(in srgb, currentColor 14%, transparent); }
+.profile-actions { display: inline-flex; gap: 8px; align-items: center; }
+[data-friend-box] { display: inline-flex; gap: 8px; align-items: center; }
+.notif-actions { display: flex; gap: 8px; padding: 0 14px 10px; }
+.row-actions { display: inline-flex; gap: 8px; }
+.blocked li { gap: 10px; }

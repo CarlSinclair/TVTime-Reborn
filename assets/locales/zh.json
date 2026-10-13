@@ -223,7 +223,8 @@
     "dismiss": "忽略",
     "delete": "删除评论",
     "ban": "封禁用户",
-    "none": "没有待处理的举报。"
+    "none": "没有待处理的举报。",
+    "reported_people": "被举报的用户"
   },
   "offline": {
     "title": "你已离线",
@@ -390,7 +391,9 @@
     "friends_username": "用户名",
     "feed_more": "加载更多",
     "feed_none": "好友还没有动态。",
-    "feed_no_friends": "你还没有好友。这里是其他人最近的一些评论。"
+    "feed_no_friends": "你还没有好友。这里是其他人最近的一些评论。",
+    "user_blocked": "已屏蔽该用户。",
+    "report_user_reason": "你为什么要举报这个人？"
   },
   "genre": {
     "action_adventure": "动作冒险",
@@ -529,6 +532,10 @@
     "friend_accepted": {
       "title": "{user} 接受了你的好友请求",
       "body": "你们现在可以看到彼此的动态。"
+    },
+    "user_report": {
+      "title": "新的资料举报",
+      "body": "{user} 举报了一个资料。请在审核队列中查看。"
     }
   },
   "profile": {

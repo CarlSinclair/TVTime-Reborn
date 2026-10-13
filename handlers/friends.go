@@ -196,7 +196,7 @@ func (a *App) apiFriendRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	switch state {
 	case "outgoing":
-		a.Notif.Send(target.ID, "friend_request", "/?friends=1", map[string]any{"user": viewer.Name()})
+		a.Notif.Send(target.ID, "friend_request", "/?friends=1", map[string]any{"user": viewer.Name(), "username": viewer.Username})
 	case "friends":
 		a.Notif.Send(target.ID, "friend_accepted", "/u/"+viewer.Username, map[string]any{"user": viewer.Name()})
 	}
@@ -260,6 +260,68 @@ func (a *App) apiFriendRemove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.okJSON(w, nil)
+}
+
+func (a *App) apiBlockUser(w http.ResponseWriter, r *http.Request) {
+	viewer, err := a.needUser(r)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	var in struct{ Username string }
+	if err := decode(r, &in); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	switch err := a.Store.Block(viewer.ID, in.Username); {
+	case err == nil:
+		logger.Info("BLOCK uid=%d blocked %q", viewer.ID, in.Username)
+		a.okJSON(w, nil)
+	case errors.Is(err, store.ErrNotFound):
+		a.fail(w, r, errNotFound)
+	case errors.Is(err, store.ErrSelfReport):
+		a.fail(w, r, errBadRequest)
+	default:
+		a.fail(w, r, err)
+	}
+}
+
+func (a *App) apiReportUser(w http.ResponseWriter, r *http.Request) {
+	viewer, err := a.needUser(r)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	var in struct{ Username, Reason string }
+	if err := decode(r, &in); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	if err := a.allow(a.reportLimit, "r:"+itoa(viewer.ID)); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	target, remote, err := a.findPerson(viewer, in.Username)
+	if err != nil || remote || target == nil {
+		a.fail(w, r, errNotFound)
+		return
+	}
+	reason := strings.TrimSpace(in.Reason)
+	if r := []rune(reason); len(r) > 300 {
+		reason = string(r[:300])
+	}
+	switch err := a.Store.ReportUser(viewer.ID, target.ID, reason); {
+	case err == nil:
+		logger.Info("REPORT user=%d by uid=%d", target.ID, viewer.ID)
+		a.Notif.SendToAdmins("user_report", "/admin/reports", map[string]any{"user": viewer.Name()})
+		a.okJSON(w, nil)
+	case errors.Is(err, store.ErrAlreadyReported):
+		a.fail(w, r, apiErr{http.StatusConflict, "err.already_reported"})
+	case errors.Is(err, store.ErrSelfReport):
+		a.fail(w, r, apiErr{http.StatusBadRequest, "err.own_comment"})
+	default:
+		a.fail(w, r, err)
+	}
 }
 
 func (a *App) apiFeed(w http.ResponseWriter, r *http.Request) {

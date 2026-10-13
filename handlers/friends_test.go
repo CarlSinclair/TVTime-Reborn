@@ -179,3 +179,55 @@ func TestHomeHasUpcomingAndFeedTabs(t *testing.T) {
 		t.Fatalf("people search page: %d", code)
 	}
 }
+
+func TestProfileActionsAndNotificationButtons(t *testing.T) {
+	e := newEnv(t)
+	alice := e.signup(t, "alice", true)
+	bob := e.signup(t, "bobby", true)
+
+	_, page := alice.get("/u/bobby")
+	for _, want := range []string{`data-friend-add="bobby"`, `data-block-user="bobby"`, `data-report-user="bobby"`} {
+		if !strings.Contains(page, want) {
+			t.Errorf("another person's profile misses %s", want)
+		}
+	}
+	if strings.Contains(page, ">Add friend<") {
+		t.Errorf("the profile buttons must be icon only")
+	}
+	alice.post("/api/friends/request", map[string]string{"username": "bobby"})
+
+	_, notes := bob.get("/notifications")
+	if !strings.Contains(notes, `data-friend-accept="alice"`) || !strings.Contains(notes, `data-friend-decline="alice"`) {
+		t.Fatalf("the request notification must carry accept and decline buttons")
+	}
+	recent := bob.getJSON("/api/notifications/recent")
+	items, _ := recent["items"].([]any)
+	if len(items) == 0 || items[0].(map[string]any)["friend"] != "alice" {
+		t.Fatalf("the bell data must name the requester: %v", recent)
+	}
+	bob.post("/api/friends/respond", map[string]any{"username": "alice", "accept": true})
+	_, notes = bob.get("/notifications")
+	if strings.Contains(notes, "data-friend-accept") {
+		t.Fatalf("the buttons must disappear once answered")
+	}
+	_, page = alice.get("/u/bobby")
+	if !strings.Contains(page, `data-friend-remove="bobby"`) || strings.Contains(page, `data-friend-add="bobby"`) {
+		t.Fatalf("friends see a remove button instead of add")
+	}
+
+	if code, _ := alice.post("/api/users/report", map[string]string{"username": "bobby", "reason": "spam"}); code != 200 {
+		t.Fatalf("report: %d", code)
+	}
+	if code, _ := alice.post("/api/users/report", map[string]string{"username": "bobby", "reason": "again"}); code != 409 {
+		t.Fatalf("a second report must be refused: %d", code)
+	}
+	if code, _ := alice.post("/api/users/block", map[string]string{"username": "bobby"}); code != 200 {
+		t.Fatalf("block: %d", code)
+	}
+	if code, _ := bob.get("/u/alice"); code != 404 {
+		t.Fatalf("a blocked person sees nothing: %d", code)
+	}
+	if fl := alice.getJSON("/api/friends"); len(fl["friends"].([]any)) != 0 {
+		t.Fatalf("blocking must end the friendship: %v", fl)
+	}
+}

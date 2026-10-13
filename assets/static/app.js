@@ -361,16 +361,47 @@
       setWatchedState(el, watched);
       return;
     }
-    if ("friendAdd" in d || "friendAccept" in d) {
-      const adding = "friendAdd" in d;
-      const username = adding ? d.friendAdd : d.friendAccept;
-      const data = await run(el, () =>
-        adding ? api("/api/friends/request", { username }) : api("/api/friends/respond", { username, accept: true })
-      );
+    if ("friendAdd" in d || "friendAccept" in d || "friendDecline" in d || "friendRemove" in d) {
+      const username = d.friendAdd || d.friendAccept || d.friendDecline || d.friendRemove;
+      let call;
+      if ("friendAdd" in d) call = () => api("/api/friends/request", { username });
+      else if ("friendAccept" in d) call = () => api("/api/friends/respond", { username, accept: true });
+      else if ("friendDecline" in d) call = () => api("/api/friends/respond", { username, accept: false });
+      else {
+        if (d.friendRemove && el.title === t("friend_remove") && !window.confirm(t("friend_remove_confirm"))) return;
+        call = () => api("/api/friends/remove", { username });
+      }
+      const data = await run(el, call);
       if (!data) return;
       const box = el.closest("[data-friend-box]");
-      if (box) box.replaceChildren(friendTag(data.state));
-      toast(t(data.state === "friends" ? "friend_now" : "friend_sent"), "ok");
+      const state = data.state || "none";
+      if (box && box.classList.contains("notif-actions")) box.remove();
+      else if (box) box.replaceChildren(...friendControls(username, state));
+      if ("friendAdd" in d) toast(t(state === "friends" ? "friend_now" : "friend_sent"), "ok");
+      if ("friendAccept" in d) toast(t("friend_now"), "ok");
+      return;
+    }
+    if ("blockUser" in d) {
+      if (!window.confirm(t("block_confirm"))) return;
+      const data = await run(el, () => api("/api/users/block", { username: d.blockUser }));
+      if (data) {
+        toast(t("user_blocked"), "ok");
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 700);
+      }
+      return;
+    }
+    if ("reportUser" in d) {
+      const reason = window.prompt(t("report_user_reason"));
+      if (reason === null) return;
+      const data = await run(el, () => api("/api/users/report", { username: d.reportUser, reason }));
+      if (data) toast(t("reported"), "ok");
+      return;
+    }
+    if ("adminDismissUser" in d) {
+      const data = await run(el, () => api("/api/admin/users/" + d.adminDismissUser + "/dismiss-reports"));
+      if (data) window.location.reload();
       return;
     }
     if ("star" in d) {
@@ -873,18 +904,30 @@
   };
   localizeTimes();
 
-  const friendTag = (state) => {
-    const tag = document.createElement("span");
-    tag.className = "tag";
-    tag.textContent = t(state === "outgoing" ? "friend_pending" : "friend_friends");
-    return tag;
-  };
-
-  const actionButton = (label, cls, handler) => {
+  const iconButton = (iconId, cls, label, attr, value) => {
     const b = document.createElement("button");
     b.type = "button";
-    b.className = "btn small " + cls;
-    b.textContent = label;
+    b.className = "icon-btn " + cls;
+    b.setAttribute("aria-label", label);
+    b.title = label;
+    if (attr) b.setAttribute(attr, value);
+    b.appendChild(icon(iconId));
+    return b;
+  };
+
+  const friendControls = (username, state) => {
+    if (state === "none") return [iconButton("fa-user-plus", "solid", t("friend_add"), "data-friend-add", username)];
+    if (state === "incoming") {
+      return [
+        iconButton("fa-check", "ok", t("friend_accept"), "data-friend-accept", username),
+        iconButton("fa-x", "no", t("friend_decline"), "data-friend-decline", username),
+      ];
+    }
+    return [iconButton("fa-x", "no", t(state === "friends" ? "friend_remove" : "friend_cancel"), "data-friend-remove", username)];
+  };
+
+  const actionButton = (iconId, cls, label, handler) => {
+    const b = iconButton(iconId, cls, label);
     b.addEventListener("click", handler);
     return b;
   };
@@ -915,16 +958,16 @@
       await loadFriends();
     };
     renderPeople(document.getElementById("friends-incoming"), data.incoming, (p) => [
-      actionButton(t("friend_accept"), "", () => act("/api/friends/respond", { username: p.username, accept: true }, t("friend_now"))),
-      actionButton(t("friend_decline"), "ghost", () => act("/api/friends/respond", { username: p.username, accept: false })),
+      actionButton("fa-check", "ok", t("friend_accept"), () => act("/api/friends/respond", { username: p.username, accept: true }, t("friend_now"))),
+      actionButton("fa-x", "no", t("friend_decline"), () => act("/api/friends/respond", { username: p.username, accept: false })),
     ]);
     renderPeople(document.getElementById("friends-list"), data.friends, (p) => [
-      actionButton(t("friend_remove"), "ghost", () => {
+      actionButton("fa-x", "no", t("friend_remove"), () => {
         if (window.confirm(t("friend_remove_confirm"))) act("/api/friends/remove", { username: p.username });
       }),
     ]);
     renderPeople(document.getElementById("friends-outgoing"), data.outgoing, (p) => [
-      actionButton(t("friend_cancel"), "ghost", () => act("/api/friends/remove", { username: p.username })),
+      actionButton("fa-x", "no", t("friend_cancel"), () => act("/api/friends/remove", { username: p.username })),
     ]);
     document.getElementById("friends-incoming-box").hidden = data.incoming.length === 0;
     document.getElementById("friends-outgoing-box").hidden = data.outgoing.length === 0;
@@ -1061,6 +1104,13 @@
         time.textContent = localTime(n.created_at);
         a.appendChild(time);
         li.appendChild(a);
+        if (n.friend) {
+          const actions = document.createElement("span");
+          actions.className = "notif-actions";
+          actions.setAttribute("data-friend-box", "");
+          friendControls(n.friend, "incoming").forEach((b) => actions.appendChild(b));
+          li.appendChild(actions);
+        }
         list.appendChild(li);
       });
     };

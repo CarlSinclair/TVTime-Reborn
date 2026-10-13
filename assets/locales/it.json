@@ -223,7 +223,8 @@
     "dismiss": "Ignora",
     "delete": "Elimina commento",
     "ban": "Banna utente",
-    "none": "Nessuna segnalazione aperta."
+    "none": "Nessuna segnalazione aperta.",
+    "reported_people": "Persone segnalate"
   },
   "offline": {
     "title": "Sei offline",
@@ -390,7 +391,9 @@
     "friends_username": "Nome utente",
     "feed_more": "Carica altro",
     "feed_none": "Ancora niente dai tuoi amici.",
-    "feed_no_friends": "Non hai ancora amici. Ecco alcuni commenti recenti di altre persone."
+    "feed_no_friends": "Non hai ancora amici. Ecco alcuni commenti recenti di altre persone.",
+    "user_blocked": "Utente bloccato.",
+    "report_user_reason": "Perché stai segnalando questa persona?"
   },
   "genre": {
     "action_adventure": "Azione e avventura",
@@ -529,6 +532,10 @@
     "friend_accepted": {
       "title": "{user} ha accettato la tua richiesta di amicizia",
       "body": "Ora vedete l'attività l'uno dell'altro."
+    },
+    "user_report": {
+      "title": "Nuova segnalazione di profilo",
+      "body": "{user} ha segnalato un profilo. Controllalo nella coda di moderazione."
     }
   },
   "profile": {

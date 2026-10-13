@@ -1,6 +1,5 @@
 {{define "friend_button"}}
-{{if eq .State "none"}}<button class="btn small" type="button" data-friend-add="{{.Username}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-user-plus"></use></svg> {{.V.T "js.friend_add"}}</button>
-{{else if eq .State "outgoing"}}<span class="tag">{{.V.T "js.friend_pending"}}</span>
-{{else if eq .State "incoming"}}<button class="btn small" type="button" data-friend-accept="{{.Username}}">{{.V.T "js.friend_accept"}}</button>
-{{else}}<span class="tag">{{.V.T "js.friend_friends"}}</span>{{end}}
+{{if eq .State "none"}}<button class="icon-btn solid" type="button" data-friend-add="{{.Username}}" aria-label="{{.V.T "js.friend_add"}}" title="{{.V.T "js.friend_add"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-user-plus"></use></svg></button>
+{{else if eq .State "incoming"}}<button class="icon-btn ok" type="button" data-friend-accept="{{.Username}}" aria-label="{{.V.T "js.friend_accept"}}" title="{{.V.T "js.friend_accept"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-check"></use></svg></button><button class="icon-btn no" type="button" data-friend-decline="{{.Username}}" aria-label="{{.V.T "js.friend_decline"}}" title="{{.V.T "js.friend_decline"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-x"></use></svg></button>
+{{else}}<button class="icon-btn no" type="button" data-friend-remove="{{.Username}}" aria-label="{{if eq .State "friends"}}{{.V.T "js.friend_remove"}}{{else}}{{.V.T "js.friend_cancel"}}{{end}}" title="{{if eq .State "friends"}}{{.V.T "js.friend_remove"}}{{else}}{{.V.T "js.friend_cancel"}}{{end}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-x"></use></svg></button>{{end}}
 {{end}}

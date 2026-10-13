@@ -85,10 +85,34 @@ func (a *App) apiAdminBan(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
+	if in.Banned {
+		if err := a.Store.ResolveUserReports(uid); err != nil {
+			logger.Error("ADMIN resolve user reports after ban target=%d: %v", uid, err)
+		}
+	}
 	logger.Info("ADMIN uid=%d set banned=%v target=%d", admin.ID, in.Banned, uid)
 	a.okJSON(w, nil)
 }
 
 func (a *App) logSyncFail(tmdbID int64, err error) {
 	logger.Error("SYNC on-demand show tmdb=%d: %v", tmdbID, err)
+}
+
+func (a *App) apiAdminDismissUser(w http.ResponseWriter, r *http.Request) {
+	admin, err := a.needAdmin(r)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	uid, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		a.fail(w, r, errNotFound)
+		return
+	}
+	if err := a.Store.ResolveUserReports(uid); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	logger.Info("ADMIN uid=%d dismissed user reports target=%d", admin.ID, uid)
+	a.okJSON(w, nil)
 }

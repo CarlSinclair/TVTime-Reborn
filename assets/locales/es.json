@@ -223,7 +223,8 @@
     "dismiss": "Descartar",
     "delete": "Eliminar comentario",
     "ban": "Expulsar usuario",
-    "none": "No hay denuncias abiertas."
+    "none": "No hay denuncias abiertas.",
+    "reported_people": "Personas denunciadas"
   },
   "offline": {
     "title": "Sin conexión",
@@ -390,7 +391,9 @@
     "friends_username": "Nombre de usuario",
     "feed_more": "Cargar más",
     "feed_none": "Aún no hay nada de tus amigos.",
-    "feed_no_friends": "Aún no tienes amigos. Aquí tienes algunos comentarios recientes de otras personas."
+    "feed_no_friends": "Aún no tienes amigos. Aquí tienes algunos comentarios recientes de otras personas.",
+    "user_blocked": "Usuario bloqueado.",
+    "report_user_reason": "¿Por qué denuncias a esta persona?"
   },
   "genre": {
     "action_adventure": "Acción y aventura",
@@ -529,6 +532,10 @@
     "friend_accepted": {
       "title": "{user} aceptó tu solicitud de amistad",
       "body": "Ahora podéis ver la actividad del otro."
+    },
+    "user_report": {
+      "title": "Nueva denuncia de perfil",
+      "body": "{user} denunció un perfil. Revísalo en la cola de moderación."
     }
   },
   "profile": {

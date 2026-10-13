@@ -12,6 +12,7 @@
       {{if .Body}}<span>{{.Body}}</span>{{end}}
       <time datetime="{{.CreatedAt}}" data-ts="{{.CreatedAt}}">{{.CreatedAt}}</time>
     </a>
+    {{if .Friend}}<span class="notif-actions" data-friend-box>{{template "friend_button" (dict "Username" .Friend "State" "incoming" "V" $)}}</span>{{end}}
   </li>
   {{end}}
 </ul>

@@ -337,3 +337,51 @@ func groupWatches(in []FeedEvent) []FeedEvent {
 	}
 	return out
 }
+
+type UserReport struct {
+	ReportedID int64
+	Username   string
+	Reporters  int
+	Reasons    string
+	Last       string
+}
+
+// ReportUser files a report against a person's profile for the moderators.
+func (s *Store) ReportUser(reporterID, reportedID int64, reason string) error {
+	if reporterID == reportedID {
+		return ErrSelfReport
+	}
+	if _, err := s.DB.Exec(`INSERT INTO user_reports (reporter_id, reported_id, reason, created_at) VALUES (?,?,?,?)`, reporterID, reportedID, reason, Now()); err != nil {
+		if isUnique(err, "user_reports") {
+			return ErrAlreadyReported
+		}
+		return fmt.Errorf("report user %d by %d: %w", reportedID, reporterID, err)
+	}
+	return nil
+}
+
+func (s *Store) OpenUserReports(limit int) ([]UserReport, error) {
+	rows, err := s.DB.Query(`SELECT u.id, u.username, COUNT(*), COALESCE(GROUP_CONCAT(NULLIF(r.reason,''), ' | '),''), MAX(r.created_at)
+	  FROM user_reports r JOIN users u ON u.id = r.reported_id
+	  WHERE r.resolved_at IS NULL GROUP BY u.id ORDER BY COUNT(*) DESC, MAX(r.created_at) DESC LIMIT ?`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("open user reports: %w", err)
+	}
+	defer rows.Close()
+	var out []UserReport
+	for rows.Next() {
+		var r UserReport
+		if err := rows.Scan(&r.ReportedID, &r.Username, &r.Reporters, &r.Reasons, &r.Last); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) ResolveUserReports(reportedID int64) error {
+	if _, err := s.DB.Exec(`UPDATE user_reports SET resolved_at = ? WHERE reported_id = ? AND resolved_at IS NULL`, Now(), reportedID); err != nil {
+		return fmt.Errorf("resolve user reports %d: %w", reportedID, err)
+	}
+	return nil
+}

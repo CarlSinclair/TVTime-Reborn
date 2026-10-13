@@ -16,5 +16,22 @@
   </li>
   {{end}}
 </ul>
-{{else}}<p class="muted">{{.T "admin.none"}}</p>{{end}}
+{{end}}
+{{if .Data.PeopleReports}}
+<h2>{{.T "admin.reported_people"}}</h2>
+<ul class="reports">
+  {{range .Data.PeopleReports}}
+  <li class="panel">
+    <p><strong>{{.Username}}</strong> <small class="muted">{{$.T "admin.reporters" .Reporters}}</small></p>
+    {{if .Reasons}}<p class="muted">{{.Reasons}}</p>{{end}}
+    <p class="actions">
+      <a class="btn ghost small" href="/u/{{.Username}}">{{$.T "admin.view"}}</a>
+      <button class="btn small" type="button" data-admin-dismiss-user="{{.ReportedID}}">{{$.T "admin.dismiss"}}</button>
+      <button class="btn danger small" type="button" data-admin-ban="{{.ReportedID}}">{{$.T "admin.ban"}}</button>
+    </p>
+  </li>
+  {{end}}
+</ul>
+{{end}}
+{{if and (not .Data.Reports) (not .Data.PeopleReports)}}<p class="muted">{{.T "admin.none"}}</p>{{end}}
 {{end}}

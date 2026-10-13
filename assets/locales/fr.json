@@ -223,7 +223,8 @@
     "dismiss": "Ignorer",
     "delete": "Supprimer le commentaire",
     "ban": "Bannir l'utilisateur",
-    "none": "Aucun signalement ouvert."
+    "none": "Aucun signalement ouvert.",
+    "reported_people": "Personnes signalées"
   },
   "offline": {
     "title": "Vous êtes hors ligne",
@@ -390,7 +391,9 @@
     "friends_username": "Nom d'utilisateur",
     "feed_more": "Charger plus",
     "feed_none": "Rien de la part de vos amis pour l'instant.",
-    "feed_no_friends": "Vous n'avez pas encore d'amis. Voici quelques commentaires récents d'autres personnes."
+    "feed_no_friends": "Vous n'avez pas encore d'amis. Voici quelques commentaires récents d'autres personnes.",
+    "user_blocked": "Utilisateur bloqué.",
+    "report_user_reason": "Pourquoi signalez-vous cette personne ?"
   },
   "genre": {
     "action_adventure": "Action et aventure",
@@ -529,6 +532,10 @@
     "friend_accepted": {
       "title": "{user} a accepté votre demande d'ami",
       "body": "Vous voyez maintenant l'activité l'un de l'autre."
+    },
+    "user_report": {
+      "title": "Nouveau signalement de profil",
+      "body": "{user} a signalé un profil. Examinez-le dans la file de modération."
     }
   },
   "profile": {

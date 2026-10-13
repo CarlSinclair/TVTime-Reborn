@@ -223,7 +223,8 @@
     "dismiss": "Dismiss",
     "delete": "Delete comment",
     "ban": "Ban user",
-    "none": "No open reports."
+    "none": "No open reports.",
+    "reported_people": "Reported people"
   },
   "offline": {
     "title": "You are offline",
@@ -390,7 +391,9 @@
     "friends_username": "Username",
     "feed_more": "Load more",
     "feed_none": "Nothing from your friends yet.",
-    "feed_no_friends": "You have no friends yet. Here are some recent comments from other people."
+    "feed_no_friends": "You have no friends yet. Here are some recent comments from other people.",
+    "user_blocked": "User blocked.",
+    "report_user_reason": "Why are you reporting this person?"
   },
   "genre": {
     "action_adventure": "Action & Adventure",
@@ -529,6 +532,10 @@
     "friend_accepted": {
       "title": "{user} accepted your friend request",
       "body": "You can now see each other's activity."
+    },
+    "user_report": {
+      "title": "New profile report",
+      "body": "{user} reported a profile. Review it in the moderation queue."
     }
   },
   "profile": {

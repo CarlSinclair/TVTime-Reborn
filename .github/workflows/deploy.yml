@@ -46,7 +46,7 @@ jobs:
         env:
           CGO_ENABLED: "0"
         run: |
-          go build -trimpath -ldflags "-s -w -X tvt/logger.Version=0.${GITHUB_RUN_NUMBER}" -o tvt .
+          go build -trimpath -ldflags "-s -w -X tvt/logger.Version=$(((GITHUB_RUN_NUMBER - 1) / 10)).$(((GITHUB_RUN_NUMBER - 1) % 10))" -o tvt .
           file tvt
 
       - name: deploy over ssh
@@ -86,9 +86,9 @@ jobs:
       - name: build for every platform
         env:
           CGO_ENABLED: "0"
-          VERSION: 0.${{ github.run_number }}
         run: |
           set -euo pipefail
+          VERSION="$(((GITHUB_RUN_NUMBER - 1) / 10)).$(((GITHUB_RUN_NUMBER - 1) % 10))"
           mkdir dist
           for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; do
             os=${target%/*}; arch=${target#*/}
@@ -109,5 +109,6 @@ jobs:
       - name: publish release
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: 0.${{ github.run_number }}
-        run: gh release create "v${VERSION}" dist/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "v${VERSION}" --notes "Commit ${GITHUB_SHA::7}. Verify downloads against SHA256SUMS." --latest
+        run: |
+          VERSION="$(((GITHUB_RUN_NUMBER - 1) / 10)).$(((GITHUB_RUN_NUMBER - 1) % 10))"
+          gh release create "v${VERSION}" dist/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "v${VERSION}" --notes "Commit ${GITHUB_SHA::7}. Verify downloads against SHA256SUMS." --latest
