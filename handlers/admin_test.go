@@ -562,3 +562,17 @@ func TestServerShareSwitch(t *testing.T) {
 		t.Fatalf("unknown server: %d", code)
 	}
 }
+
+func TestUserEditModalAlwaysHasStatusControls(t *testing.T) {
+	e := newEnv(t)
+	boss := e.makeAdmin(t, "boss")
+	_, page := boss.get("/admin?tab=users")
+	for _, want := range []string{`id="user-edit-status"`, `data-user-ban`, `data-user-deactivate`, `data-user-delete-modal`, `id="user-edit-protected"`} {
+		if !strings.Contains(page, want) {
+			t.Fatalf("the edit modal always has the ban, deactivate and delete controls, locked for protected accounts: missing %s", want)
+		}
+	}
+	if !strings.Contains(page, `<div class="toolbar">`) || strings.Index(page, `for="signups-switch">Allow sign-ups`) > strings.Index(page, `id="signups-switch"`) {
+		t.Fatalf("the plus button sits beside the search, and the switch comes after its label")
+	}
+}

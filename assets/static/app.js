@@ -480,7 +480,11 @@
       banBtn.textContent = d.banned === "1" ? banBtn.dataset.off : banBtn.dataset.on;
       deactBtn.dataset.state = d.deactivated;
       deactBtn.textContent = d.deactivated === "1" ? deactBtn.dataset.off : deactBtn.dataset.on;
-      document.getElementById("user-edit-status").hidden = d.protected === "1";
+      const locked = d.protected === "1";
+      document.getElementById("user-edit-protected").hidden = !locked;
+      document.querySelectorAll("#user-edit-status button, #user-edit-status input").forEach((ctl) => {
+        ctl.disabled = locked;
+      });
       form.querySelectorAll("[data-default]").forEach((box) => {
         box.checked = box.dataset.default === "1";
       });
@@ -1072,8 +1076,8 @@
 
   const friendsDialog = document.getElementById("m-friends");
 
-  const renderPeople = (ul, people, actions) => {
-    ul.replaceChildren();
+  const renderPeople = (ul, people, actions, append) => {
+    if (!append) ul.replaceChildren();
     people.forEach((p) => {
       const li = document.createElement("li");
       const link = document.createElement("a");
@@ -1087,35 +1091,65 @@
     });
   };
 
-  const loadFriends = async () => {
-    const data = await api("/api/friends", null, "GET");
+  const friendLists = {
+    friends: { ul: "friends-list", more: "friends-more", total: 0 },
+    incoming: { ul: "friends-incoming", more: "friends-incoming-more", total: 0 },
+    outgoing: { ul: "friends-outgoing", more: "friends-outgoing-more", total: 0 },
+  };
+
+  const friendActions = (kind, act) => {
+    if (kind === "incoming") {
+      return (p) => [
+        actionButton("fa-check", "ok", t("friend_accept"), () => act("/api/friends/respond", { username: p.username, accept: true }, t("friend_now"))),
+        actionButton("fa-x", "no", t("friend_decline"), () => act("/api/friends/respond", { username: p.username, accept: false })),
+      ];
+    }
+    if (kind === "outgoing") return (p) => [actionButton("fa-x", "no", t("friend_cancel"), () => act("/api/friends/remove", { username: p.username }))];
+    return (p) => [
+      actionButton("fa-x", "no", t("friend_remove"), () => {
+        if (window.confirm(t("friend_remove_confirm"))) act("/api/friends/remove", { username: p.username });
+      }),
+    ];
+  };
+
+  const showFriends = (data, kinds, append) => {
     const act = async (path, body, message) => {
       const res = await run(null, () => api(path, body));
       if (!res) return;
       if (message) toast(message, "ok");
       await loadFriends();
     };
-    renderPeople(document.getElementById("friends-incoming"), data.incoming, (p) => [
-      actionButton("fa-check", "ok", t("friend_accept"), () => act("/api/friends/respond", { username: p.username, accept: true }, t("friend_now"))),
-      actionButton("fa-x", "no", t("friend_decline"), () => act("/api/friends/respond", { username: p.username, accept: false })),
-    ]);
-    renderPeople(document.getElementById("friends-list"), data.friends, (p) => [
-      actionButton("fa-x", "no", t("friend_remove"), () => {
-        if (window.confirm(t("friend_remove_confirm"))) act("/api/friends/remove", { username: p.username });
-      }),
-    ]);
-    renderPeople(document.getElementById("friends-outgoing"), data.outgoing, (p) => [
-      actionButton("fa-x", "no", t("friend_cancel"), () => act("/api/friends/remove", { username: p.username })),
-    ]);
+    kinds.forEach((kind) => {
+      const list = friendLists[kind];
+      renderPeople(document.getElementById(list.ul), data[kind], friendActions(kind, act), append);
+      list.total = append ? list.total + data[kind].length : data[kind].length;
+      document.getElementById(list.more).hidden = !data[kind + "_more"];
+    });
+  };
+
+  const loadFriends = async () => {
+    const data = await api("/api/friends", null, "GET");
+    showFriends(data, ["friends", "incoming", "outgoing"], false);
     document.getElementById("friends-incoming-box").hidden = data.incoming.length === 0;
     document.getElementById("friends-outgoing-box").hidden = data.outgoing.length === 0;
     document.getElementById("friends-none").hidden = data.friends.length + data.incoming.length + data.outgoing.length > 0;
     const badge = document.getElementById("friends-badge");
     if (badge) {
-      badge.textContent = String(data.incoming.length);
-      badge.hidden = data.incoming.length === 0;
+      badge.textContent = String(data.incoming_total);
+      badge.hidden = data.incoming_total === 0;
     }
   };
+
+  const loadMoreFriends = async (kind) => {
+    const data = await api("/api/friends?" + kind + "_offset=" + friendLists[kind].total, null, "GET");
+    showFriends(data, [kind], true);
+  };
+
+  document.addEventListener("click", (event) => {
+    const more = event.target.closest("[data-friends-more]");
+    if (!more) return;
+    run(more, () => loadMoreFriends(more.dataset.friendsMore));
+  });
 
   const openFriends = async () => {
     if (!friendsDialog) return;

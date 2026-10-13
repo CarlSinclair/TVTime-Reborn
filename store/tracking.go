@@ -235,7 +235,7 @@ type ShowEntry struct {
 	Progress Progress
 }
 
-func (s *Store) UserShows(userID int64, status string) ([]ShowEntry, error) {
+func (s *Store) UserShows(userID int64, status string, limit, offset int) ([]ShowEntry, error) {
 	q := `SELECT shows.id, shows.tmdb_id, COALESCE(shows.tvdb_id,0), COALESCE(shows.imdb_id,''), shows.name, shows.original_name, shows.overview, shows.status,
 	  COALESCE(shows.first_air_date,''), COALESCE(shows.last_air_date,''), shows.poster_path, shows.backdrop_path, shows.vote_average, shows.vote_count,
 	  shows.genres, shows.networks, shows.original_language, shows.number_of_seasons, shows.number_of_episodes, shows.runtime, shows.needs_sync,
@@ -246,7 +246,8 @@ func (s *Store) UserShows(userID int64, status string) ([]ShowEntry, error) {
 		q += ` AND f.status = ?`
 		args = append(args, status)
 	}
-	q += ` ORDER BY f.favorite DESC, shows.name COLLATE NOCASE`
+	q += ` ORDER BY f.favorite DESC, shows.name COLLATE NOCASE LIMIT ? OFFSET ?`
+	args = append(args, limit, offset)
 	rows, err := s.DB.Query(q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list user shows uid=%d: %w", userID, err)

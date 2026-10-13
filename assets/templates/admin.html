@@ -64,16 +64,14 @@
 </section>
 
 {{else if eq .Data.Tab "users"}}
-<div class="page-head">
+<div class="toolbar">
   <form class="admin-search" method="get" action="/admin">
     <input type="hidden" name="tab" value="users">
     <input type="search" name="q" value="{{.Data.Query}}" placeholder="{{.T "admin.user_search"}}" aria-label="{{.T "admin.user_search"}}">
   </form>
-  <span class="page-actions">
-    <span class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="signups-switch" {{if not .Data.SignupsClosed}}checked{{end}}><label for="signups-switch" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="signups-switch">{{.T "admin.signups"}}</label></span>
-    <button class="icon-btn solid" type="button" data-modal-open="m-user-add" aria-label="{{.T "admin.user_add"}}" title="{{.T "admin.user_add"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-plus"></use></svg></button>
-  </span>
+  <button class="icon-btn solid" type="button" data-modal-open="m-user-add" aria-label="{{.T "admin.user_add"}}" title="{{.T "admin.user_add"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-plus"></use></svg></button>
 </div>
+<div class="switch-row"><label class="notify-text" for="signups-switch">{{.T "admin.signups"}}</label><span class="tswitch"><input type="checkbox" class="tswitch-input" id="signups-switch" {{if not .Data.SignupsClosed}}checked{{end}}><label for="signups-switch" class="tswitch-label"><span class="ball"></span></label></span></div>
 {{if .Data.Users}}
 <ul class="reports">
   {{range .Data.Users}}
@@ -88,7 +86,7 @@
     <p class="actions">
       <a class="icon-btn" href="/u/{{.Username}}" aria-label="{{$.T "admin.view"}}" title="{{$.T "admin.view"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-eye"></use></svg></a>
       <button class="icon-btn" type="button" aria-label="{{$.T "admin.user_edit"}}" title="{{$.T "admin.user_edit"}}"
-        data-user-edit="{{.ID}}" data-username="{{.Username}}" data-display="{{.Name}}" data-email="{{.Email}}" data-verified="{{if .EmailVerified}}1{{else}}0{{end}}"
+        data-user-edit="{{.ID}}" data-username="{{.Username}}" data-display="{{.DisplayName}}" data-email="{{.Email}}" data-verified="{{if .EmailVerified}}1{{else}}0{{end}}"
         data-banned="{{if .IsBanned}}1{{else}}0{{end}}" data-deactivated="{{if .IsDeactivated}}1{{else}}0{{end}}" data-protected="{{if or .IsAdmin (eq .ID $.User.ID)}}1{{else}}0{{end}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-pen"></use></svg></button>
     </p>
   </li>
@@ -130,6 +128,7 @@
     <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn" type="submit">{{.T "settings.save"}}</button></div>
     <div class="danger-zone" id="user-edit-status">
       <h3>{{.T "admin.user_status"}}</h3>
+      <p class="muted" id="user-edit-protected" hidden>{{.T "admin.user_protected"}}</p>
       <div class="danger-row">
         <p class="muted">{{.T "admin.user_ban_hint"}}</p>
         <div class="comment-toggles">
@@ -197,12 +196,9 @@
 
 {{else if eq .Data.Tab "servers"}}
 {{template "pending" .}}
-<div class="page-head">
-  <span class="muted">{{if not .Data.FederationOn}}{{.T "admin.federation_off"}}{{end}}</span>
-  <span class="page-actions">
-    {{if .Data.HasSettings}}<span class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="federation-switch" {{if .Data.FedWant}}checked{{end}}><label for="federation-switch" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="federation-switch">{{.T "admin.federation"}}</label></span>{{end}}
+<div class="toolbar">
+  {{if .Data.HasSettings}}<div class="switch-row" style="margin:0;flex:1"><label class="notify-text" for="federation-switch">{{.T "admin.federation"}}</label><span class="tswitch"><input type="checkbox" class="tswitch-input" id="federation-switch" {{if .Data.FedWant}}checked{{end}}><label for="federation-switch" class="tswitch-label"><span class="ball"></span></label></span></div>{{else}}<span class="muted" style="flex:1">{{if not .Data.FederationOn}}{{.T "admin.federation_off"}}{{end}}</span>{{end}}
   {{if .Data.FederationOn}}<button class="icon-btn solid" type="button" data-modal-open="m-server-add" aria-label="{{.T "admin.server_add"}}" title="{{.T "admin.server_add"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-plus"></use></svg></button>{{end}}
-  </span>
 </div>
 {{if .Data.Peers}}
 <ul class="reports">
@@ -218,6 +214,7 @@
   </li>
   {{end}}
 </ul>
+{{template "pager" (dict "Pager" .Data.Pager "V" .)}}
 {{else}}<p class="muted center">{{.T "admin.server_none"}}</p>{{end}}
 {{if .Data.FederationOn}}
 <dialog class="modal" id="m-server-add" aria-labelledby="m-server-add-t">
@@ -244,52 +241,59 @@
     {{end}}
   </div>
 </section>
-<section class="panel stack">
-  <h2>{{.T "admin.pages_contact"}}</h2>
-  <p class="muted">{{.T "admin.pages_contact_hint"}} <a href="/admin?tab=config">{{.T "admin.config"}}</a></p>
-</section>
 
 <form class="panel stack" data-api="/api/admin/pages" data-reload="1" data-success="{{.T "js.saved"}}">
   <h2>{{.T "admin.pages_add"}}</h2>
   <input type="hidden" name="action" value="add">
-  {{range .Data.PageLangs}}
-  <fieldset class="lang-fieldset">
-    <legend>{{.}}</legend>
-    <label>{{$.T "admin.pages_slug"}}<input type="text" name="slug_{{.}}" pattern="[a-z0-9][a-z0-9\-]*" maxlength="64" autocomplete="off" spellcheck="false"></label>
-    <label>{{$.T "admin.pages_title"}}<input type="text" name="title_{{.}}" maxlength="200" autocomplete="off"></label>
-    <label>{{$.T "admin.pages_body"}}<textarea name="body_{{.}}" rows="5"></textarea></label>
-    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="add-en-{{.}}" name="enabled_{{.}}" checked><label for="add-en-{{.}}" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="add-en-{{.}}">{{$.T "admin.pages_enabled"}}</label></div>
-  </fieldset>
-  {{end}}
+  <label>{{.T "admin.pages_language"}}<select name="lang">{{range .Data.PageLangs}}<option value="{{.}}" {{if eq . $.Lang}}selected{{end}}>{{$.LangName .}}</option>{{end}}</select></label>
+  <label>{{.T "admin.pages_slug"}}<input type="text" name="slug" pattern="[a-z0-9][a-z0-9\-]*" maxlength="64" autocomplete="off" spellcheck="false" required></label>
+  <label>{{.T "admin.pages_title"}}<input type="text" name="title" maxlength="200" autocomplete="off" required></label>
+  <label>{{.T "admin.pages_body"}}<textarea name="body" rows="8"></textarea></label>
+  <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="add-page-en" name="enabled" checked><label for="add-page-en" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="add-page-en">{{.T "admin.pages_enabled"}}</label></div>
   <p class="form-error" role="alert" hidden></p>
   <div><button class="btn" type="submit">{{.T "admin.pages_add"}}</button></div>
 </form>
 
 {{range .Data.PageList}}
-<form class="panel stack" data-api="/api/admin/pages" data-reload="1" data-success="{{$.T "js.saved"}}">
-  <h2>#{{.ID}}{{range .Variants}}{{if .Slug}} &middot; /{{.Slug}}{{end}}{{end}}</h2>
-  <input type="hidden" name="action" value="save">
-  <input type="hidden" name="page_id" value="{{.ID}}">
-  <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{.ID}}-on" name="page_enabled" {{if .Enabled}}checked{{end}}><label for="pg-{{.ID}}-on" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{.ID}}-on">{{$.T "admin.pages_page_enabled"}}</label></div>
-  <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{.ID}}-upd" name="show_updated" {{if .ShowUpdated}}checked{{end}}><label for="pg-{{.ID}}-upd" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{.ID}}-upd">{{$.T "admin.pages_show_updated"}}</label></div>
-  {{$pid := .ID}}
-  {{range .Variants}}
-  <fieldset class="lang-fieldset">
-    <legend>{{.Lang}}</legend>
-    <label>{{$.T "admin.pages_slug"}}<input type="text" name="slug_{{.Lang}}" value="{{.Slug}}" pattern="[a-z0-9][a-z0-9\-]*" maxlength="64" autocomplete="off" spellcheck="false"></label>
-    <label>{{$.T "admin.pages_title"}}<input type="text" name="title_{{.Lang}}" value="{{.Title}}" maxlength="200" autocomplete="off"></label>
-    <label>{{$.T "admin.pages_body"}}<textarea name="body_{{.Lang}}" rows="10">{{.Body}}</textarea></label>
-    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{$pid}}-{{.Lang}}-en" name="enabled_{{.Lang}}" {{if .Enabled}}checked{{end}}><label for="pg-{{$pid}}-{{.Lang}}-en" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{$pid}}-{{.Lang}}-en">{{$.T "admin.pages_enabled"}}</label></div>
-    {{if .Exists}}<div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{$pid}}-{{.Lang}}-del" name="del_{{.Lang}}"><label for="pg-{{$pid}}-{{.Lang}}-del" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{$pid}}-{{.Lang}}-del">{{$.T "admin.pages_delete_lang"}}</label></div>{{end}}
-  </fieldset>
-  {{end}}
-  <p class="form-error" role="alert" hidden></p>
-  <div class="modal-actions">
-    <button class="btn danger" type="button" data-pages-action="delete" data-page-id="{{.ID}}" data-confirm="{{$.T "admin.pages_delete_confirm"}}">{{$.T "admin.pages_delete"}}</button>
-    <button class="btn" type="submit">{{$.T "settings.save"}}</button>
-  </div>
-</form>
+{{$pid := .ID}}
+<details class="panel fold">
+  <summary>#{{.ID}}{{range .Variants}}{{if .Exists}} &middot; {{.Lang}}: /{{.Slug}}{{end}}{{end}} {{if not .Enabled}}<span class="tag">{{$.T "admin.off"}}</span>{{end}}</summary>
+  <form class="stack" data-api="/api/admin/pages" data-reload="1" data-success="{{$.T "js.saved"}}">
+    <input type="hidden" name="action" value="save">
+    <input type="hidden" name="page_id" value="{{.ID}}">
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{.ID}}-on" name="page_enabled" {{if .Enabled}}checked{{end}}><label for="pg-{{.ID}}-on" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{.ID}}-on">{{$.T "admin.pages_page_enabled"}}</label></div>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{.ID}}-upd" name="show_updated" {{if .ShowUpdated}}checked{{end}}><label for="pg-{{.ID}}-upd" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{.ID}}-upd">{{$.T "admin.pages_show_updated"}}</label></div>
+    {{range .Variants}}{{if .Exists}}
+    <fieldset class="lang-fieldset">
+      <legend>{{$.LangName .Lang}}</legend>
+      <label>{{$.T "admin.pages_slug"}}<input type="text" name="slug_{{.Lang}}" value="{{.Slug}}" pattern="[a-z0-9][a-z0-9\-]*" maxlength="64" autocomplete="off" spellcheck="false"></label>
+      <label>{{$.T "admin.pages_title"}}<input type="text" name="title_{{.Lang}}" value="{{.Title}}" maxlength="200" autocomplete="off"></label>
+      <label>{{$.T "admin.pages_body"}}<textarea name="body_{{.Lang}}" rows="10">{{.Body}}</textarea></label>
+      <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{$pid}}-{{.Lang}}-en" name="enabled_{{.Lang}}" {{if .Enabled}}checked{{end}}><label for="pg-{{$pid}}-{{.Lang}}-en" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{$pid}}-{{.Lang}}-en">{{$.T "admin.pages_enabled"}}</label></div>
+      <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{$pid}}-{{.Lang}}-del" name="del_{{.Lang}}"><label for="pg-{{$pid}}-{{.Lang}}-del" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{$pid}}-{{.Lang}}-del">{{$.T "admin.pages_delete_lang"}}</label></div>
+    </fieldset>
+    {{end}}{{end}}
+    <p class="form-error" role="alert" hidden></p>
+    <div class="modal-actions">
+      <button class="btn danger" type="button" data-pages-action="delete" data-page-id="{{.ID}}" data-confirm="{{$.T "admin.pages_delete_confirm"}}">{{$.T "admin.pages_delete"}}</button>
+      <button class="btn" type="submit">{{$.T "settings.save"}}</button>
+    </div>
+  </form>
+  {{if gt .Missing 0}}<form class="stack" data-api="/api/admin/pages" data-reload="1" data-success="{{$.T "js.saved"}}">
+    <h3>{{$.T "admin.pages_add_language"}}</h3>
+    <input type="hidden" name="action" value="add_lang">
+    <input type="hidden" name="page_id" value="{{.ID}}">
+    <label>{{$.T "admin.pages_language"}}<select name="lang">{{range .Variants}}{{if not .Exists}}<option value="{{.Lang}}">{{$.LangName .Lang}}</option>{{end}}{{end}}</select></label>
+    <label>{{$.T "admin.pages_slug"}}<input type="text" name="slug" pattern="[a-z0-9][a-z0-9\-]*" maxlength="64" autocomplete="off" spellcheck="false" required></label>
+    <label>{{$.T "admin.pages_title"}}<input type="text" name="title" maxlength="200" autocomplete="off" required></label>
+    <label>{{$.T "admin.pages_body"}}<textarea name="body" rows="6"></textarea></label>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{$pid}}-newlang" name="enabled" checked><label for="pg-{{$pid}}-newlang" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{$pid}}-newlang">{{$.T "admin.pages_enabled"}}</label></div>
+    <p class="form-error" role="alert" hidden></p>
+    <div><button class="btn ghost" type="submit">{{$.T "admin.pages_add_language"}}</button></div>
+  </form>{{end}}
+</details>
 {{else}}<p class="muted center">{{$.T "admin.pages_none"}}</p>{{end}}
+{{template "pager" (dict "Pager" .Data.Pager "V" .)}}
 
 {{else}}
 {{if .Data.Reports}}
@@ -309,8 +313,9 @@
   {{end}}
 </ul>
 {{end}}
+{{template "pager" (dict "Pager" .Data.Pager "V" .)}}
 {{if .Data.PeopleReports}}
-<h2>{{.T "admin.reported_people"}}</h2>
+<h2 id="people">{{.T "admin.reported_people"}}</h2>
 <ul class="reports">
   {{range .Data.PeopleReports}}
   <li class="panel">
@@ -325,6 +330,7 @@
   {{end}}
 </ul>
 {{end}}
+{{template "pager" (dict "Pager" .Data.PeoplePager "V" .)}}
 {{if and (not .Data.Reports) (not .Data.PeopleReports)}}<p class="muted center">{{.T "admin.none"}}</p>{{end}}
 {{end}}
 {{end}}

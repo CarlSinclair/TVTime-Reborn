@@ -77,12 +77,13 @@
 </section>
 {{end}}
 
-<section class="panel">
+<section class="panel" id="blocked">
   <h2>{{.T "settings.blocked"}}</h2>
   {{if .Data.Blocked}}
   <ul class="blocked">
     {{range .Data.Blocked}}<li><span>{{.}}</span> <button class="btn ghost small" type="button" data-unblock="{{.}}">{{$.T "settings.unblock"}}</button></li>{{end}}
   </ul>
+  {{template "pager" (dict "Pager" .Data.BlockedPager "V" .)}}
   {{else}}<p class="muted">{{.T "settings.blocked_none"}}</p>{{end}}
 </section>
 
@@ -243,7 +244,7 @@
     <div><button class="btn" type="submit">{{.T "settings.save"}}</button></div>
   </form>
   <form class="stack" data-api="/api/profile" data-success="{{.T "settings.saved"}}">
-    <label>{{.T "profile.display_name"}}<input type="text" name="display_name" maxlength="40" value="{{.User.Name}}"></label>
+    <label>{{.T "profile.display_name"}}<input type="text" name="display_name" maxlength="40" value="{{.User.DisplayName}}"></label>
     <label>{{.T "profile.bio"}}<textarea name="bio" rows="4" maxlength="500">{{.User.Bio}}</textarea></label>
     <div class="notify-row">
       <div class="tswitch"><input type="checkbox" class="tswitch-input" id="profile-public" name="public" {{if .User.ProfilePublic}}checked{{end}}><label for="profile-public" class="tswitch-label"><span class="ball"></span></label></div>

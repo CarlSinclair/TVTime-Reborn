@@ -3,7 +3,6 @@ package handlers
 import (
 	"errors"
 	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -130,15 +129,39 @@ func (a *App) pagePublic(w http.ResponseWriter, r *http.Request) {
 	a.errorPage(w, r, http.StatusNotFound, "err.not_found")
 }
 
+// pageView is a page with how many languages it still lacks.
+type pageView struct {
+	legalpages.Page
+	Missing int
+}
+
 // ---- admin ----
 
-func (a *App) pagesAdminData(data map[string]any) error {
+func (a *App) pagesAdminData(r *http.Request, data map[string]any) error {
 	langs := a.I18n.Langs()
 	list, err := a.pages().ListPages(langs)
 	if err != nil {
 		return err
 	}
-	data["PageList"], data["PageLangs"] = list, langs
+	const per = 10
+	offset, pg := paginate(r, "page", per, len(list), "")
+	end := offset + per
+	if end > len(list) {
+		end = len(list)
+	}
+	data["Pager"] = pg
+	list = list[offset:end]
+	views := make([]pageView, 0, len(list))
+	for _, p := range list {
+		missing := 0
+		for _, v := range p.Variants {
+			if !v.Exists {
+				missing++
+			}
+		}
+		views = append(views, pageView{Page: p, Missing: missing})
+	}
+	data["PageList"], data["PageLangs"] = views, langs
 	a.pageCache.mu.RLock()
 	data["PrivacyCustom"] = a.pageCache.customPrivacy
 	a.pageCache.mu.RUnlock()
@@ -155,9 +178,17 @@ func strOf(in map[string]any, key string) string {
 	return s
 }
 
+// variantsFrom reads the languages a form posted fields for; a language the form
+// did not mention is left alone.
 func (a *App) variantsFrom(in map[string]any) []legalpages.VariantInput {
 	var out []legalpages.VariantInput
 	for _, l := range a.I18n.Langs() {
+		_, s1 := in["slug_"+l]
+		_, s2 := in["title_"+l]
+		_, s3 := in["body_"+l]
+		if !s1 && !s2 && !s3 {
+			continue
+		}
 		out = append(out, legalpages.VariantInput{
 			Lang: l, Slug: strOf(in, "slug_"+l), Title: strOf(in, "title_"+l), Body: strOf(in, "body_"+l),
 			Enabled: boolOf(in, "enabled_"+l), Delete: boolOf(in, "del_"+l),
@@ -215,8 +246,12 @@ func (a *App) apiAdminPages(w http.ResponseWriter, r *http.Request) {
 	}
 	actor := admin.Username
 	store := a.pages()
+	slugs := []string{strOf(in, "slug")}
 	for _, l := range a.I18n.Langs() {
-		if sl := strings.ToLower(strings.TrimSpace(strOf(in, "slug_"+l))); sl != "" && a.isContactSlug(sl) {
+		slugs = append(slugs, strOf(in, "slug_"+l))
+	}
+	for _, sl := range slugs {
+		if sl = strings.ToLower(strings.TrimSpace(sl)); sl != "" && a.isContactSlug(sl) {
 			a.fail(w, r, apiErr{http.StatusConflict, "err.page_slug_taken"})
 			return
 		}
@@ -233,8 +268,41 @@ func (a *App) apiAdminPages(w http.ResponseWriter, r *http.Request) {
 	}
 	switch strOf(in, "action") {
 	case "add":
-		if _, err := store.AddPage(a.variantsFrom(in), actor); err != nil {
+		lang := strOf(in, "lang")
+		if !a.I18n.Has(lang) {
+			a.fail(w, r, errBadRequest)
+			return
+		}
+		v := legalpages.VariantInput{Lang: lang, Slug: strOf(in, "slug"), Title: strOf(in, "title"), Body: strOf(in, "body"), Enabled: boolOf(in, "enabled")}
+		if _, err := store.AddPage([]legalpages.VariantInput{v}, actor); err != nil {
 			a.fail(w, r, a.pageErr(err))
+			return
+		}
+	case "add_lang":
+		lang := strOf(in, "lang")
+		if !a.I18n.Has(lang) || pid() == 0 {
+			a.fail(w, r, errBadRequest)
+			return
+		}
+		list, err := store.ListPages(a.I18n.Langs())
+		if err != nil {
+			a.fail(w, r, err)
+			return
+		}
+		found := false
+		for _, p := range list {
+			if p.ID != pid() {
+				continue
+			}
+			found = true
+			v := legalpages.VariantInput{Lang: lang, Slug: strOf(in, "slug"), Title: strOf(in, "title"), Body: strOf(in, "body"), Enabled: boolOf(in, "enabled")}
+			if err := store.SavePage(p.ID, p.Enabled, p.ShowUpdated, []legalpages.VariantInput{v}, actor); err != nil {
+				a.fail(w, r, a.pageErr(err))
+				return
+			}
+		}
+		if !found {
+			a.fail(w, r, errNotFound)
 			return
 		}
 	case "save":
@@ -291,5 +359,3 @@ func (a *App) apiAdminPages(w http.ResponseWriter, r *http.Request) {
 	logger.Info("ADMIN uid=%d pages action=%s", admin.ID, strOf(in, "action"))
 	a.okJSON(w, nil)
 }
-
-func sortedLangs(l []string) []string { sort.Strings(l); return l }

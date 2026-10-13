@@ -119,14 +119,28 @@ func (a *App) pageProfile(w http.ResponseWriter, r *http.Request) {
 		a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
 		return
 	}
-	favShows, err := a.Store.FavoriteShows(p.ID)
+	favTotal, err := a.Store.CountFavoriteShows(p.ID)
+	if err != nil {
+		logger.Error("PAGE profile favorite count uid=%d: %v", p.ID, err)
+		a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
+		return
+	}
+	favOffset, favPager := paginate(r, "fav", 12, favTotal, "favorites")
+	favShows, err := a.Store.FavoriteShows(p.ID, 12, favOffset)
 	if err != nil {
 		logger.Error("PAGE profile favorite shows uid=%d: %v", p.ID, err)
 		a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
 		return
 	}
 	a.localizeShowList(lang, favShows)
-	recent, err := a.Store.RecentlyWatched(p.ID, 8)
+	recentTotal, err := a.Store.CountWatched(p.ID)
+	if err != nil {
+		logger.Error("PAGE profile watched count uid=%d: %v", p.ID, err)
+		a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
+		return
+	}
+	recentOffset, recentPager := paginate(r, "recent", 8, recentTotal, "recent")
+	recent, err := a.Store.RecentlyWatched(p.ID, 8, recentOffset)
 	if err != nil {
 		logger.Error("PAGE profile recent uid=%d: %v", p.ID, err)
 		a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
@@ -134,5 +148,6 @@ func (a *App) pageProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	a.localizeCalendar(lang, recent)
 	data["Stats"], data["Genres"], data["FavShows"], data["Recent"] = stats, genres, favShows, recent
+	data["FavTotal"], data["FavPager"], data["RecentTotal"], data["RecentPager"] = favTotal, favPager, recentTotal, recentPager
 	a.render(w, r, "profile", http.StatusOK, p.Name(), data)
 }

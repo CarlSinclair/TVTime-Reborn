@@ -39,16 +39,17 @@
 </section>
 {{end}}
 {{if $.Data.FavShows}}
-<section>
-  <h2>{{$.T "profile.fav_shows"}}</h2>
+<details class="fold" id="favorites" {{if gt $.Data.FavPager.Page 1}}open{{end}}>
+  <summary>{{$.T "profile.fav_shows"}} <span class="count">{{$.Data.FavTotal}}</span></summary>
   <div class="grid">
     {{range $.Data.FavShows}}{{template "card" (dict "Href" (printf "/show/%d" .TMDBID) "Poster" .PosterPath "Title" .Name "Sub" (year .FirstAirDate))}}{{end}}
   </div>
-</section>
+  {{template "pager" (dict "Pager" $.Data.FavPager "V" $)}}
+</details>
 {{end}}
 {{if $.Data.Recent}}
-<section>
-  <h2>{{$.T "profile.recent"}}</h2>
+<details class="fold" id="recent" {{if gt $.Data.RecentPager.Page 1}}open{{end}}>
+  <summary>{{$.T "profile.recent"}} <span class="count">{{$.Data.RecentTotal}}</span></summary>
   <ul class="cal-list">
     {{range $.Data.Recent}}
     <li>
@@ -57,7 +58,8 @@
     </li>
     {{end}}
   </ul>
-</section>
+  {{template "pager" (dict "Pager" $.Data.RecentPager "V" $)}}
+</details>
 {{end}}
 {{end}}
 {{if $.Data.Posts}}

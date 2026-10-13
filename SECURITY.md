@@ -15,7 +15,7 @@ server as a proxy (SSRF) are all in scope.
 ## Design notes for reviewers
 
 - Passwords are bcrypt-hashed; sessions are short-lived access tokens plus
-  rotating, hashed refresh tokens with reuse detection.
+  rotating, hashed refresh tokens with reuse detection (a replaced token presented again from the browser it was issued to, whose replacement never arrived, is recovered by rotating the chain's head; from any other browser it ends every session).
 - Passkeys (WebAuthn) require user verification and replace the password as the first factor; two-step verification (TOTP) is a separate second factor that is still enforced after a passkey sign-in.
 - TOTP secrets and the VAPID private key are encrypted at rest with a key derived
   from `TVT_JWT_SECRET`; rotating that secret requires re-enrolling 2FA.

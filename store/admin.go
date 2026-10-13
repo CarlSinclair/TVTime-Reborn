@@ -38,10 +38,12 @@ func (s *Store) UnseenPeerCount() (int, error) {
 	return s.count("unseen peers", `SELECT COUNT(*) FROM federation_peers WHERE acked = 0`)
 }
 
-// AckPeers marks every known server as seen by an admin, which clears the badge.
-func (s *Store) AckPeers() error {
-	if _, err := s.DB.Exec(`UPDATE federation_peers SET acked = 1 WHERE acked = 0`); err != nil {
-		return fmt.Errorf("ack peers: %w", err)
+// AckPeerHosts marks the given servers as seen by an admin, which lowers the badge.
+func (s *Store) AckPeerHosts(hosts []string) error {
+	for _, h := range hosts {
+		if err := s.AckPeer(h); err != nil {
+			return err
+		}
 	}
 	return nil
 }

@@ -1,0 +1,9 @@
+{{define "pager"}}
+{{if gt .Pager.Pages 1}}
+<nav class="pager-nav" aria-label="{{.V.T "admin.page" .Pager.Page .Pager.Pages}}">
+  {{if .Pager.PrevURL}}<a class="btn ghost small" href="{{.Pager.PrevURL}}">{{.V.T "admin.prev"}}</a>{{end}}
+  <span class="muted">{{.V.T "admin.page" .Pager.Page .Pager.Pages}}</span>
+  {{if .Pager.NextURL}}<a class="btn ghost small" href="{{.Pager.NextURL}}">{{.V.T "admin.next"}}</a>{{end}}
+</nav>
+{{end}}
+{{end}}

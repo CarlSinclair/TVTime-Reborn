@@ -344,15 +344,25 @@ func (a *App) pageAdmin(w http.ResponseWriter, r *http.Request) {
 			data["NextURL"] = "/admin?tab=users&page=" + strconv.Itoa(page+1) + "&q=" + url.QueryEscape(q)
 		}
 	case "servers":
-		peers, err := a.Store.Peers()
+		total, err := a.Store.CountPeers()
 		if err != nil {
 			fail("servers", err)
 			return
 		}
-		if err := a.Store.AckPeers(); err != nil {
+		offset, pg := paginate(r, "page", adminPer, total, "")
+		peers, err := a.Store.Peers(adminPer, offset)
+		if err != nil {
+			fail("servers", err)
+			return
+		}
+		hosts := make([]string, 0, len(peers))
+		for _, p := range peers {
+			hosts = append(hosts, p.Host)
+		}
+		if err := a.Store.AckPeerHosts(hosts); err != nil {
 			logger.Error("PAGE admin servers: could not clear the new-server badge: %v", err)
 		}
-		data["Peers"], data["FederationOn"] = peers, a.Fed != nil
+		data["Peers"], data["FederationOn"], data["Pager"] = peers, a.Fed != nil, pg
 		if a.Settings != nil {
 			want, err := a.Settings.Overlay(nil)
 			if err != nil {
@@ -375,22 +385,34 @@ func (a *App) pageAdmin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case "pages":
-		if err := a.pagesAdminData(data); err != nil {
+		if err := a.pagesAdminData(r, data); err != nil {
 			fail("pages", err)
 			return
 		}
 	case "reports":
-		reports, err := a.Store.OpenAbuseReports(100)
+		rTotal, err := a.Store.CountAbuseReports()
 		if err != nil {
 			fail("reports", err)
 			return
 		}
-		people, err := a.Store.OpenUserReports(100)
+		rOff, rPager := paginate(r, "page", adminPer, rTotal, "")
+		reports, err := a.Store.OpenAbuseReports(adminPer, rOff)
+		if err != nil {
+			fail("reports", err)
+			return
+		}
+		pTotal, err := a.Store.CountUserReports()
 		if err != nil {
 			fail("user reports", err)
 			return
 		}
-		data["Reports"], data["PeopleReports"] = reports, people
+		pOff, pPager := paginate(r, "ppage", adminPer, pTotal, "people")
+		people, err := a.Store.OpenUserReports(adminPer, pOff)
+		if err != nil {
+			fail("user reports", err)
+			return
+		}
+		data["Reports"], data["PeopleReports"], data["Pager"], data["PeoplePager"] = reports, people, rPager, pPager
 	default:
 		tab = "overview"
 		st, err := a.Store.AdminStats()
@@ -400,12 +422,12 @@ func (a *App) pageAdmin(w http.ResponseWriter, r *http.Request) {
 		}
 		var errs []adminError
 		for _, e := range logger.Recent() {
-			if len(errs) == 50 {
+			if len(errs) == 20 {
 				break
 			}
 			errs = append(errs, adminError{At: e.At.UTC().Format(time.RFC3339), Level: e.Level, Msg: e.Msg})
 		}
-		mails, err := a.Store.RecentMail(25)
+		mails, err := a.Store.RecentMail(10)
 		if err != nil {
 			fail("mail log", err)
 			return

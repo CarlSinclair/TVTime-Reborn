@@ -137,7 +137,7 @@ func (s *Service) signToken(userID int64, scope string, ttl time.Duration) (stri
 // signSessionToken adds the session id. Access tokens are only honoured while
 // their session still has a row in refresh_tokens, so logging out, changing the
 // password or revoking sessions ends them at once instead of at expiry.
-func (s *Service) signSessionToken(userID int64, scope string, ttl time.Duration, sid string) (string, error) {
+func (s *Service) signSessionToken(userID int64, scope string, ttl time.Duration, sid string, extra ...string) (string, error) {
 	now := time.Now()
 	claims := jwt.MapClaims{
 		"user_id": userID,
@@ -148,6 +148,9 @@ func (s *Service) signSessionToken(userID int64, scope string, ttl time.Duration
 	}
 	if sid != "" {
 		claims["sid"] = sid
+	}
+	if len(extra) > 0 && extra[0] != "" {
+		claims["ua"] = extra[0]
 	}
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(s.Secret)
 }
@@ -182,6 +185,30 @@ func (s *Service) parseSessionToken(raw, scope string) (int64, string, error) {
 	return int64(uid), sid, nil
 }
 
+// deviceTag identifies the browser a token was issued to, by a hash of its
+// User-Agent. It is not a secret: it only lets a reused refresh token from the
+// same browser (a response that never arrived) be told apart from one replayed
+// from somewhere else.
+func deviceTag(r *http.Request) string {
+	if r == nil {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(r.Header.Get("User-Agent")))
+	return hex.EncodeToString(sum[:8])
+}
+
+func (s *Service) tokenDevice(raw string) string {
+	tok, err := jwt.Parse(raw, func(t *jwt.Token) (any, error) { return s.Secret, nil })
+	if err != nil || !tok.Valid {
+		return ""
+	}
+	if c, ok := tok.Claims.(jwt.MapClaims); ok {
+		ua, _ := c["ua"].(string)
+		return ua
+	}
+	return ""
+}
+
 func (s *Service) ClearCookies(w http.ResponseWriter) {
 	s.setField(w, fieldAccess, "")
 	s.setField(w, fieldRefresh, "")
@@ -206,6 +233,12 @@ func (s *Service) sessionAlive(uid int64, sid string) bool {
 }
 
 func (s *Service) StartSession(w http.ResponseWriter, userID int64) error {
+	return s.StartSessionFor(w, nil, userID)
+}
+
+// StartSessionFor starts a session and ties its refresh token to the browser
+// that asked for it.
+func (s *Service) StartSessionFor(w http.ResponseWriter, r *http.Request, userID int64) error {
 	if u, err := s.Store.UserByID(userID); err != nil {
 		return fmt.Errorf("session user uid=%d: %w", userID, err)
 	} else if u.IsDeactivated {
@@ -221,7 +254,7 @@ func (s *Service) StartSession(w http.ResponseWriter, userID int64) error {
 	if err != nil {
 		return fmt.Errorf("session id uid=%d: %w", userID, err)
 	}
-	refresh, err := s.signSessionToken(userID, "refresh", RefreshTokenDuration, sid)
+	refresh, err := s.signSessionToken(userID, "refresh", RefreshTokenDuration, sid, deviceTag(r))
 	if err != nil {
 		return fmt.Errorf("sign refresh uid=%d: %w", userID, err)
 	}
@@ -292,7 +325,7 @@ func (s *Service) Authenticate(w http.ResponseWriter, r *http.Request) (*store.U
 		return nil, err
 	}
 
-	newRefresh, err := s.signSessionToken(uid, "refresh", RefreshTokenDuration, sid)
+	newRefresh, err := s.signSessionToken(uid, "refresh", RefreshTokenDuration, sid, deviceTag(r))
 	if err != nil {
 		return nil, fmt.Errorf("sign refresh uid=%d: %w", uid, err)
 	}
@@ -326,12 +359,18 @@ func (s *Service) Authenticate(w http.ResponseWriter, r *http.Request) (*store.U
 			return nil, fmt.Errorf("read superseded uid=%d: %w", uid, err)
 		}
 		if time.Since(store.ParseTs(sup)) > RotationGrace {
-			logger.Warn("AUTH superseded refresh token reused outside grace uid=%d, revoking all sessions", uid)
-			if _, err := s.Store.DB.Exec(`DELETE FROM refresh_tokens WHERE user_id = ?`, uid); err != nil {
-				logger.Error("AUTH revoke sessions after reuse uid=%d: %v", uid, err)
+			healed, err := s.healReuse(w, uid, sid, oldHash, refreshTok, r, store.ParseTs(sup))
+			if err != nil {
+				return nil, err
 			}
-			s.ClearCookies(w)
-			return nil, ErrBadToken
+			if !healed {
+				logger.Warn("AUTH superseded refresh token reused outside grace uid=%d from a different browser, revoking all sessions", uid)
+				if _, err := s.Store.DB.Exec(`DELETE FROM refresh_tokens WHERE user_id = ?`, uid); err != nil {
+					logger.Error("AUTH revoke sessions after reuse uid=%d: %v", uid, err)
+				}
+				s.ClearCookies(w)
+				return nil, ErrBadToken
+			}
 		}
 	}
 	access, err := s.signSessionToken(uid, "access", AccessTokenDuration, sid)
@@ -340,6 +379,69 @@ func (s *Service) Authenticate(w http.ResponseWriter, r *http.Request) (*store.U
 	}
 	s.setField(w, fieldAccess, access)
 	return u, nil
+}
+
+// healReuse recovers from a refresh token that was presented after it had been
+// replaced. When it comes from the same browser it was issued to and the chain
+// it started has not moved on, the likely cause is a rotation response that never
+// reached the browser (a dropped connection, a backgrounded app), not theft, so
+// the head of the chain is rotated for this browser instead of ending every
+// session. A different browser, or a chain that has already advanced, is still
+// treated as theft.
+func (s *Service) healReuse(w http.ResponseWriter, uid int64, sid, oldHash, presented string, r *http.Request, supersededAt time.Time) (bool, error) {
+	if tag := s.tokenDevice(presented); tag == "" || tag != deviceTag(r) || time.Since(supersededAt) > 24*time.Hour {
+		return false, nil
+	}
+	head := oldHash
+	for hops := 0; hops < 8; hops++ {
+		var next sql.NullString
+		var sup sql.NullString
+		if err := s.Store.DB.QueryRow(`SELECT superseded_by, superseded_at FROM refresh_tokens WHERE token_hash = ?`, head).Scan(&next, &sup); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return false, nil
+			}
+			return false, fmt.Errorf("walk refresh chain uid=%d: %w", uid, err)
+		}
+		if !sup.Valid {
+			break
+		}
+		if !next.Valid || next.String == "" {
+			return false, nil
+		}
+		head = next.String
+		if hops == 7 {
+			return false, nil
+		}
+	}
+	if head == oldHash {
+		return false, nil
+	}
+	newRefresh, err := s.signSessionToken(uid, "refresh", RefreshTokenDuration, sid, deviceTag(r))
+	if err != nil {
+		return false, fmt.Errorf("sign healed refresh uid=%d: %w", uid, err)
+	}
+	tx, err := s.Store.DB.Begin()
+	if err != nil {
+		return false, fmt.Errorf("begin heal uid=%d: %w", uid, err)
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(`UPDATE refresh_tokens SET superseded_at = ?, superseded_by = ? WHERE token_hash = ? AND superseded_at IS NULL`, store.Now(), hashToken(newRefresh), head)
+	if err != nil {
+		return false, fmt.Errorf("claim heal uid=%d: %w", uid, err)
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		// another request healed it first; its Set-Cookie carries the new token
+		return true, nil
+	}
+	if err := s.storeRefresh(tx, uid, sid, newRefresh, time.Now().Add(RefreshTokenDuration)); err != nil {
+		return false, fmt.Errorf("store healed refresh uid=%d: %w", uid, err)
+	}
+	if err := tx.Commit(); err != nil {
+		return false, fmt.Errorf("commit heal uid=%d: %w", uid, err)
+	}
+	s.setField(w, fieldRefresh, newRefresh)
+	logger.Info("AUTH recovered a refresh token that never arrived uid=%d", uid)
+	return true, nil
 }
 
 func (s *Service) loadUser(uid int64) (*store.User, error) {

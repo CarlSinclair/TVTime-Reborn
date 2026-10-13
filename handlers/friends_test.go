@@ -368,3 +368,36 @@ func TestAdminLinkSitsBetweenSeparatorsBeforeLogout(t *testing.T) {
 		t.Fatalf("separators must sit before and after the admin link")
 	}
 }
+
+func TestFriendsAndBlockedListsArePaginated(t *testing.T) {
+	e := newEnv(t)
+	alice := e.signup(t, "alice", true)
+	a := e.mustUser(t, "alice")
+	for i := 0; i < 12; i++ {
+		name := "pal" + string(rune('a'+i)) + "xx"
+		e.signup(t, name, true)
+		u := e.mustUser(t, name)
+		if _, err := e.store.DB.Exec(`INSERT INTO friend_requests (requester_id, addressee_id, status, created_at) VALUES (?, ?, 'accepted', '2020-01-01 00:00:00')`, a.ID, u.ID); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := e.store.DB.Exec(`INSERT INTO blocks (blocker_id, blocked_id) VALUES (?, ?)`, a.ID, u.ID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	first := alice.getJSON("/api/friends")
+	if len(first["friends"].([]any)) != 10 || first["friends_more"] != true {
+		t.Fatalf("the first ten friends and a sign that more follow: %v", first)
+	}
+	next := alice.getJSON("/api/friends?friends_offset=10")
+	if len(next["friends"].([]any)) != 2 || next["friends_more"] != false {
+		t.Fatalf("the rest: %v", next)
+	}
+	_, page := alice.get("/settings?tab=account")
+	if strings.Count(page, "data-unblock=") != 10 || !strings.Contains(page, "blocked=2") {
+		t.Fatalf("blocked people are listed ten at a time with a next link")
+	}
+	_, page2 := alice.get("/settings?tab=account&blocked=2")
+	if strings.Count(page2, "data-unblock=") != 2 {
+		t.Fatalf("second page has the remaining two")
+	}
+}

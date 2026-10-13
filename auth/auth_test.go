@@ -269,3 +269,66 @@ func TestAccessTokenDiesWithItsSession(t *testing.T) {
 		t.Fatalf("logging out one device must not end another: %v", err)
 	}
 }
+
+func startSessionFrom(t *testing.T, s *Service, uid int64, agent string) string {
+	t.Helper()
+	req := httptest.NewRequest("GET", "/", nil)
+	req.Header.Set("User-Agent", agent)
+	rr := httptest.NewRecorder()
+	w := s.WrapResponse(rr, req)
+	if err := s.StartSessionFor(w, req, uid); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	w.WriteHeader(200)
+	return BagField(sessionOf(rr).Value, fieldRefresh)
+}
+
+func requestFrom(refresh, agent string) *http.Request {
+	req := requestWithRefresh(refresh)
+	req.Header.Set("User-Agent", agent)
+	return req
+}
+
+func TestRefreshTokenThatNeverArrivedHealsFromTheSameBrowser(t *testing.T) {
+	s, u := newSvc(t)
+	first := startSessionFrom(t, s, u.ID, "Phone/1.0")
+	if _, err := authenticate(s, requestFrom(first, "Phone/1.0")); err != nil {
+		t.Fatalf("first rotation: %v", err)
+	}
+	old := store.Ts(time.Now().Add(-10 * time.Minute))
+	if _, err := s.Store.DB.Exec(`UPDATE refresh_tokens SET superseded_at = ? WHERE superseded_at IS NOT NULL`, old); err != nil {
+		t.Fatal(err)
+	}
+	rr, err := authenticate(s, requestFrom(first, "Phone/1.0"))
+	if err != nil {
+		t.Fatalf("the same browser presenting the token whose replacement never arrived is not logged out: %v", err)
+	}
+	c := sessionOf(rr)
+	if c == nil || BagField(c.Value, fieldRefresh) == "" || BagField(c.Value, fieldRefresh) == first {
+		t.Fatalf("it gets a fresh refresh token")
+	}
+	var left int
+	s.Store.DB.QueryRow(`SELECT COUNT(*) FROM refresh_tokens WHERE user_id = ? AND superseded_at IS NULL`, u.ID).Scan(&left)
+	if left != 1 {
+		t.Fatalf("exactly one live token remains: %d", left)
+	}
+	if _, err := authenticate(s, requestFrom(BagField(c.Value, fieldRefresh), "Phone/1.0")); err != nil {
+		t.Fatalf("and the new token works: %v", err)
+	}
+}
+
+func TestReplayFromAnotherBrowserStillRevokesEverything(t *testing.T) {
+	s, u := newSvc(t)
+	first := startSessionFrom(t, s, u.ID, "Phone/1.0")
+	authenticate(s, requestFrom(first, "Phone/1.0"))
+	old := store.Ts(time.Now().Add(-10 * time.Minute))
+	s.Store.DB.Exec(`UPDATE refresh_tokens SET superseded_at = ? WHERE superseded_at IS NOT NULL`, old)
+	if _, err := authenticate(s, requestFrom(first, "Thief/9.9")); err != ErrBadToken {
+		t.Fatalf("a replay from a different browser is theft: %v", err)
+	}
+	var left int
+	s.Store.DB.QueryRow(`SELECT COUNT(*) FROM refresh_tokens WHERE user_id = ?`, u.ID).Scan(&left)
+	if left != 0 {
+		t.Fatalf("all sessions revoked: %d", left)
+	}
+}

@@ -367,8 +367,16 @@ func (s *Store) Unblock(blockerID int64, username string) error {
 	return nil
 }
 
-func (s *Store) Blocked(blockerID int64) ([]string, error) {
-	rows, err := s.DB.Query(`SELECT u.username FROM blocks b JOIN users u ON u.id = b.blocked_id WHERE b.blocker_id = ? ORDER BY u.username`, blockerID)
+func (s *Store) CountBlocked(blockerID int64) (int, error) {
+	var n int
+	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM blocks WHERE blocker_id = ?`, blockerID).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count blocks uid=%d: %w", blockerID, err)
+	}
+	return n, nil
+}
+
+func (s *Store) Blocked(blockerID int64, limit, offset int) ([]string, error) {
+	rows, err := s.DB.Query(`SELECT u.username FROM blocks b JOIN users u ON u.id = b.blocked_id WHERE b.blocker_id = ? ORDER BY u.username LIMIT ? OFFSET ?`, blockerID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("list blocks uid=%d: %w", blockerID, err)
 	}
@@ -396,11 +404,20 @@ type AbuseReport struct {
 	Last        string
 }
 
-func (s *Store) OpenAbuseReports(limit int) ([]AbuseReport, error) {
+func (s *Store) CountAbuseReports() (int, error) {
+	var n int
+	if err := s.DB.QueryRow(`SELECT COUNT(DISTINCT r.comment_id) FROM comment_reports r JOIN comments c ON c.id = r.comment_id
+	  WHERE r.kind = 'abuse' AND r.resolved_at IS NULL AND c.deleted_at IS NULL AND c.hidden_at IS NULL`).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count abuse reports: %w", err)
+	}
+	return n, nil
+}
+
+func (s *Store) OpenAbuseReports(limit, offset int) ([]AbuseReport, error) {
 	rows, err := s.DB.Query(`SELECT c.id, COALESCE(c.episode_id,0), COALESCE(c.profile_id,0), COALESCE((SELECT username FROM users WHERE id = c.profile_id),''), c.body, u.username, u.id, COUNT(*), COALESCE(GROUP_CONCAT(NULLIF(r.reason,''), ' | '),''), MAX(r.created_at)
 	  FROM comment_reports r JOIN comments c ON c.id = r.comment_id JOIN users u ON u.id = c.user_id
 	  WHERE r.kind = 'abuse' AND r.resolved_at IS NULL AND c.deleted_at IS NULL AND c.hidden_at IS NULL
-	  GROUP BY c.id ORDER BY COUNT(*) DESC, MAX(r.created_at) DESC LIMIT ?`, limit)
+	  GROUP BY c.id ORDER BY COUNT(*) DESC, MAX(r.created_at) DESC LIMIT ? OFFSET ?`, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("open abuse reports: %w", err)
 	}

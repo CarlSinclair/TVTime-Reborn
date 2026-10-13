@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -140,23 +141,39 @@ func (a *App) apiPeople(w http.ResponseWriter, r *http.Request) {
 	a.okJSON(w, out)
 }
 
+const friendsChunk = 10
+
+// apiFriendsList returns the friends and the two kinds of request in chunks of
+// ten; the *_offset parameters ask for the next chunk of one list.
 func (a *App) apiFriendsList(w http.ResponseWriter, r *http.Request) {
 	u, err := a.needUser(r)
 	if err != nil {
 		a.fail(w, r, err)
 		return
 	}
-	friends, err := a.Store.Friends(u.ID)
+	off := func(name string) int {
+		n, _ := strconv.Atoi(r.URL.Query().Get(name))
+		if n < 0 {
+			return 0
+		}
+		return n
+	}
+	friends, friendsMore, err := a.Store.FriendsPage(u.ID, friendsChunk, off("friends_offset"))
 	if err != nil {
 		a.fail(w, r, err)
 		return
 	}
-	incoming, err := a.Store.IncomingFriendRequests(u.ID)
+	incoming, incomingMore, err := a.Store.IncomingFriendRequestsPage(u.ID, friendsChunk, off("incoming_offset"))
 	if err != nil {
 		a.fail(w, r, err)
 		return
 	}
-	outgoing, err := a.Store.OutgoingFriendRequests(u.ID)
+	outgoing, outgoingMore, err := a.Store.OutgoingFriendRequestsPage(u.ID, friendsChunk, off("outgoing_offset"))
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	pending, err := a.Store.PendingFriendCount(u.ID)
 	if err != nil {
 		a.fail(w, r, err)
 		return
@@ -168,7 +185,8 @@ func (a *App) apiFriendsList(w http.ResponseWriter, r *http.Request) {
 		}
 		return out
 	}
-	a.okJSON(w, map[string]any{"friends": conv(friends), "incoming": conv(incoming), "outgoing": conv(outgoing)})
+	a.okJSON(w, map[string]any{"friends": conv(friends), "incoming": conv(incoming), "outgoing": conv(outgoing),
+		"friends_more": friendsMore, "incoming_more": incomingMore, "outgoing_more": outgoingMore, "incoming_total": pending})
 }
 
 func (a *App) friendTarget(w http.ResponseWriter, r *http.Request) (*store.User, *store.User, bool) {

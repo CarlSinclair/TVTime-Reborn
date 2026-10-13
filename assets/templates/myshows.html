@@ -15,6 +15,7 @@
   </a>
   {{end}}
 </div>
+{{template "pager" (dict "Pager" .Data.Pager "V" .)}}
 {{else}}
 <p class="muted">{{.T "myshows.empty"}}</p>
 {{end}}

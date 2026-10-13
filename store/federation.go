@@ -129,8 +129,16 @@ type PeerInfo struct {
 	Share     bool
 }
 
-func (s *Store) Peers() ([]PeerInfo, error) {
-	rows, err := s.DB.Query(`SELECT host, first_seen, last_seen, blocked, acked, share FROM federation_peers ORDER BY acked, host`)
+func (s *Store) CountPeers() (int, error) {
+	var n int
+	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM federation_peers`).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count peers: %w", err)
+	}
+	return n, nil
+}
+
+func (s *Store) Peers(limit, offset int) ([]PeerInfo, error) {
+	rows, err := s.DB.Query(`SELECT host, first_seen, last_seen, blocked, acked, share FROM federation_peers ORDER BY acked, host LIMIT ? OFFSET ?`, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("list peers: %w", err)
 	}

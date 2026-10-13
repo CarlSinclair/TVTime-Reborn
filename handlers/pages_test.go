@@ -23,8 +23,8 @@ func TestOperatorPagesPrivacyDefaultAndFooter(t *testing.T) {
 		t.Fatalf("terms is optional and absent until added")
 	}
 
-	if code, out := boss.post("/api/admin/pages", map[string]any{"action": "add", "slug_en": "terms", "title_en": "Terms of use", "enabled_en": true,
-		"body_en": "# Rules\n\nBe **kind**.\n\n<script>alert(1)</script>"}); code != 200 {
+	if code, out := boss.post("/api/admin/pages", map[string]any{"action": "add", "lang": "en", "slug": "terms", "title": "Terms of use", "enabled": true,
+		"body": "# Rules\n\nBe **kind**.\n\n<script>alert(1)</script>"}); code != 200 {
 		t.Fatalf("add terms: %d %v", code, out)
 	}
 	code, terms := anon.get("/terms")
@@ -34,10 +34,10 @@ func TestOperatorPagesPrivacyDefaultAndFooter(t *testing.T) {
 	if _, foot = anon.get("/welcome"); !strings.Contains(foot, `href="/terms">Terms of use`) {
 		t.Fatalf("an enabled page appears in the footer")
 	}
-	if code, _ := boss.post("/api/admin/pages", map[string]any{"action": "add", "slug_en": "terms", "title_en": "Again", "enabled_en": true, "body_en": "x"}); code != 409 {
+	if code, _ := boss.post("/api/admin/pages", map[string]any{"action": "add", "lang": "en", "slug": "terms", "title": "Again", "enabled": true, "body": "x"}); code != 409 {
 		t.Fatalf("a slug can only belong to one page: %d", code)
 	}
-	if code, _ := boss.post("/api/admin/pages", map[string]any{"action": "add", "slug_en": "Bad Slug!", "title_en": "x", "enabled_en": true, "body_en": "x"}); code != 400 {
+	if code, _ := boss.post("/api/admin/pages", map[string]any{"action": "add", "lang": "en", "slug": "Bad Slug!", "title": "x", "enabled": true, "body": "x"}); code != 400 {
 		t.Fatalf("bad slug: %d", code)
 	}
 
@@ -64,6 +64,19 @@ func TestOperatorPagesPrivacyDefaultAndFooter(t *testing.T) {
 	boss.post("/api/admin/pages", map[string]any{"action": "save", "page_id": id, "page_enabled": false, "slug_en": "terms", "title_en": "Terms of use", "body_en": "x", "enabled_en": true})
 	if code, _ := anon.get("/terms"); code == 200 {
 		t.Fatalf("a disabled page is not public")
+	}
+	if code, _ := boss.post("/api/admin/pages", map[string]any{"action": "add_lang", "page_id": id, "lang": "pt", "slug": "termos", "title": "Termos", "body": "x", "enabled": true}); code != 200 {
+		t.Fatalf("add a language to an existing page: %d", code)
+	}
+	var langs int
+	e.store.DB.QueryRow(`SELECT COUNT(*) FROM pages WHERE page_id = ?`, id).Scan(&langs)
+	if langs != 2 {
+		t.Fatalf("a page can grow one language at a time: %d", langs)
+	}
+	boss.post("/api/admin/pages", map[string]any{"action": "save", "page_id": id, "page_enabled": true, "slug_en": "terms", "title_en": "Terms of use", "body_en": "x", "enabled_en": true})
+	e.store.DB.QueryRow(`SELECT COUNT(*) FROM pages WHERE page_id = ?`, id).Scan(&langs)
+	if langs != 2 {
+		t.Fatalf("saving one language leaves the others alone: %d", langs)
 	}
 	if code, _ := boss.post("/api/admin/pages", map[string]any{"action": "delete", "page_id": id}); code != 200 {
 		t.Fatalf("delete: %d", code)
@@ -147,7 +160,7 @@ func TestContactPageAddressFollowsTheVisitorsLanguage(t *testing.T) {
 			t.Fatalf("%s: /%s serves the page and the footer links to it: %d", lang, slug, resp.StatusCode)
 		}
 	}
-	if code, _ := boss.post("/api/admin/pages", map[string]any{"action": "add", "slug_en": "contato", "title_en": "x", "enabled_en": true, "body_en": "x"}); code != 409 {
+	if code, _ := boss.post("/api/admin/pages", map[string]any{"action": "add", "lang": "en", "slug": "contato", "title": "x", "enabled": true, "body": "x"}); code != 409 {
 		t.Fatalf("a page cannot take a contact address from any language: %d", code)
 	}
 }

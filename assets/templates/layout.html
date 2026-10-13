@@ -101,10 +101,11 @@
       <button class="icon-btn solid" type="submit" aria-label="{{.T "js.friend_add"}}" title="{{.T "js.friend_add"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-plus"></use></svg></button>
     </form>
     <p class="form-error" id="friends-error" role="alert" hidden></p>
-    <div id="friends-incoming-box" hidden><h3>{{.T "js.friends_requests"}}</h3><ul class="blocked" id="friends-incoming"></ul></div>
+    <div id="friends-incoming-box" hidden><h3>{{.T "js.friends_requests"}}</h3><ul class="blocked" id="friends-incoming"></ul><button class="btn ghost small" type="button" id="friends-incoming-more" data-friends-more="incoming" hidden>{{.T "js.feed_more"}}</button></div>
     <ul class="blocked" id="friends-list"></ul>
+    <button class="btn ghost small" type="button" id="friends-more" data-friends-more="friends" hidden>{{.T "js.feed_more"}}</button>
     <p class="muted" id="friends-none" hidden>{{.T "js.friends_none"}}</p>
-    <div id="friends-outgoing-box" hidden><h3>{{.T "js.friends_sent"}}</h3><ul class="blocked" id="friends-outgoing"></ul></div>
+    <div id="friends-outgoing-box" hidden><h3>{{.T "js.friends_sent"}}</h3><ul class="blocked" id="friends-outgoing"></ul><button class="btn ghost small" type="button" id="friends-outgoing-more" data-friends-more="outgoing" hidden>{{.T "js.feed_more"}}</button></div>
     <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button></div>
   </div>
 </dialog>

@@ -96,7 +96,7 @@ func (a *App) apiRegister(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	if err := a.Auth.StartSession(w, u.ID); err != nil {
+	if err := a.Auth.StartSessionFor(w, r, u.ID); err != nil {
 		a.fail(w, r, err)
 		return
 	}
@@ -374,7 +374,7 @@ func (a *App) apiChangePassword(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	if err := a.Auth.StartSession(w, u.ID); err != nil {
+	if err := a.Auth.StartSessionFor(w, r, u.ID); err != nil {
 		a.fail(w, r, err)
 		return
 	}

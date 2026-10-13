@@ -109,7 +109,7 @@ func TestEpisodeCommentsReplicateToAllowListedServers(t *testing.T) {
 		t.Fatalf("report: %d %v", code, out)
 	}
 	b.flush(t)
-	reports, err := a.store.OpenAbuseReports(10)
+	reports, err := a.store.OpenAbuseReports(10, 0)
 	if err != nil || len(reports) != 1 || reports[0].Body != "Spoiler: edited text" {
 		t.Fatalf("the report reaches the home server's queue: %v %+v", err, reports)
 	}

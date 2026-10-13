@@ -85,8 +85,8 @@ func TestSettingsPagesUseModalsAndRealValues(t *testing.T) {
 	if strings.Contains(prof, "data-remove-media") {
 		t.Errorf("remove buttons must not show when nothing is uploaded")
 	}
-	if strings.Contains(prof, `placeholder="modal"`) || !strings.Contains(prof, `value="modal"`) {
-		t.Errorf("the display name must be a real value, not a placeholder")
+	if !strings.Contains(prof, `name="display_name" maxlength="40" value="">`) || strings.Contains(prof, `placeholder="modal"`) {
+		t.Errorf("an unset display name stays blank, with no placeholder and nothing copied from the username")
 	}
 	if !strings.Contains(prof, `id="profile-public"`) {
 		t.Errorf("public profile must be a switch")

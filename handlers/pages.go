@@ -555,20 +555,25 @@ func (a *App) pageMyShows(w http.ResponseWriter, r *http.Request) {
 	if status != "" && status != "all" && !store.ValidStatus(status) {
 		status = ""
 	}
-	list, err := a.Store.UserShows(u.ID, status)
-	if err != nil {
-		logger.Error("PAGE my shows uid=%d: %v", u.ID, err)
-		a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
-		return
-	}
-	a.localizeEntries(a.langOf(w, r), list)
 	counts, err := a.Store.StatusCounts(u.ID)
 	if err != nil {
 		logger.Error("PAGE my shows counts uid=%d: %v", u.ID, err)
 		a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
 		return
 	}
-	a.page(w, r, "myshows", "nav.shows", map[string]any{"Counts": counts, "Entries": list, "Status": status, "Statuses": []string{"watching", "plan", "completed", "paused", "dropped"}})
+	key := status
+	if key == "" {
+		key = "all"
+	}
+	offset, pg := paginate(r, "page", 36, counts[key], "")
+	list, err := a.Store.UserShows(u.ID, status, 36, offset)
+	if err != nil {
+		logger.Error("PAGE my shows uid=%d: %v", u.ID, err)
+		a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
+		return
+	}
+	a.localizeEntries(a.langOf(w, r), list)
+	a.page(w, r, "myshows", "nav.shows", map[string]any{"Pager": pg, "Counts": counts, "Entries": list, "Status": status, "Statuses": []string{"watching", "plan", "completed", "paused", "dropped"}})
 }
 
 func (a *App) pageCalendar(w http.ResponseWriter, r *http.Request) {

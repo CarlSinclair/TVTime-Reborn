@@ -146,6 +146,42 @@ func (s *Store) Friends(userID int64) ([]Person, error) {
 	  WHERE f.status = 'accepted' AND (f.requester_id = ? OR f.addressee_id = ?) AND u.is_deactivated = 0 ORDER BY u.username COLLATE NOCASE`, userID, userID, userID)
 }
 
+// pageOf cuts a list fetched with one extra row into a page and says whether more follow.
+func pageOf(list []Person, limit int) ([]Person, bool) {
+	if len(list) > limit {
+		return list[:limit], true
+	}
+	return list, false
+}
+
+func (s *Store) FriendsPage(userID int64, limit, offset int) ([]Person, bool, error) {
+	list, err := s.people(personSelect+`CASE WHEN f.requester_id = ? THEN f.addressee_id ELSE f.requester_id END
+	  WHERE f.status = 'accepted' AND (f.requester_id = ? OR f.addressee_id = ?) AND u.is_deactivated = 0 ORDER BY u.username COLLATE NOCASE LIMIT ? OFFSET ?`, userID, userID, userID, limit+1, offset)
+	if err != nil {
+		return nil, false, err
+	}
+	page, more := pageOf(list, limit)
+	return page, more, nil
+}
+
+func (s *Store) IncomingFriendRequestsPage(userID int64, limit, offset int) ([]Person, bool, error) {
+	list, err := s.people(personSelect+`f.requester_id WHERE f.addressee_id = ? AND f.status = 'pending' AND u.is_deactivated = 0 ORDER BY f.created_at DESC LIMIT ? OFFSET ?`, userID, limit+1, offset)
+	if err != nil {
+		return nil, false, err
+	}
+	page, more := pageOf(list, limit)
+	return page, more, nil
+}
+
+func (s *Store) OutgoingFriendRequestsPage(userID int64, limit, offset int) ([]Person, bool, error) {
+	list, err := s.people(personSelect+`f.addressee_id WHERE f.requester_id = ? AND f.status = 'pending' AND u.is_deactivated = 0 ORDER BY f.created_at DESC LIMIT ? OFFSET ?`, userID, limit+1, offset)
+	if err != nil {
+		return nil, false, err
+	}
+	page, more := pageOf(list, limit)
+	return page, more, nil
+}
+
 func (s *Store) IncomingFriendRequests(userID int64) ([]Person, error) {
 	return s.people(personSelect+`f.requester_id WHERE f.addressee_id = ? AND f.status = 'pending' AND u.is_deactivated = 0 ORDER BY f.created_at DESC`, userID)
 }
@@ -435,10 +471,18 @@ func (s *Store) ReportUser(reporterID, reportedID int64, reason string) error {
 	return nil
 }
 
-func (s *Store) OpenUserReports(limit int) ([]UserReport, error) {
+func (s *Store) CountUserReports() (int, error) {
+	var n int
+	if err := s.DB.QueryRow(`SELECT COUNT(DISTINCT reported_id) FROM user_reports WHERE resolved_at IS NULL`).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count user reports: %w", err)
+	}
+	return n, nil
+}
+
+func (s *Store) OpenUserReports(limit, offset int) ([]UserReport, error) {
 	rows, err := s.DB.Query(`SELECT u.id, u.username, COUNT(*), COALESCE(GROUP_CONCAT(NULLIF(r.reason,''), ' | '),''), MAX(r.created_at)
 	  FROM user_reports r JOIN users u ON u.id = r.reported_id
-	  WHERE r.resolved_at IS NULL GROUP BY u.id ORDER BY COUNT(*) DESC, MAX(r.created_at) DESC LIMIT ?`, limit)
+	  WHERE r.resolved_at IS NULL GROUP BY u.id ORDER BY COUNT(*) DESC, MAX(r.created_at) DESC LIMIT ? OFFSET ?`, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("open user reports: %w", err)
 	}
