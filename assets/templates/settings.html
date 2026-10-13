@@ -265,7 +265,7 @@
     <div class="notify-text"><strong>{{.T "notif.ch.telegram"}}</strong><span class="notify-sub" id="telegram-waiting" hidden>{{.T "notif.telegram_waiting"}}</span></div>
     <div class="notify-actions">
       {{if .User.TelegramChatID}}
-      <button class="btn ghost small" type="button" data-telegram-unlink-chat>{{.T "notif.telegram_disconnect"}}</button>
+      <button class="btn danger small" type="button" data-telegram-unlink-chat>{{.T "notif.telegram_disconnect"}}</button>
       {{else}}
       <button class="btn small" type="button" id="telegram-connect">{{.T "notif.telegram_connect"}}</button>
       {{end}}

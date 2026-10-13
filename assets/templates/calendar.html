@@ -1,7 +1,7 @@
 {{define "content"}}
 <div class="page-head">
   <h1>{{.T "nav.calendar"}}</h1>
-  {{if .Data.Past}}<a class="btn ghost small" href="/calendar">{{.T "calendar.back"}}</a>{{else}}<a class="btn ghost small" href="/calendar?past=1"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-history"></use></svg>{{.T "calendar.past"}}</a>{{end}}
+  {{if .Data.Past}}<a class="btn ghost small" href="/calendar">{{.T "calendar.back"}}</a>{{else}}<a class="icon-btn" href="/calendar?past=1" aria-label="{{.T "calendar.past"}}" title="{{.T "calendar.past"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-history"></use></svg></a>{{end}}
 </div>
 {{if .Data.Days}}
 {{range .Data.Days}}
