@@ -116,6 +116,7 @@ func (a *App) apiUpdateProfile(w http.ResponseWriter, r *http.Request) {
 		DisplayName string `json:"display_name"`
 		Bio         string
 		Public      bool
+		Share       bool `json:"share_activity"`
 	}
 	if err := decode(r, &in); err != nil {
 		a.fail(w, r, err)
@@ -133,7 +134,7 @@ func (a *App) apiUpdateProfile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if err := a.Store.UpdateProfile(u.ID, in.DisplayName, in.Bio, in.Public); err != nil {
+	if err := a.Store.UpdateProfile(u.ID, in.DisplayName, in.Bio, in.Public, in.Share); err != nil {
 		a.fail(w, r, err)
 		return
 	}

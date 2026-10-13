@@ -4,7 +4,7 @@
     "shows": "我的剧集",
     "calendar": "日历",
     "search": "搜索",
-    "search_placeholder": "搜索剧集",
+    "search_placeholder": "搜索剧集或 @用户",
     "settings": "设置",
     "theme": "切换主题",
     "language": "语言",
@@ -61,7 +61,9 @@
     "remaining": "待看剧集：%d",
     "last_aired": "最新播出的一集",
     "trending": "本周热门",
-    "no_metadata": "由于尚未配置元数据服务，暂时无法获取剧集数据。"
+    "no_metadata": "由于尚未配置元数据服务，暂时无法获取剧集数据。",
+    "tab_upcoming": "即将播出",
+    "tab_feed": "动态"
   },
   "stats": {
     "shows": "剧集",
@@ -70,7 +72,8 @@
   },
   "search": {
     "none": "没有找到剧集。",
-    "prompt": "请在搜索框中输入剧名。"
+    "prompt": "请在搜索框中输入剧名。",
+    "tab_shows": "剧集"
   },
   "show": {
     "runtime": "%d 分钟",
@@ -276,7 +279,9 @@
     "email_same": "这已经是你的邮箱地址。",
     "telegram_not_linked": "请先连接 Telegram。",
     "email_not_verified": "请先验证你的邮箱地址。",
-    "push_not_enabled": "请先在此设备上启用推送。"
+    "push_not_enabled": "请先在此设备上启用推送。",
+    "friend_self": "不能添加自己。",
+    "friend_remote": "暂不支持其他服务器。"
   },
   "mail": {
     "login": {
@@ -367,7 +372,25 @@
     "pw_strong": "密码强度足够",
     "marked_watched": "已标记为已看",
     "marked_tip": "已标记为已看。提示：给一集评分也会标记为已看。",
-    "rated": "已评分并标记为已看"
+    "rated": "已评分并标记为已看",
+    "friend_add": "添加好友",
+    "friend_pending": "请求已发送",
+    "friend_friends": "好友",
+    "friend_accept": "接受",
+    "friend_decline": "拒绝",
+    "friend_remove": "移除",
+    "friend_cancel": "取消请求",
+    "friend_sent": "好友请求已发送。",
+    "friend_now": "你们现在是好友了。",
+    "friend_remove_confirm": "移除这位好友？",
+    "friends_title": "好友",
+    "friends_none": "还没有好友。",
+    "friends_requests": "请求",
+    "friends_sent": "已发送的请求",
+    "friends_username": "用户名",
+    "feed_more": "加载更多",
+    "feed_none": "好友还没有动态。",
+    "feed_no_friends": "你还没有好友。这里是其他人最近的一些评论。"
   },
   "genre": {
     "action_adventure": "动作冒险",
@@ -498,7 +521,15 @@
       "body": "你的邮箱地址现在是 {email}。如果不是你本人操作，请立即保护你的账户。"
     },
     "test_btn": "测试",
-    "verify_first": "请先验证邮箱"
+    "verify_first": "请先验证邮箱",
+    "friend_request": {
+      "title": "{user} 向你发送了好友请求",
+      "body": "打开好友列表进行回复。"
+    },
+    "friend_accepted": {
+      "title": "{user} 接受了你的好友请求",
+      "body": "你们现在可以看到彼此的动态。"
+    }
   },
   "profile": {
     "bio": "简介",
@@ -520,7 +551,8 @@
     "upload_hint": "JPEG、PNG、GIF 或 WebP，不超过 6 MB。",
     "view_public": "查看我的公开资料",
     "watch_time": "观看时长",
-    "week": "最近 7 天"
+    "week": "最近 7 天",
+    "share_activity": "向好友分享我的动态"
   },
   "tg": {
     "error": "出错了，请重试。",
@@ -598,5 +630,19 @@
     "title": "关于",
     "license": "TVT 是遵循 GNU Affero 通用公共许可证 v3 的自由软件。",
     "data_title": "数据来源"
+  },
+  "feed": {
+    "watch_one": "看了一集",
+    "watch_many": "看了 %d 集",
+    "watch_ep": "看了 %s，",
+    "rate": "给一集打了分，",
+    "rate_ep": "给 %s 打了分，",
+    "comment_on": "评论了 %s，"
+  },
+  "people": {
+    "tab": "用户",
+    "prompt": "请输入完整的用户名，例如 alice。",
+    "none": "没有这个用户名的用户。",
+    "remote": "暂不支持其他服务器。"
   }
 }

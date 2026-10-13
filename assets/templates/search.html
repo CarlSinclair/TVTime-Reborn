@@ -1,5 +1,20 @@
 {{define "content"}}
 <h1>{{.T "nav.search"}}</h1>
+<div class="tabs" role="tablist">
+  <a class="tab {{if ne .Data.Kind "people"}}active{{end}}" href="/search{{if .Data.Query}}?q={{.Data.Query}}{{end}}">{{.T "search.tab_shows"}}</a>
+  <a class="tab {{if eq .Data.Kind "people"}}active{{end}}" href="/search?kind=people{{if .Data.Query}}&q={{.Data.Query}}{{end}}">{{.T "people.tab"}}</a>
+</div>
+{{if eq .Data.Kind "people"}}
+  {{if .Data.Person}}
+  <div class="person-card">
+    {{if .Data.Person.Avatar}}<img class="avatar lg" src="{{.Data.Person.Avatar}}" alt="">{{else}}<span class="avatar lg fallback">{{initial .Data.Person.Name}}</span>{{end}}
+    <div class="person-main"><a href="/u/{{.Data.Person.Username}}"><strong>{{.Data.Person.Name}}</strong></a><span class="muted">@{{.Data.Person.Username}}</span></div>
+    {{if not .Data.Person.Self}}<span data-friend-box>{{template "friend_button" (dict "Username" .Data.Person.Username "State" .Data.Person.State "V" $)}}</span>{{end}}
+  </div>
+  {{else if .Data.Remote}}<p class="muted">{{.T "people.remote"}}</p>
+  {{else if .Data.Query}}<p class="muted">{{.T "people.none"}}</p>
+  {{else}}<p class="muted">{{.T "people.prompt"}}</p>{{end}}
+{{else}}
 {{if .Data.NoMetadata}}<div class="notice">{{.T "home.no_metadata"}}</div>{{end}}
 {{if .Data.SearchFailed}}<div class="notice error">{{.T "err.metadata_unavailable"}}</div>{{end}}
 {{if .Data.Query}}
@@ -16,5 +31,6 @@
   {{end}}
 {{else}}
   <p class="muted">{{.T "search.prompt"}}</p>
+{{end}}
 {{end}}
 {{end}}

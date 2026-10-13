@@ -91,14 +91,15 @@ func New(cfg *config.Config, st *store.Store, a *auth.Service, sy *syncer.Syncer
 }
 
 type View struct {
-	App    *App
-	Lang   string
-	User   *store.User
-	CSRF   string
-	Title  string
-	Path   string
-	Data   map[string]any
-	Unread int
+	App     *App
+	Lang    string
+	User    *store.User
+	CSRF    string
+	Title   string
+	Path    string
+	Data    map[string]any
+	Unread  int
+	Friends int
 }
 
 var LangNames = map[string]string{
@@ -236,6 +237,11 @@ func (a *App) render(w http.ResponseWriter, r *http.Request, name string, status
 			logger.Error("RENDER unread count uid=%d: %v", u.ID, err)
 		} else {
 			v.Unread = n
+		}
+		if n, err := a.Store.PendingFriendCount(u.ID); err != nil {
+			logger.Error("RENDER friend requests uid=%d: %v", u.ID, err)
+		} else {
+			v.Friends = n
 		}
 	}
 	if data == nil {

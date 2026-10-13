@@ -315,6 +315,17 @@ code { background: var(--panel-2); padding: 2px 6px; border-radius: 4px; word-br
 .bottomnav .icon { width: 1.5em; height: 1.5em; }
 .bottomnav a { display: flex; align-items: center; justify-content: center; }
 .stars { display: inline-flex; gap: 2px; }
+.tab { background: none; border-top: 0; border-inline: 0; font: inherit; cursor: pointer; }
+.badge.inline { position: static; display: inline-block; margin-inline-start: 6px; }
+.avatar.sm { width: 36px; height: 36px; }
+.avatar.sm.fallback { font-size: 1rem; }
+.feed-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.feed-body { min-width: 0; }
+.feed-body p { margin: 0 0 4px; }
+.feed-body blockquote { margin: 4px 0; }
+.feed-stars .star { font-size: 1.1rem; padding: 0; cursor: default; }
+.person-card { display: flex; align-items: center; gap: 14px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+.person-main { display: flex; flex-direction: column; flex: 1 1 0; min-width: 0; }
 .star { background: none; border: 0; padding: 2px; font-size: 1.5rem; line-height: 1; color: #5b6075; cursor: pointer; }
 .star.on { color: #f5c518; }
 .star:hover { color: #f5c518; }

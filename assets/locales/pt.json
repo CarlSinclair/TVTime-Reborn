@@ -4,7 +4,7 @@
     "shows": "Minhas séries",
     "calendar": "Calendário",
     "search": "Buscar",
-    "search_placeholder": "Buscar séries",
+    "search_placeholder": "Buscar séries ou @pessoas",
     "settings": "Configurações",
     "theme": "Alternar tema",
     "language": "Idioma",
@@ -61,7 +61,9 @@
     "remaining": "Episódios para assistir: %d",
     "last_aired": "Último episódio exibido",
     "trending": "Em alta esta semana",
-    "no_metadata": "Os dados das séries ainda não estão disponíveis porque o serviço de metadados não está configurado."
+    "no_metadata": "Os dados das séries ainda não estão disponíveis porque o serviço de metadados não está configurado.",
+    "tab_upcoming": "Próximos",
+    "tab_feed": "Feed"
   },
   "stats": {
     "shows": "Séries",
@@ -70,7 +72,8 @@
   },
   "search": {
     "none": "Nenhuma série encontrada.",
-    "prompt": "Digite o nome de uma série na busca."
+    "prompt": "Digite o nome de uma série na busca.",
+    "tab_shows": "Séries"
   },
   "show": {
     "runtime": "%d min",
@@ -276,7 +279,9 @@
     "email_same": "Esse já é o seu e-mail.",
     "telegram_not_linked": "Conecte o Telegram primeiro.",
     "email_not_verified": "Verifique seu e-mail primeiro.",
-    "push_not_enabled": "Ative o push neste dispositivo primeiro."
+    "push_not_enabled": "Ative o push neste dispositivo primeiro.",
+    "friend_self": "Você não pode adicionar a si mesmo.",
+    "friend_remote": "Outros servidores ainda não são suportados."
   },
   "mail": {
     "login": {
@@ -367,7 +372,25 @@
     "pw_strong": "Senha forte",
     "marked_watched": "Marcado como assistido",
     "marked_tip": "Marcado como assistido. Dica: avaliar um episódio faz o mesmo.",
-    "rated": "Avaliado e marcado como assistido"
+    "rated": "Avaliado e marcado como assistido",
+    "friend_add": "Adicionar amigo",
+    "friend_pending": "Pedido enviado",
+    "friend_friends": "Amigos",
+    "friend_accept": "Aceitar",
+    "friend_decline": "Recusar",
+    "friend_remove": "Remover",
+    "friend_cancel": "Cancelar pedido",
+    "friend_sent": "Pedido de amizade enviado.",
+    "friend_now": "Vocês agora são amigos.",
+    "friend_remove_confirm": "Remover este amigo?",
+    "friends_title": "Amigos",
+    "friends_none": "Ainda sem amigos.",
+    "friends_requests": "Pedidos",
+    "friends_sent": "Pedidos enviados",
+    "friends_username": "Nome de usuário",
+    "feed_more": "Carregar mais",
+    "feed_none": "Nada dos seus amigos ainda.",
+    "feed_no_friends": "Você ainda não tem amigos. Aqui estão alguns comentários recentes de outras pessoas."
   },
   "genre": {
     "action_adventure": "Ação e Aventura",
@@ -498,7 +521,15 @@
       "body": "Seu e-mail agora é {email}. Se não foi você, proteja sua conta imediatamente."
     },
     "test_btn": "Testar",
-    "verify_first": "Verifique o e-mail primeiro"
+    "verify_first": "Verifique o e-mail primeiro",
+    "friend_request": {
+      "title": "{user} enviou um pedido de amizade",
+      "body": "Abra sua lista de amigos para responder."
+    },
+    "friend_accepted": {
+      "title": "{user} aceitou seu pedido de amizade",
+      "body": "Agora vocês veem a atividade um do outro."
+    }
   },
   "profile": {
     "bio": "Bio",
@@ -520,7 +551,8 @@
     "upload_hint": "JPEG, PNG, GIF ou WebP, até 6 MB.",
     "view_public": "Ver meu perfil público",
     "watch_time": "Tempo assistido",
-    "week": "Últimos 7 dias"
+    "week": "Últimos 7 dias",
+    "share_activity": "Compartilhar minha atividade com amigos"
   },
   "tg": {
     "error": "Algo deu errado. Tente novamente.",
@@ -598,5 +630,19 @@
     "title": "Sobre",
     "license": "O TVT é software livre sob a GNU Affero General Public License v3.",
     "data_title": "Fontes de dados"
+  },
+  "feed": {
+    "watch_one": "assistiu a um episódio de",
+    "watch_many": "assistiu a %d episódios de",
+    "watch_ep": "assistiu a %s de",
+    "rate": "avaliou um episódio de",
+    "rate_ep": "avaliou %s de",
+    "comment_on": "comentou em %s de"
+  },
+  "people": {
+    "tab": "Pessoas",
+    "prompt": "Digite o nome de usuário exato, por exemplo alice.",
+    "none": "Ninguém com esse nome de usuário.",
+    "remote": "Outros servidores ainda não são suportados."
   }
 }

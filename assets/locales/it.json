@@ -4,7 +4,7 @@
     "shows": "Le mie serie",
     "calendar": "Calendario",
     "search": "Cerca",
-    "search_placeholder": "Cerca serie TV",
+    "search_placeholder": "Cerca serie o @persone",
     "settings": "Impostazioni",
     "theme": "Cambia tema",
     "language": "Lingua",
@@ -61,7 +61,9 @@
     "remaining": "Episodi da guardare: %d",
     "last_aired": "Ultimo episodio andato in onda",
     "trending": "Di tendenza questa settimana",
-    "no_metadata": "I dati delle serie non sono ancora disponibili perché il servizio di metadati non è configurato."
+    "no_metadata": "I dati delle serie non sono ancora disponibili perché il servizio di metadati non è configurato.",
+    "tab_upcoming": "In arrivo",
+    "tab_feed": "Feed"
   },
   "stats": {
     "shows": "Serie",
@@ -70,7 +72,8 @@
   },
   "search": {
     "none": "Nessuna serie trovata.",
-    "prompt": "Scrivi il nome di una serie nella barra di ricerca."
+    "prompt": "Scrivi il nome di una serie nella barra di ricerca.",
+    "tab_shows": "Serie"
   },
   "show": {
     "runtime": "%d min",
@@ -276,7 +279,9 @@
     "email_same": "Questo è già il tuo indirizzo e-mail.",
     "telegram_not_linked": "Collega prima Telegram.",
     "email_not_verified": "Verifica prima il tuo indirizzo e-mail.",
-    "push_not_enabled": "Attiva prima le notifiche push su questo dispositivo."
+    "push_not_enabled": "Attiva prima le notifiche push su questo dispositivo.",
+    "friend_self": "Non puoi aggiungere te stesso.",
+    "friend_remote": "Gli altri server non sono ancora supportati."
   },
   "mail": {
     "login": {
@@ -367,7 +372,25 @@
     "pw_strong": "Password sicura",
     "marked_watched": "Segnato come visto",
     "marked_tip": "Segnato come visto. Suggerimento: votare un episodio fa lo stesso.",
-    "rated": "Votato e segnato come visto"
+    "rated": "Votato e segnato come visto",
+    "friend_add": "Aggiungi amico",
+    "friend_pending": "Richiesta inviata",
+    "friend_friends": "Amici",
+    "friend_accept": "Accetta",
+    "friend_decline": "Rifiuta",
+    "friend_remove": "Rimuovi",
+    "friend_cancel": "Annulla richiesta",
+    "friend_sent": "Richiesta di amicizia inviata.",
+    "friend_now": "Ora siete amici.",
+    "friend_remove_confirm": "Rimuovere questo amico?",
+    "friends_title": "Amici",
+    "friends_none": "Ancora nessun amico.",
+    "friends_requests": "Richieste",
+    "friends_sent": "Richieste inviate",
+    "friends_username": "Nome utente",
+    "feed_more": "Carica altro",
+    "feed_none": "Ancora niente dai tuoi amici.",
+    "feed_no_friends": "Non hai ancora amici. Ecco alcuni commenti recenti di altre persone."
   },
   "genre": {
     "action_adventure": "Azione e avventura",
@@ -498,7 +521,15 @@
       "body": "Il tuo indirizzo e-mail ora è {email}. Se non sei stato tu, proteggi subito il tuo account."
     },
     "test_btn": "Prova",
-    "verify_first": "Verifica prima l'e-mail"
+    "verify_first": "Verifica prima l'e-mail",
+    "friend_request": {
+      "title": "{user} ti ha inviato una richiesta di amicizia",
+      "body": "Apri la tua lista amici per rispondere."
+    },
+    "friend_accepted": {
+      "title": "{user} ha accettato la tua richiesta di amicizia",
+      "body": "Ora vedete l'attività l'uno dell'altro."
+    }
   },
   "profile": {
     "bio": "Bio",
@@ -520,7 +551,8 @@
     "upload_hint": "JPEG, PNG, GIF o WebP, fino a 6 MB.",
     "view_public": "Vedi il mio profilo pubblico",
     "watch_time": "Tempo di visione",
-    "week": "Ultimi 7 giorni"
+    "week": "Ultimi 7 giorni",
+    "share_activity": "Condividi la mia attività con gli amici"
   },
   "tg": {
     "error": "Qualcosa è andato storto. Riprova.",
@@ -598,5 +630,19 @@
     "title": "Informazioni",
     "license": "TVT è software libero con licenza GNU Affero General Public License v3.",
     "data_title": "Fonti dei dati"
+  },
+  "feed": {
+    "watch_one": "ha guardato un episodio di",
+    "watch_many": "ha guardato %d episodi di",
+    "watch_ep": "ha guardato %s di",
+    "rate": "ha votato un episodio di",
+    "rate_ep": "ha votato %s di",
+    "comment_on": "ha commentato %s di"
+  },
+  "people": {
+    "tab": "Persone",
+    "prompt": "Scrivi il nome utente esatto, per esempio alice.",
+    "none": "Nessuno con questo nome utente.",
+    "remote": "Gli altri server non sono ancora supportati."
   }
 }

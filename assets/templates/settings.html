@@ -215,6 +215,10 @@
       <div class="tswitch"><input type="checkbox" class="tswitch-input" id="profile-public" name="public" {{if .User.ProfilePublic}}checked{{end}}><label for="profile-public" class="tswitch-label"><span class="ball"></span></label></div>
       <label class="notify-text" for="profile-public">{{.T "profile.public"}}</label>
     </div>
+    <div class="notify-row">
+      <div class="tswitch"><input type="checkbox" class="tswitch-input" id="profile-share" name="share_activity" {{if .User.ShareActivity}}checked{{end}}><label for="profile-share" class="tswitch-label"><span class="ball"></span></label></div>
+      <label class="notify-text" for="profile-share">{{.T "profile.share_activity"}}</label>
+    </div>
     <p class="form-error" role="alert" hidden></p>
     <button class="btn" type="submit">{{.T "settings.save"}}</button>
   </form>

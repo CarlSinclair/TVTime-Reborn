@@ -4,7 +4,7 @@
     "shows": "My shows",
     "calendar": "Calendar",
     "search": "Search",
-    "search_placeholder": "Search TV shows",
+    "search_placeholder": "Search shows or @people",
     "settings": "Settings",
     "theme": "Toggle theme",
     "language": "Language",
@@ -61,7 +61,9 @@
     "remaining": "Episodes left to watch: %d",
     "last_aired": "Last aired episode",
     "trending": "Trending this week",
-    "no_metadata": "Show data is not available yet because the metadata service is not configured."
+    "no_metadata": "Show data is not available yet because the metadata service is not configured.",
+    "tab_upcoming": "Upcoming",
+    "tab_feed": "Feed"
   },
   "stats": {
     "shows": "Shows",
@@ -70,7 +72,8 @@
   },
   "search": {
     "none": "No shows found.",
-    "prompt": "Type a show name in the search box."
+    "prompt": "Type a show name in the search box.",
+    "tab_shows": "Shows"
   },
   "show": {
     "runtime": "%d min",
@@ -276,7 +279,9 @@
     "email_same": "That is already your email address.",
     "telegram_not_linked": "Connect Telegram first.",
     "email_not_verified": "Verify your email address first.",
-    "push_not_enabled": "Enable push on this device first."
+    "push_not_enabled": "Enable push on this device first.",
+    "friend_self": "You cannot add yourself.",
+    "friend_remote": "Other servers are not supported yet."
   },
   "mail": {
     "login": {
@@ -367,7 +372,25 @@
     "pw_strong": "Strong password",
     "marked_watched": "Marked as watched",
     "marked_tip": "Marked as watched. Tip: rating an episode does the same.",
-    "rated": "Rated and marked as watched"
+    "rated": "Rated and marked as watched",
+    "friend_add": "Add friend",
+    "friend_pending": "Request sent",
+    "friend_friends": "Friends",
+    "friend_accept": "Accept",
+    "friend_decline": "Decline",
+    "friend_remove": "Remove",
+    "friend_cancel": "Cancel request",
+    "friend_sent": "Friend request sent.",
+    "friend_now": "You are now friends.",
+    "friend_remove_confirm": "Remove this friend?",
+    "friends_title": "Friends",
+    "friends_none": "No friends yet.",
+    "friends_requests": "Requests",
+    "friends_sent": "Sent requests",
+    "friends_username": "Username",
+    "feed_more": "Load more",
+    "feed_none": "Nothing from your friends yet.",
+    "feed_no_friends": "You have no friends yet. Here are some recent comments from other people."
   },
   "genre": {
     "action_adventure": "Action & Adventure",
@@ -498,7 +521,15 @@
       "body": "Your email address is now {email}. If this was not you, secure your account immediately."
     },
     "test_btn": "Test",
-    "verify_first": "Verify email first"
+    "verify_first": "Verify email first",
+    "friend_request": {
+      "title": "{user} sent you a friend request",
+      "body": "Open your friends list to answer."
+    },
+    "friend_accepted": {
+      "title": "{user} accepted your friend request",
+      "body": "You can now see each other's activity."
+    }
   },
   "profile": {
     "bio": "Bio",
@@ -520,7 +551,8 @@
     "upload_hint": "JPEG, PNG, GIF or WebP, up to 6 MB.",
     "view_public": "View my public profile",
     "watch_time": "Watch time",
-    "week": "Last 7 days"
+    "week": "Last 7 days",
+    "share_activity": "Share my activity with friends"
   },
   "tg": {
     "error": "Something went wrong. Please try again.",
@@ -598,5 +630,19 @@
     "title": "About",
     "license": "TVT is free software under the GNU Affero General Public License v3.",
     "data_title": "Data sources"
+  },
+  "feed": {
+    "watch_one": "watched an episode of",
+    "watch_many": "watched %d episodes of",
+    "watch_ep": "watched %s of",
+    "rate": "rated an episode of",
+    "rate_ep": "rated %s of",
+    "comment_on": "commented on %s of"
+  },
+  "people": {
+    "tab": "People",
+    "prompt": "Type a username exactly, for example alice.",
+    "none": "No one with that username.",
+    "remote": "Other servers are not supported yet."
   }
 }

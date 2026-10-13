@@ -118,6 +118,12 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/account/export", a.apiExport)
 
 	mux.HandleFunc("GET /api/search", a.apiSearch)
+	mux.HandleFunc("GET /api/people", a.apiPeople)
+	mux.HandleFunc("GET /api/friends", a.apiFriendsList)
+	mux.HandleFunc("POST /api/friends/request", a.apiFriendRequest)
+	mux.HandleFunc("POST /api/friends/respond", a.apiFriendRespond)
+	mux.HandleFunc("POST /api/friends/remove", a.apiFriendRemove)
+	mux.HandleFunc("GET /api/feed", a.apiFeed)
 	mux.HandleFunc("POST /api/show/{tmdb}/follow", a.apiFollow)
 	mux.HandleFunc("POST /api/show/{tmdb}/unfollow", a.apiUnfollow)
 	mux.HandleFunc("POST /api/show/{tmdb}/favorite", a.apiFavorite)
@@ -230,6 +236,40 @@ func (a *App) pageSearch(w http.ResponseWriter, r *http.Request) {
 	lang := a.langOf(w, r)
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	data := map[string]any{"Query": q}
+	kind := r.URL.Query().Get("kind")
+	if strings.HasPrefix(q, "@") {
+		kind = "people"
+	}
+	data["Kind"] = kind
+	if kind == "people" {
+		if viewer := auth.UserFrom(r.Context()); viewer != nil && q != "" {
+			if err := a.allow(a.searchLimit, "p:"+itoa(viewer.ID)); err != nil {
+				a.errorPage(w, r, http.StatusTooManyRequests, "err.rate_limited")
+				return
+			}
+			u, remote, err := a.findPerson(viewer, q)
+			if err != nil {
+				logger.Error("PAGE search people q=%q: %v", q, err)
+				a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
+				return
+			}
+			data["Remote"] = remote
+			if u != nil {
+				pv := a.personJSON(store.Person{ID: u.ID, Username: u.Username, DisplayName: u.DisplayName, AvatarPath: u.AvatarPath})
+				pv.Self = u.ID == viewer.ID
+				if !pv.Self {
+					if pv.State, err = a.Store.FriendState(viewer.ID, u.ID); err != nil {
+						logger.Error("PAGE search people state: %v", err)
+						a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
+						return
+					}
+				}
+				data["Person"] = pv
+			}
+		}
+		a.page(w, r, "search", "nav.search", data)
+		return
+	}
 	if q != "" {
 		if err := a.allow(a.searchLimit, "s:"+auth.ClientIP(r)); err != nil {
 			a.errorPage(w, r, http.StatusTooManyRequests, "err.rate_limited")

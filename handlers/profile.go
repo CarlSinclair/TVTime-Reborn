@@ -50,6 +50,15 @@ func (a *App) pageProfile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if viewer != nil && !isOwn {
+		state, err := a.Store.FriendState(viewer.ID, p.ID)
+		if err != nil {
+			logger.Error("PAGE profile friend state: %v", err)
+			a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
+			return
+		}
+		data["Friend"] = state
+	}
 	if !p.ProfilePublic && !isOwn && (viewer == nil || !viewer.IsAdmin) {
 		data["Private"] = true
 		a.render(w, r, "profile", http.StatusOK, p.Name(), data)

@@ -55,6 +55,7 @@
       </summary>
       <div class="menu">
         <a href="/u/{{.User.Username}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-user"></use></svg>{{.T "nav.profile"}}</a>
+        <button type="button" data-friends-open><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-user-plus"></use></svg>{{.T "js.friends_title"}}{{if gt .Friends 0}} <span class="badge inline" id="friends-badge">{{.Friends}}</span>{{end}}</button>
         <a href="/settings"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-gear"></use></svg>{{.T "nav.settings"}}</a>
         {{if .User.IsAdmin}}<a href="/admin/reports">{{.T "admin.reports"}}</a>{{end}}
         <hr>
@@ -89,6 +90,23 @@
     <a class="cslove-a" href="{{loveHref .Lang}}" rel="author noopener" target="_blank">Carl Sinclair</a>
   </span>
 </footer>
+{{if .User}}
+<dialog class="modal" id="m-friends" aria-labelledby="m-friends-t">
+  <div class="stack">
+    <h2 id="m-friends-t">{{.T "js.friends_title"}}</h2>
+    <form class="inline-field" id="friends-add-form">
+      <input type="text" id="friends-add-name" maxlength="64" placeholder="{{.T "js.friends_username"}}" aria-label="{{.T "js.friends_username"}}" autocomplete="off">
+      <button class="icon-btn solid" type="submit" aria-label="{{.T "js.friend_add"}}" title="{{.T "js.friend_add"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-plus"></use></svg></button>
+    </form>
+    <p class="form-error" id="friends-error" role="alert" hidden></p>
+    <div id="friends-incoming-box" hidden><h3>{{.T "js.friends_requests"}}</h3><ul class="blocked" id="friends-incoming"></ul></div>
+    <ul class="blocked" id="friends-list"></ul>
+    <p class="muted" id="friends-none" hidden>{{.T "js.friends_none"}}</p>
+    <div id="friends-outgoing-box" hidden><h3>{{.T "js.friends_sent"}}</h3><ul class="blocked" id="friends-outgoing"></ul></div>
+    <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button></div>
+  </div>
+</dialog>
+{{end}}
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <script type="application/json" id="i18n">{{.JSStrings}}</script>
 <script src="/static/app.js?v={{assetV}}" defer></script>

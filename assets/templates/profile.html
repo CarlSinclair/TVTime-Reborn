@@ -8,7 +8,7 @@
       <h1>{{.Name}}</h1>
       <p class="muted">@{{.Username}} &middot; {{$.T "profile.joined" (slice .CreatedAt 0 10)}}</p>
     </div>
-    {{if $.Data.IsOwn}}<a class="btn ghost small push-end" href="/settings?tab=profile">{{$.T "profile.edit"}}</a>{{end}}
+    {{if $.Data.IsOwn}}<a class="btn ghost small push-end" href="/settings?tab=profile">{{$.T "profile.edit"}}</a>{{else if $.User}}<span class="push-end" data-friend-box>{{template "friend_button" (dict "Username" .Username "State" $.Data.Friend "V" $)}}</span>{{end}}
   </div>
   {{if $.Data.Private}}
   <p class="notice">{{$.T "profile.private"}}</p>

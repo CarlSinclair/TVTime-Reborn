@@ -1,10 +1,18 @@
 {{define "content"}}
 {{if .Data.NoMetadata}}<div class="notice">{{.T "home.no_metadata"}}</div>{{end}}
-<section>
-  <h2>{{.T "home.up_next"}}</h2>
+<div class="tabs" role="tablist">
+  <button class="tab active" type="button" role="tab" data-home-tab="upcoming">{{.T "home.tab_upcoming"}}</button>
+  <button class="tab" type="button" role="tab" data-home-tab="feed">{{.T "home.tab_feed"}}</button>
+</div>
+<section id="home-upcoming">
   <div class="upnext" id="upnext">
     {{range .Data.UpNext}}{{template "upnext_card" (dict "It" . "V" $)}}{{end}}
   </div>
   <p class="muted" id="upnext-empty" {{if .Data.UpNext}}hidden{{end}}>{{.T "home.up_next_empty"}}</p>
+</section>
+<section id="home-feed" hidden>
+  <p class="muted" id="feed-note" hidden></p>
+  <div id="feed-list"></div>
+  <p><button class="btn ghost" type="button" id="feed-more" hidden>{{.T "js.feed_more"}}</button></p>
 </section>
 {{end}}

@@ -37,6 +37,7 @@ type User struct {
 	NotifyTelegram   bool
 	NotifyOffsetMin  int
 	PendingEmail     string
+	ShareActivity    bool
 	CreatedAt        string
 }
 
@@ -67,14 +68,14 @@ func ValidUsername(u string) bool { return usernameRe.MatchString(u) }
 
 const userCols = `id, COALESCE(email,''), username, display_name, bio, avatar_path, banner_path, password_hash, email_verified, locale, timezone,
   profile_public, is_admin, is_banned, totp_secret_enc, totp_enabled, totp_last_step, COALESCE(telegram_id,0), telegram_username, telegram_chat_id,
-  notify_in_app, notify_push, notify_email, notify_telegram, notify_offset_min, pending_email, created_at`
+  notify_in_app, notify_push, notify_email, notify_telegram, notify_offset_min, pending_email, share_activity, created_at`
 
 func scanUser(row interface{ Scan(...any) error }) (*User, error) {
 	var u User
-	var ev, pub, adm, ban, te, nIn, nPush, nMail, nTg int
+	var ev, pub, adm, ban, te, nIn, nPush, nMail, nTg, share int
 	if err := row.Scan(&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.Bio, &u.AvatarPath, &u.BannerPath, &u.PasswordHash, &ev, &u.Locale, &u.Timezone,
 		&pub, &adm, &ban, &u.TOTPSecretEnc, &te, &u.TOTPLastStep, &u.TelegramID, &u.TelegramUsername, &u.TelegramChatID,
-		&nIn, &nPush, &nMail, &nTg, &u.NotifyOffsetMin, &u.PendingEmail, &u.CreatedAt); err != nil {
+		&nIn, &nPush, &nMail, &nTg, &u.NotifyOffsetMin, &u.PendingEmail, &share, &u.CreatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -82,6 +83,7 @@ func scanUser(row interface{ Scan(...any) error }) (*User, error) {
 	}
 	u.EmailVerified, u.ProfilePublic, u.IsAdmin, u.IsBanned, u.TOTPEnabled = ev == 1, pub == 1, adm == 1, ban == 1, te == 1
 	u.NotifyInApp, u.NotifyPush, u.NotifyEmail, u.NotifyTelegram = nIn == 1, nPush == 1, nMail == 1, nTg == 1
+	u.ShareActivity = share == 1
 	return &u, nil
 }
 
@@ -266,12 +268,15 @@ func (s *Store) ConfirmEmailChange(userID int64) (oldEmail, newEmail string, err
 	return oldEmail, newEmail, tx.Commit()
 }
 
-func (s *Store) UpdateProfile(userID int64, displayName, bio string, public bool) error {
-	p := 0
+func (s *Store) UpdateProfile(userID int64, displayName, bio string, public, shareActivity bool) error {
+	p, sh := 0, 0
 	if public {
 		p = 1
 	}
-	return s.exec("update profile", userID, `UPDATE users SET display_name = ?, bio = ?, profile_public = ? WHERE id = ?`, displayName, bio, p, userID)
+	if shareActivity {
+		sh = 1
+	}
+	return s.exec("update profile", userID, `UPDATE users SET display_name = ?, bio = ?, profile_public = ?, share_activity = ? WHERE id = ?`, displayName, bio, p, sh, userID)
 }
 
 func (s *Store) SetAvatar(userID int64, path string) error {

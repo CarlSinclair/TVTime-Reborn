@@ -4,7 +4,7 @@
     "shows": "マイドラマ",
     "calendar": "カレンダー",
     "search": "検索",
-    "search_placeholder": "ドラマを検索",
+    "search_placeholder": "作品または@ユーザーを検索",
     "settings": "設定",
     "theme": "テーマを切り替え",
     "language": "言語",
@@ -61,7 +61,9 @@
     "remaining": "未視聴のエピソード：%d",
     "last_aired": "最新の放送エピソード",
     "trending": "今週のトレンド",
-    "no_metadata": "メタデータサービスが未設定のため、作品データはまだ利用できません。"
+    "no_metadata": "メタデータサービスが未設定のため、作品データはまだ利用できません。",
+    "tab_upcoming": "今後の配信",
+    "tab_feed": "フィード"
   },
   "stats": {
     "shows": "作品数",
@@ -70,7 +72,8 @@
   },
   "search": {
     "none": "ドラマが見つかりませんでした。",
-    "prompt": "検索ボックスに作品名を入力してください。"
+    "prompt": "検索ボックスに作品名を入力してください。",
+    "tab_shows": "作品"
   },
   "show": {
     "runtime": "%d分",
@@ -276,7 +279,9 @@
     "email_same": "すでにそのメールアドレスです。",
     "telegram_not_linked": "先にTelegramを連携してください。",
     "email_not_verified": "先にメールアドレスを確認してください。",
-    "push_not_enabled": "先にこの端末でプッシュを有効にしてください。"
+    "push_not_enabled": "先にこの端末でプッシュを有効にしてください。",
+    "friend_self": "自分自身は追加できません。",
+    "friend_remote": "他のサーバーにはまだ対応していません。"
   },
   "mail": {
     "login": {
@@ -367,7 +372,25 @@
     "pw_strong": "強力なパスワード",
     "marked_watched": "視聴済みにしました",
     "marked_tip": "視聴済みにしました。ヒント：エピソードを評価しても同じ操作になります。",
-    "rated": "評価して視聴済みにしました"
+    "rated": "評価して視聴済みにしました",
+    "friend_add": "友達を追加",
+    "friend_pending": "リクエスト送信済み",
+    "friend_friends": "友達",
+    "friend_accept": "承認",
+    "friend_decline": "拒否",
+    "friend_remove": "削除",
+    "friend_cancel": "リクエストを取り消す",
+    "friend_sent": "友達リクエストを送信しました。",
+    "friend_now": "友達になりました。",
+    "friend_remove_confirm": "この友達を削除しますか？",
+    "friends_title": "友達",
+    "friends_none": "まだ友達がいません。",
+    "friends_requests": "リクエスト",
+    "friends_sent": "送信済みリクエスト",
+    "friends_username": "ユーザー名",
+    "feed_more": "さらに読み込む",
+    "feed_none": "友達からの更新はまだありません。",
+    "feed_no_friends": "まだ友達がいません。他のユーザーの最近のコメントをいくつか表示します。"
   },
   "genre": {
     "action_adventure": "アクション＆アドベンチャー",
@@ -498,7 +521,15 @@
       "body": "メールアドレスは {email} になりました。心当たりがない場合は、すぐにアカウントを保護してください。"
     },
     "test_btn": "テスト",
-    "verify_first": "先にメールを確認"
+    "verify_first": "先にメールを確認",
+    "friend_request": {
+      "title": "{user}さんから友達リクエストが届きました",
+      "body": "友達リストを開いて返信してください。"
+    },
+    "friend_accepted": {
+      "title": "{user}さんが友達リクエストを承認しました",
+      "body": "お互いのアクティビティが見られるようになりました。"
+    }
   },
   "profile": {
     "bio": "自己紹介",
@@ -520,7 +551,8 @@
     "upload_hint": "JPEG、PNG、GIF、WebP（6MBまで）。",
     "view_public": "公開プロフィールを見る",
     "watch_time": "視聴時間",
-    "week": "過去7日間"
+    "week": "過去7日間",
+    "share_activity": "アクティビティを友達と共有する"
   },
   "tg": {
     "error": "問題が発生しました。もう一度お試しください。",
@@ -598,5 +630,19 @@
     "title": "このサービスについて",
     "license": "TVTは、GNU Affero General Public License v3の下で公開されているフリーソフトウェアです。",
     "data_title": "データの提供元"
+  },
+  "feed": {
+    "watch_one": "が次のエピソードを視聴しました：",
+    "watch_many": "が%d話を視聴しました：",
+    "watch_ep": "が%sを視聴しました：",
+    "rate": "が次のエピソードを評価しました：",
+    "rate_ep": "が%sを評価しました：",
+    "comment_on": "が%sにコメントしました："
+  },
+  "people": {
+    "tab": "ユーザー",
+    "prompt": "ユーザー名を正確に入力してください（例：alice）。",
+    "none": "そのユーザー名の人は見つかりません。",
+    "remote": "他のサーバーにはまだ対応していません。"
   }
 }

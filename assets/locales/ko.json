@@ -4,7 +4,7 @@
     "shows": "내 드라마",
     "calendar": "캘린더",
     "search": "검색",
-    "search_placeholder": "드라마 검색",
+    "search_placeholder": "작품 또는 @사람 검색",
     "settings": "설정",
     "theme": "테마 전환",
     "language": "언어",
@@ -61,7 +61,9 @@
     "remaining": "남은 에피소드: %d",
     "last_aired": "가장 최근 방영된 에피소드",
     "trending": "이번 주 인기",
-    "no_metadata": "메타데이터 서비스가 설정되지 않아 작품 데이터를 아직 사용할 수 없습니다."
+    "no_metadata": "메타데이터 서비스가 설정되지 않아 작품 데이터를 아직 사용할 수 없습니다.",
+    "tab_upcoming": "예정",
+    "tab_feed": "피드"
   },
   "stats": {
     "shows": "작품",
@@ -70,7 +72,8 @@
   },
   "search": {
     "none": "드라마를 찾지 못했습니다.",
-    "prompt": "검색창에 작품 이름을 입력하세요."
+    "prompt": "검색창에 작품 이름을 입력하세요.",
+    "tab_shows": "작품"
   },
   "show": {
     "runtime": "%d분",
@@ -276,7 +279,9 @@
     "email_same": "이미 사용 중인 이메일 주소입니다.",
     "telegram_not_linked": "먼저 Telegram을 연결하세요.",
     "email_not_verified": "먼저 이메일 주소를 인증하세요.",
-    "push_not_enabled": "먼저 이 기기에서 푸시를 켜세요."
+    "push_not_enabled": "먼저 이 기기에서 푸시를 켜세요.",
+    "friend_self": "자기 자신은 추가할 수 없습니다.",
+    "friend_remote": "다른 서버는 아직 지원하지 않습니다."
   },
   "mail": {
     "login": {
@@ -367,7 +372,25 @@
     "pw_strong": "강력한 비밀번호",
     "marked_watched": "시청 완료로 표시했습니다",
     "marked_tip": "시청 완료로 표시했습니다. 팁: 에피소드를 평가해도 같은 효과입니다.",
-    "rated": "평가하고 시청 완료로 표시했습니다"
+    "rated": "평가하고 시청 완료로 표시했습니다",
+    "friend_add": "친구 추가",
+    "friend_pending": "요청 보냄",
+    "friend_friends": "친구",
+    "friend_accept": "수락",
+    "friend_decline": "거절",
+    "friend_remove": "삭제",
+    "friend_cancel": "요청 취소",
+    "friend_sent": "친구 요청을 보냈습니다.",
+    "friend_now": "이제 친구입니다.",
+    "friend_remove_confirm": "이 친구를 삭제할까요?",
+    "friends_title": "친구",
+    "friends_none": "아직 친구가 없습니다.",
+    "friends_requests": "요청",
+    "friends_sent": "보낸 요청",
+    "friends_username": "사용자 이름",
+    "feed_more": "더 보기",
+    "feed_none": "친구의 소식이 아직 없습니다.",
+    "feed_no_friends": "아직 친구가 없습니다. 다른 사람들의 최근 댓글을 보여 드립니다."
   },
   "genre": {
     "action_adventure": "액션 & 어드벤처",
@@ -498,7 +521,15 @@
       "body": "이메일 주소가 이제 {email}입니다. 본인이 아니라면 즉시 계정을 보호하세요."
     },
     "test_btn": "테스트",
-    "verify_first": "먼저 이메일을 인증하세요"
+    "verify_first": "먼저 이메일을 인증하세요",
+    "friend_request": {
+      "title": "{user}님이 친구 요청을 보냈습니다",
+      "body": "친구 목록을 열어 응답하세요."
+    },
+    "friend_accepted": {
+      "title": "{user}님이 친구 요청을 수락했습니다",
+      "body": "이제 서로의 활동을 볼 수 있습니다."
+    }
   },
   "profile": {
     "bio": "소개",
@@ -520,7 +551,8 @@
     "upload_hint": "JPEG, PNG, GIF, WebP (최대 6MB).",
     "view_public": "내 공개 프로필 보기",
     "watch_time": "시청 시간",
-    "week": "최근 7일"
+    "week": "최근 7일",
+    "share_activity": "내 활동을 친구와 공유"
   },
   "tg": {
     "error": "문제가 발생했습니다. 다시 시도해 주세요.",
@@ -598,5 +630,19 @@
     "title": "소개",
     "license": "TVT는 GNU Affero General Public License v3에 따른 자유 소프트웨어입니다.",
     "data_title": "데이터 출처"
+  },
+  "feed": {
+    "watch_one": "님이 다음 에피소드를 시청했습니다:",
+    "watch_many": "님이 %d개 에피소드를 시청했습니다:",
+    "watch_ep": "님이 %s을(를) 시청했습니다:",
+    "rate": "님이 다음 에피소드를 평가했습니다:",
+    "rate_ep": "님이 %s을(를) 평가했습니다:",
+    "comment_on": "님이 %s에 댓글을 남겼습니다:"
+  },
+  "people": {
+    "tab": "사람",
+    "prompt": "사용자 이름을 정확히 입력하세요. 예: alice.",
+    "none": "해당 사용자 이름의 사람이 없습니다.",
+    "remote": "다른 서버는 아직 지원하지 않습니다."
   }
 }

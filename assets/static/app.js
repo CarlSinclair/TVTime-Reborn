@@ -361,6 +361,18 @@
       setWatchedState(el, watched);
       return;
     }
+    if ("friendAdd" in d || "friendAccept" in d) {
+      const adding = "friendAdd" in d;
+      const username = adding ? d.friendAdd : d.friendAccept;
+      const data = await run(el, () =>
+        adding ? api("/api/friends/request", { username }) : api("/api/friends/respond", { username, accept: true })
+      );
+      if (!data) return;
+      const box = el.closest("[data-friend-box]");
+      if (box) box.replaceChildren(friendTag(data.state));
+      toast(t(data.state === "friends" ? "friend_now" : "friend_sent"), "ok");
+      return;
+    }
     if ("star" in d) {
       const wrap = el.closest(".stars");
       const card = el.closest(".upnext-item");
@@ -798,9 +810,10 @@
       if (value.length < 2) return hide();
       timer = setTimeout(async () => {
         const mine = ++seq;
+        const people = value.startsWith("@");
         let data;
         try {
-          data = await api("/api/search?q=" + encodeURIComponent(value), null, "GET");
+          data = await api((people ? "/api/people?q=" : "/api/search?q=") + encodeURIComponent(value), null, "GET");
         } catch (err) {
           if (mine === seq) hide();
           console.warn("search failed", err);
@@ -808,6 +821,24 @@
         }
         if (mine !== seq) return;
         suggest.textContent = "";
+        if (people) {
+          data.results.forEach((r) => {
+            const a = document.createElement("a");
+            a.href = "/u/" + r.username;
+            const span = document.createElement("span");
+            span.textContent = r.name + " @" + r.username;
+            if (r.avatar) {
+              const img = document.createElement("img");
+              img.alt = "";
+              img.src = r.avatar;
+              a.append(img);
+            }
+            a.append(span);
+            suggest.appendChild(a);
+          });
+          suggest.hidden = data.results.length === 0;
+          return;
+        }
         data.results.forEach((r) => {
           const a = document.createElement("a");
           a.href = "/show/" + r.id;
@@ -835,9 +866,165 @@
     return Number.isNaN(d.getTime()) ? stamp : d.toLocaleString(lang);
   };
 
-  document.querySelectorAll("time[data-ts]").forEach((node) => {
-    node.textContent = localTime(node.dataset.ts);
+  const localizeTimes = (root) => {
+    (root || document).querySelectorAll("time[data-ts]").forEach((node) => {
+      node.textContent = localTime(node.dataset.ts);
+    });
+  };
+  localizeTimes();
+
+  const friendTag = (state) => {
+    const tag = document.createElement("span");
+    tag.className = "tag";
+    tag.textContent = t(state === "outgoing" ? "friend_pending" : "friend_friends");
+    return tag;
+  };
+
+  const actionButton = (label, cls, handler) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn small " + cls;
+    b.textContent = label;
+    b.addEventListener("click", handler);
+    return b;
+  };
+
+  const friendsDialog = document.getElementById("m-friends");
+
+  const renderPeople = (ul, people, actions) => {
+    ul.replaceChildren();
+    people.forEach((p) => {
+      const li = document.createElement("li");
+      const link = document.createElement("a");
+      link.href = "/u/" + p.username;
+      link.textContent = p.name + " (@" + p.username + ")";
+      const box = document.createElement("span");
+      box.className = "row-actions";
+      actions(p).forEach((b) => box.appendChild(b));
+      li.append(link, box);
+      ul.appendChild(li);
+    });
+  };
+
+  const loadFriends = async () => {
+    const data = await api("/api/friends", null, "GET");
+    const act = async (path, body, message) => {
+      const res = await run(null, () => api(path, body));
+      if (!res) return;
+      if (message) toast(message, "ok");
+      await loadFriends();
+    };
+    renderPeople(document.getElementById("friends-incoming"), data.incoming, (p) => [
+      actionButton(t("friend_accept"), "", () => act("/api/friends/respond", { username: p.username, accept: true }, t("friend_now"))),
+      actionButton(t("friend_decline"), "ghost", () => act("/api/friends/respond", { username: p.username, accept: false })),
+    ]);
+    renderPeople(document.getElementById("friends-list"), data.friends, (p) => [
+      actionButton(t("friend_remove"), "ghost", () => {
+        if (window.confirm(t("friend_remove_confirm"))) act("/api/friends/remove", { username: p.username });
+      }),
+    ]);
+    renderPeople(document.getElementById("friends-outgoing"), data.outgoing, (p) => [
+      actionButton(t("friend_cancel"), "ghost", () => act("/api/friends/remove", { username: p.username })),
+    ]);
+    document.getElementById("friends-incoming-box").hidden = data.incoming.length === 0;
+    document.getElementById("friends-outgoing-box").hidden = data.outgoing.length === 0;
+    document.getElementById("friends-none").hidden = data.friends.length + data.incoming.length + data.outgoing.length > 0;
+    const badge = document.getElementById("friends-badge");
+    if (badge) {
+      badge.textContent = String(data.incoming.length);
+      badge.hidden = data.incoming.length === 0;
+    }
+  };
+
+  const openFriends = async () => {
+    if (!friendsDialog) return;
+    const menu = document.getElementById("account-menu");
+    if (menu) menu.open = false;
+    const ok = await run(null, async () => {
+      await loadFriends();
+      return true;
+    });
+    if (ok) friendsDialog.showModal();
+  };
+
+  document.addEventListener("click", (event) => {
+    if (event.target.closest("[data-friends-open]")) openFriends();
   });
+
+  const friendsForm = document.getElementById("friends-add-form");
+  if (friendsForm) {
+    friendsForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const input = document.getElementById("friends-add-name");
+      const errBox = document.getElementById("friends-error");
+      errBox.hidden = true;
+      const name = input.value.trim();
+      if (!name) return;
+      const data = await run(null, async () => {
+        try {
+          return await api("/api/friends/request", { username: name });
+        } catch (err) {
+          errBox.textContent = err.message;
+          errBox.hidden = false;
+          throw err;
+        }
+      });
+      if (!data) return;
+      input.value = "";
+      toast(t(data.state === "friends" ? "friend_now" : "friend_sent"), "ok");
+      await loadFriends();
+    });
+  }
+
+  if (new URLSearchParams(window.location.search).get("friends") === "1") openFriends();
+
+  const homeTabs = document.querySelectorAll("[data-home-tab]");
+  if (homeTabs.length) {
+    const upcoming = document.getElementById("home-upcoming");
+    const feed = document.getElementById("home-feed");
+    const list = document.getElementById("feed-list");
+    const note = document.getElementById("feed-note");
+    const more = document.getElementById("feed-more");
+    let feedLoaded = false;
+    let cursor = "";
+    const loadFeed = async (before) => {
+      const data = await run(null, () => api("/api/feed" + (before ? "?before=" + encodeURIComponent(before) : ""), null, "GET"));
+      if (!data) return;
+      list.insertAdjacentHTML("beforeend", data.html);
+      localizeTimes(list);
+      if (!before) {
+        note.hidden = data.mode === "friends";
+        note.textContent = t(data.mode === "suggested" ? "feed_no_friends" : "feed_none");
+      }
+      cursor = data.next || "";
+      more.hidden = !cursor;
+    };
+    const show = (name) => {
+      homeTabs.forEach((b) => b.classList.toggle("active", b.dataset.homeTab === name));
+      upcoming.hidden = name !== "upcoming";
+      feed.hidden = name !== "feed";
+      if (name === "feed" && !feedLoaded) {
+        feedLoaded = true;
+        loadFeed("");
+      }
+      try {
+        localStorage.setItem("tt-home-tab", name);
+      } catch (err) {
+        console.warn("home tab not stored", err);
+      }
+    };
+    homeTabs.forEach((b) => b.addEventListener("click", () => show(b.dataset.homeTab)));
+    more.addEventListener("click", () => loadFeed(cursor));
+    let start = new URLSearchParams(window.location.search).get("tab");
+    if (!start) {
+      try {
+        start = localStorage.getItem("tt-home-tab");
+      } catch (err) {
+        start = null;
+      }
+    }
+    if (start === "feed") show("feed");
+  }
 
   const bell = document.getElementById("bell");
   if (bell) {

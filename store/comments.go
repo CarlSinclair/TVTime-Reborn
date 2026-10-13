@@ -294,10 +294,24 @@ func (s *Store) Block(blockerID int64, username string) error {
 	if u.ID == blockerID {
 		return ErrSelfReport
 	}
-	if _, err := s.DB.Exec(`INSERT INTO blocks (blocker_id, blocked_id, created_at) VALUES (?,?,?) ON CONFLICT DO NOTHING`, blockerID, u.ID, Now()); err != nil {
-		return fmt.Errorf("block uid=%d target=%d: %w", blockerID, u.ID, err)
+	return s.blockUser(blockerID, u.ID)
+}
+
+// blockUser records the block and ends any friendship or pending request
+// between the two, so a blocked person has no way to reach the blocker.
+func (s *Store) blockUser(blockerID, targetID int64) error {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return fmt.Errorf("begin block uid=%d target=%d: %w", blockerID, targetID, err)
 	}
-	return nil
+	defer tx.Rollback()
+	if _, err := tx.Exec(`INSERT INTO blocks (blocker_id, blocked_id, created_at) VALUES (?,?,?) ON CONFLICT DO NOTHING`, blockerID, targetID, Now()); err != nil {
+		return fmt.Errorf("block uid=%d target=%d: %w", blockerID, targetID, err)
+	}
+	if _, err := tx.Exec(`DELETE FROM friend_requests WHERE (requester_id = ? AND addressee_id = ?) OR (requester_id = ? AND addressee_id = ?)`, blockerID, targetID, targetID, blockerID); err != nil {
+		return fmt.Errorf("end friendship on block uid=%d target=%d: %w", blockerID, targetID, err)
+	}
+	return tx.Commit()
 }
 
 func (s *Store) BlockByComment(blockerID, commentID int64) error {
@@ -311,10 +325,7 @@ func (s *Store) BlockByComment(blockerID, commentID int64) error {
 	if owner == blockerID {
 		return ErrSelfReport
 	}
-	if _, err := s.DB.Exec(`INSERT INTO blocks (blocker_id, blocked_id, created_at) VALUES (?,?,?) ON CONFLICT DO NOTHING`, blockerID, owner, Now()); err != nil {
-		return fmt.Errorf("block uid=%d target=%d: %w", blockerID, owner, err)
-	}
-	return nil
+	return s.blockUser(blockerID, owner)
 }
 
 func (s *Store) Unblock(blockerID int64, username string) error {

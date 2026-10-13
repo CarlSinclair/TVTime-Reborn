@@ -1,0 +1,6 @@
+{{define "friend_button"}}
+{{if eq .State "none"}}<button class="btn small" type="button" data-friend-add="{{.Username}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-user-plus"></use></svg> {{.V.T "js.friend_add"}}</button>
+{{else if eq .State "outgoing"}}<span class="tag">{{.V.T "js.friend_pending"}}</span>
+{{else if eq .State "incoming"}}<button class="btn small" type="button" data-friend-accept="{{.Username}}">{{.V.T "js.friend_accept"}}</button>
+{{else}}<span class="tag">{{.V.T "js.friend_friends"}}</span>{{end}}
+{{end}}

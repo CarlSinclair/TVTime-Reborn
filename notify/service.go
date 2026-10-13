@@ -70,6 +70,8 @@ var Events = map[string]Event{
 	"import_done":            {"import_done", "system"},
 	"email_change_requested": {"email_change_requested", "security"},
 	"email_changed":          {"email_changed", "security"},
+	"friend_request":         {"friend_request", "social"},
+	"friend_accepted":        {"friend_accepted", "social"},
 	"test":                   {"test", "system"},
 }
 
