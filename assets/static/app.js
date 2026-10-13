@@ -410,6 +410,32 @@
       if (data) window.location.reload();
       return;
     }
+    if ("userEdit" in d) {
+      const form = document.getElementById("user-edit-form");
+      form.dataset.api = "/api/admin/users/" + d.userEdit + "/update";
+      form.elements.display.value = d.display;
+      form.elements.email.value = d.email;
+      form.elements.verified.checked = d.verified === "1";
+      form.querySelector(".form-error").hidden = true;
+      document.getElementById("m-user-edit").showModal();
+      return;
+    }
+    if ("userDelete" in d) {
+      if (!window.confirm(d.confirm)) return;
+      const data = await run(el, () => api("/api/admin/users/" + d.userDelete + "/delete"));
+      if (data) window.location.reload();
+      return;
+    }
+    if ("adminUnban" in d) {
+      const data = await run(el, () => api("/api/admin/users/" + d.adminUnban + "/ban", { banned: false }));
+      if (data) window.location.reload();
+      return;
+    }
+    if ("signups" in d) {
+      const data = await run(el, () => api("/api/admin/signups", { closed: d.signups === "1" }));
+      if (data) window.location.reload();
+      return;
+    }
     if ("adminDismissUser" in d) {
       const data = await run(el, () => api("/api/admin/users/" + d.adminDismissUser + "/dismiss-reports"));
       if (data) window.location.reload();
@@ -1216,7 +1242,8 @@
       viewerWatched = data.viewer_watched;
       count.textContent = "(" + data.total + ")";
       if (!append) list.textContent = "";
-      if (data.comments.length === 0 && !append) {
+      if (kind === "profile") root.hidden = data.total === 0 && !document.getElementById("comment-form");
+      if (data.comments.length === 0 && !append && kind !== "profile") {
         const li = document.createElement("li");
         li.className = "muted";
         li.textContent = t("comments_empty");

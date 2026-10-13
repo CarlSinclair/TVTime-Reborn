@@ -345,7 +345,7 @@ func TestPendingRequestShowsAPendingTagNotAButton(t *testing.T) {
 		t.Fatalf("search results show Pending as well")
 	}
 	_, menu := alice.get("/")
-	if strings.Contains(menu, "/admin/reports") {
+	if strings.Contains(menu, `href="/admin"`) {
 		t.Fatalf("the admin link is only for admins")
 	}
 }
@@ -358,7 +358,7 @@ func TestAdminLinkSitsBetweenSeparatorsBeforeLogout(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, page := c.get("/")
-	i := strings.Index(page, `href="/admin/reports"`)
+	i := strings.Index(page, `href="/admin"`)
 	logout := strings.Index(page, `data-logout`)
 	if i < 0 || logout < 0 || i > logout {
 		t.Fatalf("the admin link must appear in the account menu before Log out")

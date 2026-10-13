@@ -121,7 +121,7 @@ func (s *Syncer) SyncShow(ctx context.Context, tmdbID int64) (*store.Show, error
 		inputs = append(inputs, in)
 	}
 	sh := &store.Show{
-		TMDBID: d.ID, TVDBID: d.ExternalIDs.TVDBID, IMDbID: d.ExternalIDs.IMDbID, Name: d.Name, OriginalName: d.OriginalName,
+		TMDBID: d.ID, TVDBID: d.ExternalIDs.TVDBID, IMDbID: d.ExternalIDs.IMDbID, Name: d.DisplayName(), OriginalName: d.OriginalName,
 		Overview: d.Overview, Status: d.Status, FirstAirDate: d.FirstAirDate, LastAirDate: d.LastAirDate,
 		PosterPath: d.PosterPath, BackdropPath: d.BackdropPath, VoteAverage: d.VoteAverage, VoteCount: d.VoteCount,
 		Genres: names(d.Genres), Networks: names(d.Networks), OriginalLanguage: d.OriginalLanguage,
@@ -131,7 +131,12 @@ func (s *Syncer) SyncShow(ctx context.Context, tmdbID int64) (*store.Show, error
 	if err != nil {
 		return nil, err
 	}
-	logger.Info("SYNC show tmdb=%d id=%d name=%q seasons=%d", tmdbID, id, d.Name, len(inputs))
+	logger.Info("SYNC show tmdb=%d id=%d name=%q seasons=%d", tmdbID, id, sh.Name, len(inputs))
+	if n, err := s.Store.CompleteFinished(0, id); err != nil {
+		logger.Error("SYNC complete finished show=%d: %v", id, err)
+	} else if n > 0 {
+		logger.Info("SYNC marked %d follows of show=%d completed", n, id)
+	}
 	saved, err := s.Store.ShowByID(id)
 	if err != nil {
 		return nil, err
@@ -202,7 +207,11 @@ func (s *Syncer) syncShowLang(ctx context.Context, sh *store.Show, lang string) 
 			eps = append(eps, store.EpisodeI18nInput{Season: ep.SeasonNumber, Number: ep.EpisodeNumber, Name: ep.Name, Overview: ep.Overview})
 		}
 	}
-	return s.Store.SaveShowI18n(sh.ID, lang, d.Name, d.Overview, eps)
+	name := d.Name
+	if d.Name == d.OriginalName && !strings.EqualFold(d.OriginalLanguage, lang) {
+		name = ""
+	}
+	return s.Store.SaveShowI18n(sh.ID, lang, name, d.Overview, eps)
 }
 
 func (s *Syncer) Run(ctx context.Context) {

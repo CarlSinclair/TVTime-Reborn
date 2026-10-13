@@ -62,8 +62,14 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /about", a.pageSimple("about", "about.title"))
 	mux.HandleFunc("GET /offline", a.pageSimple("offline", "offline.title"))
 	mux.HandleFunc("GET /t/{purpose}", a.pageToken)
-	mux.HandleFunc("GET /admin/reports", a.pageAdminReports)
-	mux.HandleFunc("GET /admin/servers", a.pageAdminServers)
+	mux.HandleFunc("GET /admin", a.pageAdmin)
+	mux.HandleFunc("GET /admin/reports", a.adminRedirect("reports"))
+	mux.HandleFunc("GET /admin/servers", a.adminRedirect("servers"))
+	mux.HandleFunc("POST /api/admin/servers/add", a.apiAdminServerAdd)
+	mux.HandleFunc("POST /api/admin/users", a.apiAdminUserCreate)
+	mux.HandleFunc("POST /api/admin/users/{id}/update", a.apiAdminUserUpdate)
+	mux.HandleFunc("POST /api/admin/users/{id}/delete", a.apiAdminUserDelete)
+	mux.HandleFunc("POST /api/admin/signups", a.apiAdminSignups)
 	mux.HandleFunc("POST /api/admin/servers/block", a.apiAdminServer(false))
 	mux.HandleFunc("POST /api/admin/servers/forget", a.apiAdminServer(true))
 
@@ -208,7 +214,7 @@ func (a *App) pageSimple(name, titleKey string) http.HandlerFunc {
 		data := map[string]any{}
 		if code := r.URL.Query().Get("error"); code != "" {
 			switch code {
-			case "telegram_failed", "telegram_unavailable", "banned", "rate_limited", "internal":
+			case "telegram_failed", "telegram_unavailable", "banned", "rate_limited", "internal", "signups_closed":
 				data["ErrorKey"] = "err." + code
 			}
 		}
@@ -378,7 +384,7 @@ func (a *App) pageShow(w http.ResponseWriter, r *http.Request) {
 		a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
 		return
 	}
-	data := map[string]any{"Show": sh, "Seasons": seasons}
+	data := map[string]any{"Show": sh, "Seasons": seasons, "SeasonProgress": map[int]store.Progress{}}
 	if list, err := a.Store.ShowRatings(sh.ID); err != nil {
 		logger.Error("PAGE show ratings show=%d: %v", sh.ID, err)
 	} else {
@@ -397,8 +403,15 @@ func (a *App) pageShow(w http.ResponseWriter, r *http.Request) {
 			a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
 			return
 		}
+		sp, err := a.Store.SeasonProgress(u.ID, sh.ID)
+		if err != nil {
+			logger.Error("PAGE show season progress: %v", err)
+			a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
+			return
+		}
 		data["Follow"] = f
 		data["Progress"] = p
+		data["SeasonProgress"] = sp
 	}
 	a.render(w, r, "show", http.StatusOK, sh.Name, data)
 }
@@ -572,26 +585,6 @@ func (a *App) pageCalendar(w http.ResponseWriter, r *http.Request) {
 		days = append(days, byDate[d])
 	}
 	a.page(w, r, "calendar", "nav.calendar", map[string]any{"Days": days, "Today": now.Format("2006-01-02"), "Past": past})
-}
-
-func (a *App) pageAdminReports(w http.ResponseWriter, r *http.Request) {
-	if _, err := a.needAdmin(r); err != nil {
-		a.errorPage(w, r, http.StatusForbidden, "err.forbidden")
-		return
-	}
-	reports, err := a.Store.OpenAbuseReports(100)
-	if err != nil {
-		logger.Error("PAGE admin reports: %v", err)
-		a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
-		return
-	}
-	people, err := a.Store.OpenUserReports(100)
-	if err != nil {
-		logger.Error("PAGE admin user reports: %v", err)
-		a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
-		return
-	}
-	a.page(w, r, "admin_reports", "admin.reports", map[string]any{"Reports": reports, "PeopleReports": people})
 }
 
 const privacyUpdated = "2026-10-13"

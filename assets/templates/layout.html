@@ -58,7 +58,7 @@
         <button type="button" data-friends-open><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-user-plus"></use></svg>{{.T "js.friends_title"}}{{if gt .Friends 0}} <span class="badge inline" id="friends-badge">{{.Friends}}</span>{{end}}</button>
         <a href="/settings"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-gear"></use></svg>{{.T "nav.settings"}}</a>
         {{if .User.IsAdmin}}<hr>
-        <a href="/admin/reports"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-user-shield"></use></svg>{{.T "nav.admin"}}</a>{{end}}
+        <a href="/admin"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-user-shield"></use></svg>{{.T "nav.admin"}}{{if gt .AdminOpen 0}} <span class="badge inline">{{.AdminOpen}}</span>{{end}}</a>{{end}}
         <hr>
         <button type="button" data-logout><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-logout"></use></svg>{{.T "auth.logout"}}</button>
       </div>

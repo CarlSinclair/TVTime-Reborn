@@ -1,0 +1,179 @@
+{{define "content"}}
+<h1>{{.T "nav.admin"}}</h1>
+<nav class="tabs centered" role="tablist" aria-label="{{.T "nav.admin"}}">
+  <a class="tab {{if eq .Data.Tab "overview"}}active{{end}}" href="/admin">{{.T "admin.overview"}}</a>
+  <a class="tab {{if eq .Data.Tab "users"}}active{{end}}" href="/admin?tab=users">{{.T "admin.users"}}</a>
+  <a class="tab {{if eq .Data.Tab "servers"}}active{{end}}" href="/admin?tab=servers">{{.T "admin.servers"}}{{if gt .Data.ServersBadge 0}}<span class="badge inline">{{.Data.ServersBadge}}</span>{{end}}</a>
+  <a class="tab {{if eq .Data.Tab "reports"}}active{{end}}" href="/admin?tab=reports">{{.T "admin.reports"}}{{if gt .Data.ReportsBadge 0}}<span class="badge inline">{{.Data.ReportsBadge}}</span>{{end}}</a>
+</nav>
+
+{{if eq .Data.Tab "overview"}}
+<section>
+  <div class="stats four">
+    <div><strong>{{.Data.Stats.Users}}</strong><span>{{.T "admin.stat_users"}}</span></div>
+    <div><strong>{{.Data.Stats.NewUsers7d}}</strong><span>{{.T "admin.stat_new"}}</span></div>
+    <div><strong>{{.Data.Stats.Banned}}</strong><span>{{.T "admin.stat_banned"}}</span></div>
+    <div><strong>{{.Data.Stats.Unverified}}</strong><span>{{.T "admin.stat_unverified"}}</span></div>
+    <div><strong>{{.Data.Stats.Shows}}</strong><span>{{.T "admin.stat_shows"}}</span></div>
+    <div><strong>{{.Data.Stats.Follows}}</strong><span>{{.T "admin.stat_follows"}}</span></div>
+    <div><strong>{{.Data.Stats.Watched}}</strong><span>{{.T "admin.stat_watched"}}</span></div>
+    <div><strong>{{.Data.Stats.Comments}}</strong><span>{{.T "admin.stat_comments"}}</span></div>
+    <div><strong>{{.Data.Stats.OpenReports}}</strong><span>{{.T "admin.stat_reports"}}</span></div>
+    <div><strong>{{.Data.Stats.Peers}}</strong><span>{{.T "admin.stat_servers"}}</span></div>
+    <div><strong>{{.Data.Stats.OutboxPending}}</strong><span>{{.T "admin.stat_outbox"}}</span></div>
+  </div>
+</section>
+<section>
+  <h2>{{.T "admin.system"}}</h2>
+  <table class="data-table">
+    <tbody>
+      <tr><th scope="row">{{.T "admin.version"}}</th><td>{{.Data.Version}}</td></tr>
+      <tr><th scope="row">{{.T "admin.mail"}}</th><td>{{if .Data.MailOn}}{{.T "admin.on"}}{{else}}{{.T "admin.off"}}{{end}}</td></tr>
+      <tr><th scope="row">{{.T "admin.metadata"}}</th><td>{{if .Data.TMDBOn}}{{.T "admin.on"}}{{else}}{{.T "admin.off"}}{{end}}</td></tr>
+      <tr><th scope="row">{{.T "admin.federation"}}</th><td>{{if .Data.FederationOn}}{{.T "admin.on"}}{{else}}{{.T "admin.off"}}{{end}}</td></tr>
+    </tbody>
+  </table>
+</section>
+<section>
+  <h2>{{.T "admin.errors"}}</h2>
+  {{if .Data.Errors}}
+  <ul class="log-list">
+    {{range .Data.Errors}}<li><span class="tag">{{.Level}}</span> <time datetime="{{.At}}">{{.At}}</time> <code>{{.Msg}}</code></li>{{end}}
+  </ul>
+  {{else}}<p class="muted center">{{.T "admin.errors_none"}}</p>{{end}}
+</section>
+
+{{else if eq .Data.Tab "users"}}
+<div class="page-head">
+  <form class="admin-search" method="get" action="/admin">
+    <input type="hidden" name="tab" value="users">
+    <input type="search" name="q" value="{{.Data.Query}}" placeholder="{{.T "admin.user_search"}}" aria-label="{{.T "admin.user_search"}}">
+  </form>
+  <span class="page-actions">
+    <button class="btn ghost small" type="button" data-signups="{{if .Data.SignupsClosed}}0{{else}}1{{end}}">{{.T "admin.signups"}}: {{if .Data.SignupsClosed}}{{.T "admin.signups_closed"}}{{else}}{{.T "admin.signups_open"}}{{end}}</button>
+    <button class="icon-btn solid" type="button" data-modal-open="m-user-add" aria-label="{{.T "admin.user_add"}}" title="{{.T "admin.user_add"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-plus"></use></svg></button>
+  </span>
+</div>
+{{if .Data.Users}}
+<ul class="reports">
+  {{range .Data.Users}}
+  <li class="panel">
+    <p><strong>{{.Name}}</strong> <span class="muted">@{{.Username}}</span>
+      {{if .IsAdmin}}<span class="tag">{{$.T "admin.user_admin"}}</span>{{end}}
+      {{if .IsBanned}}<span class="tag">{{$.T "admin.user_banned"}}</span>{{end}}
+      {{if and .Email (not .EmailVerified)}}<span class="tag">{{$.T "admin.user_unverified"}}</span>{{end}}
+    </p>
+    <p class="muted">{{if .Email}}{{.Email}} &middot; {{end}}{{$.T "admin.user_joined" (slice .CreatedAt 0 10)}}</p>
+    <p class="actions">
+      <a class="btn ghost small" href="/u/{{.Username}}">{{$.T "admin.view"}}</a>
+      <button class="btn ghost small" type="button" data-user-edit="{{.ID}}" data-display="{{.DisplayName}}" data-email="{{.Email}}" data-verified="{{if .EmailVerified}}1{{else}}0{{end}}">{{$.T "admin.user_edit"}}</button>
+      {{if ne .ID $.User.ID}}
+      {{if .IsBanned}}<button class="btn ghost small" type="button" data-admin-unban="{{.ID}}">{{$.T "admin.user_unban"}}</button>
+      {{else if not .IsAdmin}}<button class="btn danger small" type="button" data-admin-ban="{{.ID}}">{{$.T "admin.ban"}}</button>{{end}}
+      {{if not .IsAdmin}}<button class="btn danger small" type="button" data-user-delete="{{.ID}}" data-confirm="{{$.T "admin.user_delete_confirm"}}">{{$.T "admin.user_delete"}}</button>{{end}}
+      {{end}}
+    </p>
+  </li>
+  {{end}}
+</ul>
+{{if gt .Data.Pages 1}}
+<p class="pager center">
+  {{if .Data.PrevURL}}<a class="btn ghost small" href="{{.Data.PrevURL}}">{{.T "admin.prev"}}</a>{{end}}
+  <span class="muted">{{.T "admin.page" .Data.Page .Data.Pages}}</span>
+  {{if .Data.NextURL}}<a class="btn ghost small" href="{{.Data.NextURL}}">{{.T "admin.next"}}</a>{{end}}
+</p>
+{{end}}
+{{else}}<p class="muted center">{{.T "admin.user_none"}}</p>{{end}}
+
+<dialog class="modal" id="m-user-add" aria-labelledby="m-user-add-t">
+  <form class="stack" data-api="/api/admin/users" data-reload="1" data-success="{{.T "admin.user_created"}}">
+    <h2 id="m-user-add-t">{{.T "admin.user_add"}}</h2>
+    <label>{{.T "auth.username"}}<input type="text" name="username" autocomplete="off" minlength="3" maxlength="20" required></label>
+    <label>{{.T "profile.display_name"}}<input type="text" name="display" maxlength="40" autocomplete="off"></label>
+    <label>{{.T "auth.email"}}<input type="email" name="email" autocomplete="off"></label>
+    <label>{{.T "auth.password"}}<input type="password" name="password" autocomplete="new-password" minlength="8" maxlength="72" required></label>
+    <label class="check"><input type="checkbox" name="verified" checked> {{.T "admin.user_verified"}}</label>
+    <p class="form-error" role="alert" hidden></p>
+    <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn" type="submit">{{.T "admin.user_add"}}</button></div>
+  </form>
+</dialog>
+
+<dialog class="modal" id="m-user-edit" aria-labelledby="m-user-edit-t">
+  <form class="stack" id="user-edit-form" data-api="" data-reload="1" data-success="{{.T "js.saved"}}">
+    <h2 id="m-user-edit-t">{{.T "admin.user_edit"}}</h2>
+    <label>{{.T "profile.display_name"}}<input type="text" name="display" maxlength="40" autocomplete="off"></label>
+    <label>{{.T "auth.email"}}<input type="email" name="email" autocomplete="off"></label>
+    <label class="check"><input type="checkbox" name="verified"> {{.T "admin.user_verified"}}</label>
+    <p class="form-error" role="alert" hidden></p>
+    <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn" type="submit">{{.T "settings.save"}}</button></div>
+  </form>
+</dialog>
+
+{{else if eq .Data.Tab "servers"}}
+<div class="page-head">
+  <span class="muted">{{if not .Data.FederationOn}}{{.T "admin.federation_off"}}{{end}}</span>
+  {{if .Data.FederationOn}}<button class="icon-btn solid" type="button" data-modal-open="m-server-add" aria-label="{{.T "admin.server_add"}}" title="{{.T "admin.server_add"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-plus"></use></svg></button>{{end}}
+</div>
+{{if .Data.Peers}}
+<ul class="reports">
+  {{range .Data.Peers}}
+  <li class="panel">
+    <p><strong>{{.Host}}</strong> {{if .Blocked}}<span class="tag">{{$.T "admin.server_blocked"}}</span>{{end}} {{if .New}}<span class="tag">{{$.T "admin.server_new"}}</span>{{end}}</p>
+    <p class="muted">{{$.T "admin.server_seen" .FirstSeen .LastSeen}}</p>
+    <p class="actions">
+      <button class="btn small {{if not .Blocked}}danger{{else}}ghost{{end}}" type="button" data-server-block="{{.Host}}" data-blocked="{{if .Blocked}}0{{else}}1{{end}}">{{if .Blocked}}{{$.T "admin.server_unblock"}}{{else}}{{$.T "admin.server_block"}}{{end}}</button>
+      <button class="btn ghost small" type="button" data-server-forget="{{.Host}}">{{$.T "admin.server_forget"}}</button>
+    </p>
+  </li>
+  {{end}}
+</ul>
+{{else}}<p class="muted center">{{.T "admin.server_none"}}</p>{{end}}
+{{if .Data.FederationOn}}
+<dialog class="modal" id="m-server-add" aria-labelledby="m-server-add-t">
+  <form class="stack" data-api="/api/admin/servers/add" data-reload="1" data-success="{{.T "admin.server_added"}}">
+    <h2 id="m-server-add-t">{{.T "admin.server_add"}}</h2>
+    <label>{{.T "admin.server_host"}}<input type="text" name="host" placeholder="tvt.example.org" autocomplete="off" autocapitalize="off" spellcheck="false" required></label>
+    <p class="muted">{{.T "admin.server_host_hint"}}</p>
+    <p class="form-error" role="alert" hidden></p>
+    <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn" type="submit">{{.T "admin.server_connect"}}</button></div>
+  </form>
+</dialog>
+{{end}}
+
+{{else}}
+{{if .Data.Reports}}
+<ul class="reports">
+  {{range .Data.Reports}}
+  <li class="panel">
+    <p><strong>{{.Author}}</strong> <small class="muted">{{$.T "admin.reporters" .Reporters}}</small></p>
+    <blockquote>{{.Body}}</blockquote>
+    {{if .Reasons}}<p class="muted">{{.Reasons}}</p>{{end}}
+    <p class="actions">
+      <a class="btn ghost small" href="{{if eq .Target.Kind "profile"}}/u/{{.ProfileName}}{{else}}/episode/{{.Target.ID}}{{end}}">{{$.T "admin.view"}}</a>
+      <button class="btn small" type="button" data-admin-resolve="{{.CommentID}}">{{$.T "admin.dismiss"}}</button>
+      <button class="btn danger small" type="button" data-admin-delete="{{.CommentID}}">{{$.T "admin.delete"}}</button>
+      <button class="btn danger small" type="button" data-admin-ban="{{.AuthorID}}">{{$.T "admin.ban"}}</button>
+    </p>
+  </li>
+  {{end}}
+</ul>
+{{end}}
+{{if .Data.PeopleReports}}
+<h2>{{.T "admin.reported_people"}}</h2>
+<ul class="reports">
+  {{range .Data.PeopleReports}}
+  <li class="panel">
+    <p><strong>{{.Username}}</strong> <small class="muted">{{$.T "admin.reporters" .Reporters}}</small></p>
+    {{if .Reasons}}<p class="muted">{{.Reasons}}</p>{{end}}
+    <p class="actions">
+      <a class="btn ghost small" href="/u/{{.Username}}">{{$.T "admin.view"}}</a>
+      <button class="btn small" type="button" data-admin-dismiss-user="{{.ReportedID}}">{{$.T "admin.dismiss"}}</button>
+      <button class="btn danger small" type="button" data-admin-ban="{{.ReportedID}}">{{$.T "admin.ban"}}</button>
+    </p>
+  </li>
+  {{end}}
+</ul>
+{{end}}
+{{if and (not .Data.Reports) (not .Data.PeopleReports)}}<p class="muted center">{{.T "admin.none"}}</p>{{end}}
+{{end}}
+{{end}}

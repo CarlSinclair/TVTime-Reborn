@@ -4,6 +4,7 @@
   <img class="poster" src="{{img "w342" .PosterPath}}" alt="">
   <div class="show-info">
     <h1>{{.Name}} {{if year .FirstAirDate}}<small>({{year .FirstAirDate}})</small>{{end}}</h1>
+    {{if and .OriginalName (ne .OriginalName .Name)}}<p class="original-name muted" lang="{{.OriginalLanguage}}">{{.OriginalName}}</p>{{end}}
     <p class="meta">
       {{if .Status}}<span>{{.Status}}</span>{{end}}
       {{if .Networks}}<span>{{.Networks}}</span>{{end}}
@@ -32,7 +33,7 @@
       {{end}}
     </div>
     {{if and $.User $.Data.Follow}}
-    <p class="progress-line"><progress max="{{$.Data.Progress.Aired}}" value="{{$.Data.Progress.Watched}}"></progress> {{$.T "show.progress" $.Data.Progress.Watched $.Data.Progress.Aired}}</p>
+    <p class="progress-line"><progress {{if $.Data.Progress.Done}}class="done"{{end}} max="{{$.Data.Progress.Aired}}" value="{{$.Data.Progress.Watched}}"></progress> {{$.T "show.progress" $.Data.Progress.Watched $.Data.Progress.Aired}}</p>
     {{end}}
     {{if .SyncError}}<p class="notice error">{{$.T "show.sync_error"}}</p>{{end}}
   </div>
@@ -45,7 +46,13 @@
     <a class="season-card" href="/show/{{$.Data.Show.TMDBID}}/season/{{.SeasonNumber}}">
       <img loading="lazy" src="{{img "w185" .PosterPath}}" alt="">
       <span class="season-name">{{if eq .SeasonNumber 0}}{{$.T "show.specials"}}{{else}}{{$.T "show.season" .SeasonNumber}}{{end}}</span>
-      <span class="count-badge">{{.EpisodeCount}}</span>
+      {{$p := index $.Data.SeasonProgress .SeasonNumber}}
+      {{if gt $p.Aired 0}}
+      <progress {{if $p.Done}}class="done"{{end}} max="{{$p.Aired}}" value="{{$p.Watched}}"></progress>
+      <span class="card-sub">{{$.T "show.progress" $p.Watched $p.Aired}}</span>
+      {{else}}
+      <span class="card-sub">{{$.T "show.episodes" .EpisodeCount}}</span>
+      {{end}}
     </a>
     {{end}}
   </div>

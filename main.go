@@ -113,6 +113,11 @@ func main() {
 		go fed.Run(ctx)
 		logger.Info("federation on as %s", baseURL.Host)
 	}
+	if n, err := st.CompleteFinished(0, 0); err != nil {
+		logger.Error("complete finished shows at start: %v", err)
+	} else if n > 0 {
+		logger.Info("marked %d finished shows completed", n)
+	}
 	go sy.Run(ctx)
 	nt.Start(ctx)
 	go nt.RunJobs(ctx)

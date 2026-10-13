@@ -114,7 +114,12 @@ func (a *App) ensureFollowing(userID, showID int64) error {
 		return err
 	}
 	if f == nil {
-		return a.Store.Follow(userID, showID, "watching")
+		if err := a.Store.Follow(userID, showID, "watching"); err != nil {
+			return err
+		}
+	}
+	if _, err := a.Store.CompleteFinished(userID, showID); err != nil {
+		logger.Error("COMPLETE after watch uid=%d show=%d: %v", userID, showID, err)
 	}
 	return nil
 }

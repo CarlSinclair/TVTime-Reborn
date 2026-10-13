@@ -220,6 +220,29 @@ func (s *Service) peerKey(ctx context.Context, host string) (ed25519.PublicKey, 
 	return ed25519.PublicKey(raw), nil
 }
 
+// NormalizeHost reduces what an admin typed (possibly a full URL) to a bare
+// lower-case host[:port].
+func NormalizeHost(in string) string {
+	h := strings.ToLower(strings.TrimSpace(in))
+	for _, p := range []string{"https://", "http://"} {
+		h = strings.TrimPrefix(h, p)
+	}
+	if i := strings.IndexAny(h, "/?#"); i >= 0 {
+		h = h[:i]
+	}
+	return h
+}
+
+// Connect introduces this server to another one at an admin's request: the
+// other server's key is fetched from its well-known document and pinned.
+func (s *Service) Connect(ctx context.Context, host string) (string, error) {
+	host = NormalizeHost(host)
+	if _, err := s.peerKey(ctx, host); err != nil {
+		return host, err
+	}
+	return host, nil
+}
+
 func (s *Service) currentDoc(ctx context.Context, host string) (*wellKnown, error) {
 	var doc wellKnown
 	code, err := s.fetch(ctx, host, "/.well-known/tvt", &doc)

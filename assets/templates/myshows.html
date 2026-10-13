@@ -10,7 +10,7 @@
   <a class="card" href="/show/{{.Show.TMDBID}}">
     <img loading="lazy" src="{{img "w342" .Show.PosterPath}}" alt="">
     <span class="card-title">{{if .Follow.Favorite}}&#9829; {{end}}{{.Show.Name}}</span>
-    <progress max="{{.Progress.Aired}}" value="{{.Progress.Watched}}"></progress>
+    <progress {{if .Progress.Done}}class="done"{{end}} max="{{.Progress.Aired}}" value="{{.Progress.Watched}}"></progress>
     <span class="card-sub">{{$.T "show.progress" .Progress.Watched .Progress.Aired}}</span>
   </a>
   {{end}}

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -53,6 +54,10 @@ func (a *App) apiRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := a.allow(a.authLimit, "reg:"+auth.ClientIP(r)); err != nil {
 		a.fail(w, r, err)
+		return
+	}
+	if a.signupsClosed() {
+		a.fail(w, r, errSignupsClosed)
 		return
 	}
 	email, ok := normEmail(in.Email)
@@ -463,6 +468,18 @@ func (a *App) apiDeleteAccount(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, apiErr{http.StatusBadRequest, "err.confirm_username"})
 		return
 	}
+	if err := a.deleteAccount(r.Context(), u); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	a.Auth.ClearCookies(w)
+	a.okJSON(w, map[string]any{"redirect": "/"})
+}
+
+// deleteAccount removes an account and everything it owns. Remote friends are
+// told the friendship ended; a failure to remove uploaded images is logged but
+// does not undo the deletion.
+func (a *App) deleteAccount(ctx context.Context, u *store.User) error {
 	if a.Fed != nil {
 		if friends, err := a.Store.RemoteFriends(u.ID); err != nil {
 			logger.Error("ACCOUNT delete: remote friends uid=%d: %v", u.ID, err)
@@ -470,20 +487,20 @@ func (a *App) apiDeleteAccount(w http.ResponseWriter, r *http.Request) {
 			for _, f := range friends {
 				if peer, err := a.Store.UserByID(f.UserID); err == nil {
 					a.Fed.SendFriendEnd(u, peer)
+				} else {
+					logger.Error("ACCOUNT delete: remote friend lookup uid=%d friend=%d: %v", u.ID, f.UserID, err)
 				}
 			}
 		}
 	}
 	if err := a.Store.DeleteUser(u.ID); err != nil {
-		a.fail(w, r, err)
-		return
+		return err
 	}
-	if err := a.removeUserMedia(r.Context(), u); err != nil {
+	if err := a.removeUserMedia(ctx, u); err != nil {
 		logger.Error("ACCOUNT delete media uid=%d: %v", u.ID, err)
 	}
-	a.Auth.ClearCookies(w)
 	logger.Info("ACCOUNT deleted uid=%d", u.ID)
-	a.okJSON(w, map[string]any{"redirect": "/"})
+	return nil
 }
 
 func (a *App) apiExport(w http.ResponseWriter, r *http.Request) {

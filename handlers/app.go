@@ -102,6 +102,8 @@ type View struct {
 	Data    map[string]any
 	Unread  int
 	Friends int
+	// AdminOpen is the number of admin items waiting, shown beside the Admin link.
+	AdminOpen int
 }
 
 var LangNames = map[string]string{
@@ -246,6 +248,13 @@ func (a *App) render(w http.ResponseWriter, r *http.Request, name string, status
 			v.Friends = n
 		}
 	}
+	if u != nil && u.IsAdmin {
+		if reports, servers, err := a.adminBadges(); err != nil {
+			logger.Error("RENDER admin badges uid=%d: %v", u.ID, err)
+		} else {
+			v.AdminOpen = reports + servers
+		}
+	}
 	if data == nil {
 		v.Data = map[string]any{}
 	}
@@ -291,16 +300,17 @@ type apiErr struct {
 func (e apiErr) Error() string { return e.key }
 
 var (
-	errBadRequest  = apiErr{http.StatusBadRequest, "err.bad_request"}
-	errUnauth      = apiErr{http.StatusUnauthorized, "err.login_required"}
-	errForbidden   = apiErr{http.StatusForbidden, "err.forbidden"}
-	errNotFound    = apiErr{http.StatusNotFound, "err.not_found"}
-	errRate        = apiErr{http.StatusTooManyRequests, "err.rate_limited"}
-	errNeedVerify  = apiErr{http.StatusForbidden, "err.verify_email"}
-	errMailDown    = apiErr{http.StatusServiceUnavailable, "err.mail_unavailable"}
-	errTMDBDown    = apiErr{http.StatusBadGateway, "err.metadata_unavailable"}
-	errInternal    = apiErr{http.StatusInternalServerError, "err.internal"}
-	errTMDBMissing = apiErr{http.StatusServiceUnavailable, "err.metadata_not_configured"}
+	errBadRequest    = apiErr{http.StatusBadRequest, "err.bad_request"}
+	errUnauth        = apiErr{http.StatusUnauthorized, "err.login_required"}
+	errForbidden     = apiErr{http.StatusForbidden, "err.forbidden"}
+	errNotFound      = apiErr{http.StatusNotFound, "err.not_found"}
+	errRate          = apiErr{http.StatusTooManyRequests, "err.rate_limited"}
+	errNeedVerify    = apiErr{http.StatusForbidden, "err.verify_email"}
+	errMailDown      = apiErr{http.StatusServiceUnavailable, "err.mail_unavailable"}
+	errTMDBDown      = apiErr{http.StatusBadGateway, "err.metadata_unavailable"}
+	errInternal      = apiErr{http.StatusInternalServerError, "err.internal"}
+	errTMDBMissing   = apiErr{http.StatusServiceUnavailable, "err.metadata_not_configured"}
+	errSignupsClosed = apiErr{http.StatusForbidden, "err.signups_closed"}
 )
 
 // fail logs the real cause server-side and returns only an i18n message to the

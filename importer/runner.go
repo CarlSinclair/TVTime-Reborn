@@ -73,6 +73,13 @@ func (r *Runner) resolve(ctx context.Context, s Show) (int64, string) {
 	if s.TVDBID > 0 {
 		item, err := r.TMDB.FindByExternal(ctx, strconv.FormatInt(s.TVDBID, 10), "tvdb_id")
 		if err == nil {
+			want := normName(s.Name)
+			if want != "" && normName(item.Name) != want && normName(item.OriginalName) != want {
+				if id, why := r.byName(ctx, s.Name); why == "" && id != 0 && id != item.ID {
+					logger.Info("IMPORT %q: TMDB maps tvdb=%d to %q (tmdb=%d), using exact-name match tmdb=%d instead", s.Name, s.TVDBID, item.Name, item.ID, id)
+					return id, ""
+				}
+			}
 			return item.ID, ""
 		}
 		if !errors.Is(err, tmdb.ErrNotFound) {
@@ -250,6 +257,11 @@ func (r *Runner) run(ctx context.Context, jobID int64) {
 	}
 	if err := r.Store.SaveImportProgress(job); err != nil {
 		logger.Error("IMPORT job=%d: %v", job.ID, err)
+	}
+	if n, err := r.Store.CompleteFinished(job.UserID, 0); err != nil {
+		logger.Error("IMPORT job=%d complete finished shows uid=%d: %v", job.ID, job.UserID, err)
+	} else if n > 0 {
+		logger.Info("IMPORT job=%d marked %d finished shows completed", job.ID, n)
 	}
 	if err := r.Store.FinishImport(job.ID, "done", ""); err != nil {
 		logger.Error("IMPORT job=%d: %v", job.ID, err)

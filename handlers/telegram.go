@@ -74,6 +74,10 @@ func (a *App) pageTelegramLogin(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case err == nil:
 	case errors.Is(err, store.ErrNotFound):
+		if a.signupsClosed() {
+			fail("signups_closed")
+			return
+		}
 		u, err = a.Store.CreateTelegramUser(data.ID, data.Username, data.DisplayName(), a.lang(w, r, nil))
 		if err != nil {
 			logger.Error("AUTH telegram register tg=%d: %v", data.ID, err)

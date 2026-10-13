@@ -397,7 +397,7 @@ func TestFullFlow(t *testing.T) {
 		t.Fatalf("blocked author still visible: %s", raw)
 	}
 
-	if code, _ := alice.get("/admin/reports"); code != 403 {
+	if code, _ := alice.get("/admin"); code != 403 {
 		t.Fatalf("admin page for non-admin: %d", code)
 	}
 	if code, out := alice.post("/api/auth/logout", nil); code != 200 {

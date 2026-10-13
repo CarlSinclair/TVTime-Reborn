@@ -31,9 +31,11 @@
 {{if $.Data.Genres}}
 <section>
   <h2>{{$.T "profile.genres"}}</h2>
-  <div class="season-links">
-    {{range $.Data.Genres}}<span class="chip">{{$.Genre .Name}} <small>{{hours .Minutes}}</small></span>{{end}}
-  </div>
+  <table class="data-table">
+    <tbody>
+      {{range $.Data.Genres}}<tr><th scope="row">{{$.Genre .Name}}</th><td>{{hours .Minutes}}</td></tr>{{end}}
+    </tbody>
+  </table>
 </section>
 {{end}}
 {{if $.Data.FavShows}}
@@ -59,9 +61,10 @@
 {{end}}
 {{end}}
 {{if $.Data.Posts}}
-<section id="comments" class="comments" data-kind="profile" data-target="{{.ID}}" data-logged="1" data-verified="{{if and $.User $.User.CanComment}}1{{else}}0{{end}}" data-admin="{{if and $.User $.User.IsAdmin}}1{{else}}0{{end}}">
+{{$canPost := and $.Data.IsOwn $.User.CanComment}}
+<section id="comments" class="comments" {{if not $canPost}}hidden{{end}} data-kind="profile" data-target="{{.ID}}" data-logged="1" data-verified="{{if and $.User $.User.CanComment}}1{{else}}0{{end}}" data-admin="{{if and $.User $.User.IsAdmin}}1{{else}}0{{end}}">
   <h2>{{$.T "profile.posts"}} <small id="comments-count"></small></h2>
-  {{if and $.Data.IsOwn $.User.CanComment}}
+  {{if $canPost}}
   <form class="comment-form" id="comment-form">
     <textarea name="body" maxlength="2000" rows="3" placeholder="{{$.T "profile.post_placeholder"}}" required></textarea>
     <div class="comment-form-row">

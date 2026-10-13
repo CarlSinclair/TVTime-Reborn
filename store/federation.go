@@ -125,10 +125,11 @@ type PeerInfo struct {
 	FirstSeen string
 	LastSeen  string
 	Blocked   bool
+	New       bool
 }
 
 func (s *Store) Peers() ([]PeerInfo, error) {
-	rows, err := s.DB.Query(`SELECT host, first_seen, last_seen, blocked FROM federation_peers ORDER BY host`)
+	rows, err := s.DB.Query(`SELECT host, first_seen, last_seen, blocked, acked FROM federation_peers ORDER BY acked, host`)
 	if err != nil {
 		return nil, fmt.Errorf("list peers: %w", err)
 	}
@@ -136,11 +137,11 @@ func (s *Store) Peers() ([]PeerInfo, error) {
 	var out []PeerInfo
 	for rows.Next() {
 		var p PeerInfo
-		var b int
-		if err := rows.Scan(&p.Host, &p.FirstSeen, &p.LastSeen, &b); err != nil {
+		var b, ack int
+		if err := rows.Scan(&p.Host, &p.FirstSeen, &p.LastSeen, &b, &ack); err != nil {
 			return nil, err
 		}
-		p.Blocked = b == 1
+		p.Blocked, p.New = b == 1, ack == 0
 		out = append(out, p)
 	}
 	return out, rows.Err()

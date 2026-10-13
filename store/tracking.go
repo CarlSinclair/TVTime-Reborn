@@ -166,6 +166,49 @@ func (s *Store) Progress(userID, showID int64) (Progress, error) {
 	return p, nil
 }
 
+// CompleteFinished moves shows from "watching" to "completed" once the show has
+// ended and every aired regular episode is watched. userID or showID of 0 means
+// all users or all shows. It returns how many follows changed.
+func (s *Store) CompleteFinished(userID, showID int64) (int64, error) {
+	res, err := s.DB.Exec(`UPDATE follows SET status = 'completed'
+	  WHERE status = 'watching' AND (? = 0 OR user_id = ?) AND (? = 0 OR show_id = ?)
+	    AND show_id IN (SELECT id FROM shows WHERE LOWER(status) IN ('ended', 'canceled', 'cancelled'))
+	    AND EXISTS (SELECT 1 FROM episodes e WHERE e.show_id = follows.show_id AND e.season_number > 0 AND e.air_date IS NOT NULL AND e.air_date <= ?)
+	    AND NOT EXISTS (SELECT 1 FROM episodes e WHERE e.show_id = follows.show_id AND e.season_number > 0 AND e.air_date IS NOT NULL AND e.air_date <= ?
+	      AND NOT EXISTS (SELECT 1 FROM watched w WHERE w.user_id = follows.user_id AND w.episode_id = e.id))`,
+		userID, userID, showID, showID, today(), today())
+	if err != nil {
+		return 0, fmt.Errorf("complete finished uid=%d show=%d: %w", userID, showID, err)
+	}
+	n, _ := res.RowsAffected()
+	return n, nil
+}
+
+// SeasonProgress counts, per season number, the aired episodes and how many of
+// the season's episodes the user has watched.
+func (s *Store) SeasonProgress(userID, showID int64) (map[int]Progress, error) {
+	rows, err := s.DB.Query(`SELECT e.season_number,
+	  COALESCE(SUM(CASE WHEN e.air_date IS NOT NULL AND e.air_date <= ? THEN 1 ELSE 0 END), 0), COUNT(w.episode_id)
+	  FROM episodes e LEFT JOIN watched w ON w.episode_id = e.id AND w.user_id = ?
+	  WHERE e.show_id = ? GROUP BY e.season_number`, today(), userID, showID)
+	if err != nil {
+		return nil, fmt.Errorf("season progress uid=%d show=%d: %w", userID, showID, err)
+	}
+	defer rows.Close()
+	out := map[int]Progress{}
+	for rows.Next() {
+		var n int
+		var p Progress
+		if err := rows.Scan(&n, &p.Aired, &p.Watched); err != nil {
+			return nil, fmt.Errorf("season progress scan uid=%d show=%d: %w", userID, showID, err)
+		}
+		out[n] = p
+	}
+	return out, rows.Err()
+}
+
+func (p Progress) Done() bool { return p.Aired > 0 && p.Watched >= p.Aired }
+
 type ShowEntry struct {
 	Show     Show
 	Follow   Follow
