@@ -63,6 +63,49 @@ See `SECURITY.md`. Highlights: hashed refresh tokens with reuse detection, CSRF 
 
     go vet ./... && go test ./...
 
+## FAQ
+
+### Is federation ActivityPub? Why not support it?
+
+No. TVT federation is ActivityPub's cousin, built for a different goal, and TVT does not
+implement ActivityPub. The two share the basic idea: people are addressed as
+`name@server`, servers find each other through a well-known document, and servers deliver
+signed HTTP POSTs to an inbox. Everything after that differs.
+
+| | TVT federation | ActivityPub |
+|---|---|---|
+| Default audience | Private: only servers that hold an accepted friendship | Public by default; delivery follows followers and public addressing |
+| Relationship | Mutual friendship, accepted by both people | One-way follow |
+| Data kept elsewhere | Short lease: 14 days, dropped sooner when the friendship ends | Kept until a Delete arrives, which receivers may ignore |
+| Vocabulary | Five small fixed messages (friend request, accept, end, activity, retract) | JSON-LD activity streams: a large open vocabulary |
+| Signing key | One Ed25519 key per server, pinned on first contact | A key per person (usually RSA) fetched from each actor document |
+| Fetching | Servers only talk to servers where someone has a friend | Servers fetch actors, collections and remote objects from anywhere |
+| Spoilers | Spoiler comments are never sent; episodes are named only to friends who have seen them | Content-warning field exists, but nothing enforces it |
+
+Why it is not supported:
+
+- **Privacy.** TVT shows what people watch. ActivityPub's model assumes publishing, and a
+  delete is only a request. A watch history that cannot be reliably withdrawn is a poor fit.
+  Leases and friends-only delivery make "it expires on its own" the default.
+- **Attack surface.** ActivityPub implementations keep having to defend against signature
+  and actor spoofing, server-side request forgery through actor and object fetching, HTML
+  injection in remote content, and follow or reply spam from open inboxes. TVT's closed,
+  small protocol avoids most of these by not accepting what it does not need.
+- **Scope.** TVT needs five messages. Supporting ActivityPub means a JSON-LD processor,
+  WebFinger, per-person keys and HTTP Signature variants, shared inboxes, collection paging
+  and compatibility with each server's quirks, for little gain on a private feed.
+
+If you want to build an optional ActivityPub bridge anyway, the clean way is a separate
+module that only publishes what is already public (for example a creator's profile posts
+as `Note` objects, with spoiler flags as content warnings) and accepts replies as
+ordinary comments. It should never carry friend activity. Plan for these:
+
+- WebFinger at `/.well-known/webfinger` and a `Person` actor per person.
+- Per-person key pairs and HTTP Signatures (draft-cavage and the newer RFC 9421).
+- `Follow`, `Accept`, `Undo`, `Create`, `Delete` and `Update` handling.
+- Strict sanitizing of remote HTML and a hardened outgoing client like the one in `federation/`.
+- Delivery retries with the same outbox, and a way to block servers.
+
 ## Roadmap
 
 - Leased replication: opt-in sharing of episode comments between instances without federation's permanence. Each comment is signed by its home instance and copied to peers on a short lease (about a day); peers must re-fetch to renew it, and a deleted comment answers "410 Gone", so deletions propagate within one lease and nothing is immutable. Needs peer allowlists, cross-instance blocking and reporting, and signed identities.

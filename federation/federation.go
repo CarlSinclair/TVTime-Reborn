@@ -15,8 +15,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
+	"unicode"
 
 	"tvt/auth"
 	"tvt/logger"
@@ -45,25 +45,32 @@ type Service struct {
 	Secret   string
 	Insecure bool
 	Block    map[string]bool
+	Allow    map[string]bool
 
-	priv    ed25519.PrivateKey
-	pub     ed25519.PublicKey
-	client  *http.Client
-	inLimit *auth.Limiter
-	userLim *auth.Limiter
-
-	mu   sync.Mutex
-	seen map[string]time.Time
+	priv      ed25519.PrivateKey
+	pub       ed25519.PublicKey
+	client    *http.Client
+	ipLimit   *auth.Limiter
+	hostLimit *auth.Limiter
+	ipFetch   *auth.Limiter
+	allFetch  *auth.Limiter
+	userLim   *auth.Limiter
 }
 
 // New prepares the server's identity: an Ed25519 key created on first start
 // and kept sealed in the database.
-func New(st *store.Store, nt *notify.Service, host, secret string, insecure bool, block []string) (*Service, error) {
-	s := &Service{Store: st, Notify: nt, Host: strings.ToLower(host), Secret: secret, Insecure: insecure, Block: map[string]bool{},
-		client: newClient(insecure), inLimit: auth.NewLimiter(240, time.Minute), userLim: auth.NewLimiter(120, time.Minute), seen: map[string]time.Time{}}
+func New(st *store.Store, nt *notify.Service, host, secret string, insecure bool, block, allow []string) (*Service, error) {
+	s := &Service{Store: st, Notify: nt, Host: strings.ToLower(host), Secret: secret, Insecure: insecure, Block: map[string]bool{}, Allow: map[string]bool{},
+		client: newClient(insecure), ipLimit: auth.NewLimiter(120, time.Minute), hostLimit: auth.NewLimiter(240, time.Minute),
+		ipFetch: auth.NewLimiter(10, time.Minute), allFetch: auth.NewLimiter(60, time.Minute), userLim: auth.NewLimiter(120, time.Minute)}
 	for _, b := range block {
 		if b = strings.ToLower(strings.TrimSpace(b)); b != "" {
 			s.Block[b] = true
+		}
+	}
+	for _, a := range allow {
+		if a = strings.ToLower(strings.TrimSpace(a)); a != "" {
+			s.Allow[a] = true
 		}
 	}
 	if err := s.loadKey(); err != nil {
@@ -183,7 +190,7 @@ func (s *Service) fetch(ctx context.Context, host, path string, out any) (int, e
 // human clears the pin.
 func (s *Service) peerKey(ctx context.Context, host string) (ed25519.PublicKey, error) {
 	host = strings.ToLower(host)
-	if !ValidHost(host, s.Insecure) || s.Block[host] || host == s.Host {
+	if !ValidHost(host, s.Insecure) || s.Block[host] || host == s.Host || (len(s.Allow) > 0 && !s.Allow[host]) {
 		return nil, ErrBadHost
 	}
 	if p, err := s.Store.PeerByHost(host); err == nil {
@@ -198,6 +205,22 @@ func (s *Service) peerKey(ctx context.Context, host string) (ed25519.PublicKey, 
 	} else if !errors.Is(err, store.ErrNotFound) {
 		return nil, err
 	}
+	if !s.allFetch.Allow("all") {
+		return nil, fmt.Errorf("%w: too many new servers at once", ErrUnreachable)
+	}
+	doc, err := s.currentDoc(ctx, host)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Store.PinPeer(host, doc.Key); err != nil {
+		return nil, err
+	}
+	logger.Info("FEDERATION pinned the key of %s", host)
+	raw, _ := base64.StdEncoding.DecodeString(doc.Key)
+	return ed25519.PublicKey(raw), nil
+}
+
+func (s *Service) currentDoc(ctx context.Context, host string) (*wellKnown, error) {
 	var doc wellKnown
 	code, err := s.fetch(ctx, host, "/.well-known/tvt", &doc)
 	if err != nil {
@@ -210,11 +233,26 @@ func (s *Service) peerKey(ctx context.Context, host string) (ed25519.PublicKey, 
 	if err != nil || len(raw) != ed25519.PublicKeySize {
 		return nil, fmt.Errorf("federation: %s published an invalid key", host)
 	}
-	if err := s.Store.PinPeer(host, doc.Key); err != nil {
-		return nil, err
+	return &doc, nil
+}
+
+// keyChanged compares what a server publishes now with the key pinned for it.
+// It is only asked after a signature failed, so a rotated key shows up as a
+// clear warning for the operator rather than as silent bad signatures.
+func (s *Service) keyChanged(ctx context.Context, host string) bool {
+	if !s.allFetch.Allow("all") {
+		return false
 	}
-	logger.Info("FEDERATION pinned the key of %s", host)
-	return ed25519.PublicKey(raw), nil
+	p, err := s.Store.PeerByHost(host)
+	if err != nil {
+		return false
+	}
+	doc, err := s.currentDoc(ctx, host)
+	if err != nil || doc.Key == p.PublicKey {
+		return false
+	}
+	logger.Warn("FEDERATION the key of %s changed; messages are refused until an admin forgets it under Admin > Servers", host)
+	return true
 }
 
 // ResolveUser finds a person by name on another server and makes sure there is
@@ -241,8 +279,20 @@ func (s *Service) ResolveUser(ctx context.Context, name, host string) (*store.Us
 	return s.Store.EnsureRemoteUser(host, info.Username, cleanName(info.Name))
 }
 
+// stripFormat removes invisible formatting characters (zero-width joiners,
+// bidirectional overrides and the like) that can make text look like something
+// else.
+func stripFormat(s string) string {
+	return strings.Map(func(r rune) rune {
+		if unicode.Is(unicode.Cf, r) || r == '\u2028' || r == '\u2029' {
+			return -1
+		}
+		return r
+	}, s)
+}
+
 func cleanName(n string) string {
-	n = strings.TrimSpace(n)
+	n = strings.TrimSpace(stripFormat(n))
 	for _, c := range n {
 		if c < 32 {
 			return ""
@@ -402,6 +452,9 @@ func (s *Service) Run(ctx context.Context) {
 			s.Flush(ctx)
 		case <-purge.C:
 			if err := s.Store.PurgeExpiredRemote(); err != nil {
+				logger.Error("FEDERATION %v", err)
+			}
+			if err := s.Store.PurgeSignatures(30 * time.Minute); err != nil {
 				logger.Error("FEDERATION %v", err)
 			}
 		}

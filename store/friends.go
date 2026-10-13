@@ -50,36 +50,57 @@ func (s *Store) FriendState(viewerID, otherID int64) (string, error) {
 	return "incoming", nil
 }
 
-// RequestFriend sends a request. When the other person already asked you, the
-// two requests meet and become a friendship at once.
-func (s *Store) RequestFriend(fromID, toID int64) (string, error) {
+// RequestFriend sends a request and says whether it was new. Only one request
+// from one person to another can wait at a time: asking again while it is
+// unanswered changes nothing (created is false), and once it is declined a new
+// one may be sent. When the other person already asked you, the two requests
+// meet and become a friendship at once.
+func (s *Store) RequestFriend(fromID, toID int64) (state string, created bool, err error) {
 	if fromID == toID {
-		return "", ErrSelfFriend
+		return "", false, ErrSelfFriend
 	}
 	if blocked, err := s.BlockedEither(fromID, toID); err != nil {
-		return "", err
+		return "", false, err
 	} else if blocked {
-		return "", ErrFriendBlocked
+		return "", false, ErrFriendBlocked
 	}
-	state, err := s.FriendState(fromID, toID)
+	state, err = s.FriendState(fromID, toID)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	switch state {
 	case "friends":
-		return "", ErrAlreadyFriends
+		return "", false, ErrAlreadyFriends
 	case "outgoing":
-		return "outgoing", nil
+		return "outgoing", false, nil
 	case "incoming":
 		if err := s.AcceptFriend(fromID, toID); err != nil {
-			return "", err
+			return "", false, err
 		}
-		return "friends", nil
+		return "friends", true, nil
 	}
-	if _, err := s.DB.Exec(`INSERT INTO friend_requests (requester_id, addressee_id, status, created_at) VALUES (?,?, 'pending', ?)`, fromID, toID, Now()); err != nil {
-		return "", fmt.Errorf("friend request %d->%d: %w", fromID, toID, err)
+	res, err := s.DB.Exec(`INSERT INTO friend_requests (requester_id, addressee_id, status, created_at) VALUES (?,?, 'pending', ?) ON CONFLICT DO NOTHING`, fromID, toID, Now())
+	if err != nil {
+		return "", false, fmt.Errorf("friend request %d->%d: %w", fromID, toID, err)
 	}
-	return "outgoing", nil
+	n, _ := res.RowsAffected()
+	return "outgoing", n > 0, nil
+}
+
+// PendingIncoming counts unanswered requests waiting for a person, optionally
+// only those from one server.
+func (s *Store) PendingIncoming(userID int64, host string) (int, error) {
+	var n int
+	q := `SELECT COUNT(*) FROM friend_requests f JOIN users u ON u.id = f.requester_id WHERE f.addressee_id = ? AND f.status = 'pending'`
+	args := []any{userID}
+	if host != "" {
+		q += ` AND u.remote_host = ?`
+		args = append(args, strings.ToLower(host))
+	}
+	if err := s.DB.QueryRow(q, args...).Scan(&n); err != nil {
+		return 0, fmt.Errorf("pending incoming uid=%d: %w", userID, err)
+	}
+	return n, nil
 }
 
 func (s *Store) AcceptFriend(addresseeID, requesterID int64) error {
@@ -160,6 +181,9 @@ type FeedEvent struct {
 	ViewerWatched bool
 	ShowID        int64
 }
+
+// Remote says the person lives on another server.
+func (e FeedEvent) Remote() bool { return strings.Contains(e.Username, "@") }
 
 func (e FeedEvent) Name() string {
 	if strings.TrimSpace(e.DisplayName) != "" {

@@ -63,6 +63,9 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /offline", a.pageSimple("offline", "offline.title"))
 	mux.HandleFunc("GET /t/{purpose}", a.pageToken)
 	mux.HandleFunc("GET /admin/reports", a.pageAdminReports)
+	mux.HandleFunc("GET /admin/servers", a.pageAdminServers)
+	mux.HandleFunc("POST /api/admin/servers/block", a.apiAdminServer(false))
+	mux.HandleFunc("POST /api/admin/servers/forget", a.apiAdminServer(true))
 
 	mux.HandleFunc("POST /api/auth/register", a.apiRegister)
 	mux.HandleFunc("POST /api/auth/login", a.apiLogin)

@@ -2,6 +2,7 @@ package federation
 
 import (
 	"crypto/ed25519"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -10,37 +11,23 @@ import (
 	"strings"
 	"time"
 
+	"tvt/auth"
 	"tvt/logger"
 	"tvt/store"
 )
 
-func (s *Service) remember(sig string) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	now := time.Now()
-	if len(s.seen) > 20000 {
-		for k, t := range s.seen {
-			if now.Sub(t) > 2*dateSkew {
-				delete(s.seen, k)
-			}
-		}
-	}
-	if _, dup := s.seen[sig]; dup {
-		return false
-	}
-	s.seen[sig] = now
-	return true
-}
-
 // Inbox receives messages from other servers. Every message must carry a
 // signature from the sending server's pinned key, over its method, path, the
-// receiving host, a fresh timestamp and a digest of the body.
+// receiving host, a fresh timestamp and a digest of the body. Nothing is
+// charged to a server's own quota until its signature has checked out, so
+// someone claiming to be another server cannot use that server's allowance up.
 func (s *Service) Inbox(w http.ResponseWriter, r *http.Request) {
-	from := strings.ToLower(strings.TrimSpace(r.Header.Get("X-TVT-Host")))
-	if !s.inLimit.Allow("in:" + from) {
+	ip := auth.ClientIP(r)
+	if !s.ipLimit.Allow("ip:" + ip) {
 		http.Error(w, "too many requests", http.StatusTooManyRequests)
 		return
 	}
+	from := strings.ToLower(strings.TrimSpace(r.Header.Get("X-TVT-Host")))
 	body, err := readLimited(http.MaxBytesReader(w, r.Body, maxBody+1))
 	if err != nil {
 		http.Error(w, "bad request", http.StatusRequestEntityTooLarge)
@@ -58,8 +45,12 @@ func (s *Service) Inbox(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sig, err := base64.StdEncoding.DecodeString(r.Header.Get("X-TVT-Signature"))
-	if err != nil {
+	if err != nil || len(sig) != ed25519.SignatureSize {
 		http.Error(w, "bad signature", http.StatusUnauthorized)
+		return
+	}
+	if _, perr := s.Store.PeerByHost(from); errors.Is(perr, store.ErrNotFound) && !s.ipFetch.Allow("ip:"+ip) {
+		http.Error(w, "too many requests", http.StatusTooManyRequests)
 		return
 	}
 	key, err := s.peerKey(r.Context(), from)
@@ -69,11 +60,26 @@ func (s *Service) Inbox(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !ed25519.Verify(key, canonical(r.Method, r.URL.Path, s.Host, date, digest), sig) {
+		if s.keyChanged(r.Context(), from) {
+			http.Error(w, "server key changed", http.StatusForbidden)
+			return
+		}
 		logger.Warn("FEDERATION bad signature from %s", from)
 		http.Error(w, "bad signature", http.StatusUnauthorized)
 		return
 	}
-	if !s.remember(base64.StdEncoding.EncodeToString(sig)) {
+	if !s.hostLimit.Allow("host:" + from) {
+		http.Error(w, "too many requests", http.StatusTooManyRequests)
+		return
+	}
+	sum := sha256.Sum256(sig)
+	fresh, err := s.Store.RememberSignature(base64.StdEncoding.EncodeToString(sum[:]))
+	if err != nil {
+		logger.Error("FEDERATION %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if !fresh {
 		http.Error(w, "replay", http.StatusConflict)
 		return
 	}
@@ -145,16 +151,33 @@ func (s *Service) onFriend(host string, m message) error {
 	}
 	switch m.Type {
 	case "friend_request":
-		state, err := s.Store.RequestFriend(shadow.ID, target.ID)
+		if exists, _ := s.Store.FriendState(shadow.ID, target.ID); exists == "none" {
+			perHost, err := s.Store.PendingIncoming(target.ID, host)
+			if err != nil {
+				return err
+			}
+			total, err := s.Store.PendingIncoming(target.ID, "")
+			if err != nil {
+				return err
+			}
+			if perHost >= maxPendingPerHost || total >= maxPendingTotal {
+				logger.Warn("FEDERATION dropped a friend request for uid=%d from %s: too many waiting", target.ID, host)
+				return nil
+			}
+		}
+		state, created, err := s.Store.RequestFriend(shadow.ID, target.ID)
 		if err != nil && !errors.Is(err, store.ErrAlreadyFriends) {
 			return err
 		}
+		if !created {
+			return nil
+		}
 		switch state {
 		case "outgoing":
-			s.Notify.Send(target.ID, "friend_request", "/?friends=1", map[string]any{"user": shadow.Name() + " (" + shadow.Username + ")", "username": shadow.Username})
+			s.notifyUser(target.ID, "friend_request", "/?friends=1", map[string]any{"user": shadow.Name() + " (" + shadow.Username + ")", "username": shadow.Username})
 		case "friends":
 			s.SendFriendAccept(target, shadow)
-			s.Notify.Send(target.ID, "friend_accepted", "/u/"+shadow.Username, map[string]any{"user": shadow.Name()})
+			s.notifyUser(target.ID, "friend_accepted", "/u/"+shadow.Username, map[string]any{"user": shadow.Name()})
 		}
 	case "friend_accept":
 		if err := s.Store.AcceptFriend(shadow.ID, target.ID); err != nil {
@@ -163,7 +186,7 @@ func (s *Service) onFriend(host string, m message) error {
 			}
 			return err
 		}
-		s.Notify.Send(target.ID, "friend_accepted", "/u/"+shadow.Username, map[string]any{"user": shadow.Name()})
+		s.notifyUser(target.ID, "friend_accepted", "/u/"+shadow.Username, map[string]any{"user": shadow.Name()})
 	case "friend_end":
 		if err := s.Store.EndFriendship(target.ID, shadow.ID); err != nil {
 			return err
@@ -175,10 +198,15 @@ func (s *Service) onFriend(host string, m message) error {
 	return nil
 }
 
+const (
+	maxPendingPerHost = 5
+	maxPendingTotal   = 100
+)
+
 var kinds = map[string]bool{"watch": true, "rating": true, "comment": true, "post": true}
 
 func clip(s string, n int) string {
-	s = strings.Join(strings.Fields(s), " ")
+	s = strings.Join(strings.Fields(stripFormat(s)), " ")
 	if r := []rune(s); len(r) > n {
 		return string(r[:n])
 	}
@@ -271,4 +299,10 @@ func imgName(n string) bool {
 		}
 	}
 	return true
+}
+
+func (s *Service) notifyUser(userID int64, event, link string, data map[string]any) {
+	if s.Notify != nil {
+		s.Notify.Send(userID, event, link, data)
+	}
 }

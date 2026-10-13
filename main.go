@@ -105,7 +105,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	if cfg.Federation {
-		fed, err := federation.New(st, nt, baseURL.Host, cfg.JWTSecret, cfg.FedInsecure, cfg.FedBlock)
+		fed, err := federation.New(st, nt, baseURL.Host, cfg.JWTSecret, cfg.FedInsecure, cfg.FedBlock, cfg.FedAllow)
 		if err != nil {
 			logger.Fatal("federation: %v", err)
 		}

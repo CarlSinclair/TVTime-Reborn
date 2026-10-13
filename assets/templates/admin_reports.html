@@ -1,5 +1,8 @@
 {{define "content"}}
-<h1>{{.T "admin.reports"}}</h1>
+<div class="page-head">
+  <h1>{{.T "admin.reports"}}</h1>
+  <a class="btn ghost small" href="/admin/servers">{{.T "admin.servers"}}</a>
+</div>
 {{if .Data.Reports}}
 <ul class="reports">
   {{range .Data.Reports}}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"tvt/logger"
 	"tvt/store"
@@ -115,4 +116,55 @@ func (a *App) apiAdminDismissUser(w http.ResponseWriter, r *http.Request) {
 	}
 	logger.Info("ADMIN uid=%d dismissed user reports target=%d", admin.ID, uid)
 	a.okJSON(w, nil)
+}
+
+func (a *App) pageAdminServers(w http.ResponseWriter, r *http.Request) {
+	if _, err := a.needAdmin(r); err != nil {
+		a.errorPage(w, r, http.StatusForbidden, "err.forbidden")
+		return
+	}
+	peers, err := a.Store.Peers()
+	if err != nil {
+		logger.Error("PAGE admin servers: %v", err)
+		a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
+		return
+	}
+	a.page(w, r, "admin_servers", "admin.servers", map[string]any{"Peers": peers})
+}
+
+func (a *App) apiAdminServer(forget bool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		admin, err := a.needAdmin(r)
+		if err != nil {
+			a.fail(w, r, err)
+			return
+		}
+		var in struct {
+			Host    string
+			Blocked bool
+		}
+		if err := decode(r, &in); err != nil {
+			a.fail(w, r, err)
+			return
+		}
+		host := strings.ToLower(strings.TrimSpace(in.Host))
+		if host == "" {
+			a.fail(w, r, errBadRequest)
+			return
+		}
+		if forget {
+			err = a.Store.ForgetPeer(host)
+		} else {
+			err = a.Store.SetPeerBlocked(host, in.Blocked)
+		}
+		switch {
+		case errors.Is(err, store.ErrNotFound):
+			a.fail(w, r, errNotFound)
+		case err != nil:
+			a.fail(w, r, err)
+		default:
+			logger.Info("ADMIN uid=%d server %s forget=%v blocked=%v", admin.ID, host, forget, in.Blocked)
+			a.okJSON(w, nil)
+		}
+	}
 }

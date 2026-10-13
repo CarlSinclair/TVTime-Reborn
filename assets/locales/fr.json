@@ -224,7 +224,14 @@
     "delete": "Supprimer le commentaire",
     "ban": "Bannir l'utilisateur",
     "none": "Aucun signalement ouvert.",
-    "reported_people": "Personnes signalées"
+    "reported_people": "Personnes signalées",
+    "servers": "Serveurs",
+    "server_blocked": "Bloqué",
+    "server_seen": "Vu pour la première fois le %s, dernière fois le %s",
+    "server_block": "Bloquer",
+    "server_unblock": "Débloquer",
+    "server_forget": "Oublier la clé",
+    "server_none": "Aucun autre serveur ne s'est encore connecté."
   },
   "offline": {
     "title": "Vous êtes hors ligne",
@@ -393,7 +400,8 @@
     "feed_none": "Rien de la part de vos amis pour l'instant.",
     "feed_no_friends": "Vous n'avez pas encore d'amis. Voici quelques commentaires récents d'autres personnes.",
     "user_blocked": "Utilisateur bloqué.",
-    "report_user_reason": "Pourquoi signalez-vous cette personne ?"
+    "report_user_reason": "Pourquoi signalez-vous cette personne ?",
+    "server_forget_confirm": "Oublier la clé de ce serveur ? À sa prochaine connexion, la clé qu'il présentera sera acceptée."
   },
   "genre": {
     "action_adventure": "Action et aventure",

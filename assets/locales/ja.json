@@ -224,7 +224,14 @@
     "delete": "コメントを削除",
     "ban": "ユーザーをBAN",
     "none": "未対応の通報はありません。",
-    "reported_people": "報告されたユーザー"
+    "reported_people": "報告されたユーザー",
+    "servers": "サーバー",
+    "server_blocked": "ブロック中",
+    "server_seen": "初回 %s、最終 %s",
+    "server_block": "ブロック",
+    "server_unblock": "ブロック解除",
+    "server_forget": "鍵を忘れる",
+    "server_none": "まだ他のサーバーは接続していません。"
   },
   "offline": {
     "title": "オフラインです",
@@ -393,7 +400,8 @@
     "feed_none": "友達からの更新はまだありません。",
     "feed_no_friends": "まだ友達がいません。他のユーザーの最近のコメントをいくつか表示します。",
     "user_blocked": "ユーザーをブロックしました。",
-    "report_user_reason": "この人を報告する理由は何ですか？"
+    "report_user_reason": "この人を報告する理由は何ですか？",
+    "server_forget_confirm": "このサーバーの鍵を忘れますか？次回の接続時には、提示された鍵がそのまま信頼されます。"
   },
   "genre": {
     "action_adventure": "アクション＆アドベンチャー",

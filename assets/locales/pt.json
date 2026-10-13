@@ -224,7 +224,14 @@
     "delete": "Excluir comentário",
     "ban": "Banir usuário",
     "none": "Nenhuma denúncia aberta.",
-    "reported_people": "Pessoas denunciadas"
+    "reported_people": "Pessoas denunciadas",
+    "servers": "Servidores",
+    "server_blocked": "Bloqueado",
+    "server_seen": "Visto pela primeira vez em %s, por último em %s",
+    "server_block": "Bloquear",
+    "server_unblock": "Desbloquear",
+    "server_forget": "Esquecer chave",
+    "server_none": "Nenhum outro servidor se conectou ainda."
   },
   "offline": {
     "title": "Você está offline",
@@ -393,7 +400,8 @@
     "feed_none": "Nada dos seus amigos ainda.",
     "feed_no_friends": "Você ainda não tem amigos. Aqui estão alguns comentários recentes de outras pessoas.",
     "user_blocked": "Usuário bloqueado.",
-    "report_user_reason": "Por que você está denunciando esta pessoa?"
+    "report_user_reason": "Por que você está denunciando esta pessoa?",
+    "server_forget_confirm": "Esquecer a chave deste servidor? Na próxima conexão, a chave que ele apresentar será aceita."
   },
   "genre": {
     "action_adventure": "Ação e Aventura",

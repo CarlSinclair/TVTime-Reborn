@@ -120,6 +120,75 @@ func (s *Store) PinPeer(host, key string) error {
 	return nil
 }
 
+type PeerInfo struct {
+	Host      string
+	FirstSeen string
+	LastSeen  string
+	Blocked   bool
+}
+
+func (s *Store) Peers() ([]PeerInfo, error) {
+	rows, err := s.DB.Query(`SELECT host, first_seen, last_seen, blocked FROM federation_peers ORDER BY host`)
+	if err != nil {
+		return nil, fmt.Errorf("list peers: %w", err)
+	}
+	defer rows.Close()
+	var out []PeerInfo
+	for rows.Next() {
+		var p PeerInfo
+		var b int
+		if err := rows.Scan(&p.Host, &p.FirstSeen, &p.LastSeen, &b); err != nil {
+			return nil, err
+		}
+		p.Blocked = b == 1
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) SetPeerBlocked(host string, blocked bool) error {
+	v := 0
+	if blocked {
+		v = 1
+	}
+	res, err := s.DB.Exec(`UPDATE federation_peers SET blocked = ? WHERE host = ?`, v, strings.ToLower(host))
+	if err != nil {
+		return fmt.Errorf("block peer %s: %w", host, err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// ForgetPeer removes the pinned key, so the next contact learns it afresh.
+func (s *Store) ForgetPeer(host string) error {
+	if _, err := s.DB.Exec(`DELETE FROM federation_peers WHERE host = ?`, strings.ToLower(host)); err != nil {
+		return fmt.Errorf("forget peer %s: %w", host, err)
+	}
+	return nil
+}
+
+// RememberSignature records a signature that was just accepted and reports
+// whether it was new; a signature seen before is a replay. The record survives
+// restarts.
+func (s *Store) RememberSignature(sig string) (bool, error) {
+	res, err := s.DB.Exec(`INSERT OR IGNORE INTO fed_seen (sig, seen_at) VALUES (?,?)`, sig, Now())
+	if err != nil {
+		return false, fmt.Errorf("remember signature: %w", err)
+	}
+	n, _ := res.RowsAffected()
+	return n > 0, nil
+}
+
+func (s *Store) PurgeSignatures(olderThan time.Duration) error {
+	_, err := s.DB.Exec(`DELETE FROM fed_seen WHERE seen_at < ?`, Ts(time.Now().Add(-olderThan)))
+	if err != nil {
+		return fmt.Errorf("purge signatures: %w", err)
+	}
+	return nil
+}
+
 type OutboxItem struct {
 	ID       int64
 	Host     string

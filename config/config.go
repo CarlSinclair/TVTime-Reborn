@@ -37,6 +37,7 @@ type Config struct {
 	Federation     bool
 	FedInsecure    bool
 	FedBlock       []string
+	FedAllow       []string
 	TVDBImageBase  string
 	SourceURL      string
 	MediaPublicURL string
@@ -86,6 +87,7 @@ func Load() (*Config, error) {
 		Federation:     env("TVT_FEDERATION", "1") != "0",
 		FedInsecure:    env("TVT_FEDERATION_INSECURE", "") == "1",
 		FedBlock:       strings.Split(env("TVT_FEDERATION_BLOCK", ""), ","),
+		FedAllow:       strings.Split(env("TVT_FEDERATION_ALLOW", ""), ","),
 		TVDBImageBase:  strings.TrimRight(env("TVT_TVDB_IMAGE_BASE", "https://artworks.thetvdb.com"), "/"),
 		MediaPublicURL: strings.TrimRight(env("TVT_MEDIA_PUBLIC_URL", ""), "/"),
 		SourceURL:      env("TVT_SOURCE_URL", "https://github.com/CarlSinclair/tvt"),

@@ -224,7 +224,14 @@
     "delete": "删除评论",
     "ban": "封禁用户",
     "none": "没有待处理的举报。",
-    "reported_people": "被举报的用户"
+    "reported_people": "被举报的用户",
+    "servers": "服务器",
+    "server_blocked": "已屏蔽",
+    "server_seen": "首次出现 %s，最近出现 %s",
+    "server_block": "屏蔽",
+    "server_unblock": "取消屏蔽",
+    "server_forget": "忘记密钥",
+    "server_none": "还没有其他服务器连接过。"
   },
   "offline": {
     "title": "你已离线",
@@ -393,7 +400,8 @@
     "feed_none": "好友还没有动态。",
     "feed_no_friends": "你还没有好友。这里是其他人最近的一些评论。",
     "user_blocked": "已屏蔽该用户。",
-    "report_user_reason": "你为什么要举报这个人？"
+    "report_user_reason": "你为什么要举报这个人？",
+    "server_forget_confirm": "忘记此服务器的密钥？它下次连接时，将信任它提供的任何密钥。"
   },
   "genre": {
     "action_adventure": "动作冒险",

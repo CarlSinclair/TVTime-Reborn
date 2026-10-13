@@ -286,3 +286,47 @@ func TestProfilePostsReuseComments(t *testing.T) {
 		t.Fatalf("visitors see posts but no top-level form")
 	}
 }
+
+func TestOnlyOnePendingRequestUntilAnswered(t *testing.T) {
+	e := newEnv(t)
+	alice := e.signup(t, "alice", true)
+	bob := e.signup(t, "bobby", true)
+	bu := e.mustUser(t, "bobby")
+
+	for i := 0; i < 3; i++ {
+		if code, out := alice.post("/api/friends/request", map[string]string{"username": "bobby"}); code != 200 || out["state"] != "outgoing" {
+			t.Fatalf("request %d: %d %v", i, code, out)
+		}
+	}
+	notes, _ := e.store.Notifications(bu.ID, 20, 0)
+	n := 0
+	for _, x := range notes {
+		if x.Event == "friend_request" {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Fatalf("an unanswered request can be sent once; bob got %d notifications", n)
+	}
+	if in := bob.getJSON("/api/friends")["incoming"].([]any); len(in) != 1 {
+		t.Fatalf("incoming = %v", in)
+	}
+
+	bob.post("/api/friends/respond", map[string]any{"username": "alice", "accept": false})
+	if code, out := alice.post("/api/friends/request", map[string]string{"username": "bobby"}); code != 200 || out["state"] != "outgoing" {
+		t.Fatalf("after a decline a new request may be sent: %d %v", code, out)
+	}
+	notes, _ = e.store.Notifications(bu.ID, 20, 0)
+	n = 0
+	for _, x := range notes {
+		if x.Event == "friend_request" {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Fatalf("an identical notification is not repeated within minutes, so a decline-and-ask-again loop cannot spam: %d", n)
+	}
+	if in := bob.getJSON("/api/friends")["incoming"].([]any); len(in) != 1 {
+		t.Fatalf("the new request must still be waiting in the list: %v", in)
+	}
+}

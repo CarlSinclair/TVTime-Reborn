@@ -206,7 +206,7 @@ func (a *App) apiFriendRequest(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	state, err := a.Store.RequestFriend(viewer.ID, target.ID)
+	state, created, err := a.Store.RequestFriend(viewer.ID, target.ID)
 	switch {
 	case errors.Is(err, store.ErrSelfFriend):
 		a.fail(w, r, apiErr{http.StatusBadRequest, "err.friend_self"})
@@ -222,6 +222,7 @@ func (a *App) apiFriendRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch {
+	case !created:
 	case target.IsRemote() && a.Fed != nil:
 		switch state {
 		case "outgoing":

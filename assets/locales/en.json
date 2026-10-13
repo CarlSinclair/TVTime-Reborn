@@ -224,7 +224,14 @@
     "delete": "Delete comment",
     "ban": "Ban user",
     "none": "No open reports.",
-    "reported_people": "Reported people"
+    "reported_people": "Reported people",
+    "servers": "Servers",
+    "server_blocked": "Blocked",
+    "server_seen": "First seen %s, last seen %s",
+    "server_block": "Block",
+    "server_unblock": "Unblock",
+    "server_forget": "Forget key",
+    "server_none": "No other servers have connected yet."
   },
   "offline": {
     "title": "You are offline",
@@ -393,7 +400,8 @@
     "feed_none": "Nothing from your friends yet.",
     "feed_no_friends": "You have no friends yet. Here are some recent comments from other people.",
     "user_blocked": "User blocked.",
-    "report_user_reason": "Why are you reporting this person?"
+    "report_user_reason": "Why are you reporting this person?",
+    "server_forget_confirm": "Forget this server's key? The next time it connects, whatever key it presents will be trusted."
   },
   "genre": {
     "action_adventure": "Action & Adventure",

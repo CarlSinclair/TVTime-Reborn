@@ -399,6 +399,17 @@
       if (data) toast(t("reported"), "ok");
       return;
     }
+    if ("serverBlock" in d) {
+      const data = await run(el, () => api("/api/admin/servers/block", { host: d.serverBlock, blocked: d.blocked === "1" }));
+      if (data) window.location.reload();
+      return;
+    }
+    if ("serverForget" in d) {
+      if (!window.confirm(t("server_forget_confirm"))) return;
+      const data = await run(el, () => api("/api/admin/servers/forget", { host: d.serverForget }));
+      if (data) window.location.reload();
+      return;
+    }
     if ("adminDismissUser" in d) {
       const data = await run(el, () => api("/api/admin/users/" + d.adminDismissUser + "/dismiss-reports"));
       if (data) window.location.reload();

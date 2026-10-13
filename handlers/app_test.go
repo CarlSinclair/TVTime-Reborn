@@ -244,7 +244,7 @@ func newEnv(t *testing.T) *env {
 	if err != nil {
 		t.Fatalf("app: %v", err)
 	}
-	fed, err := federation.New(st, nt, srv.Listener.Addr().String(), cfg.JWTSecret, true, nil)
+	fed, err := federation.New(st, nt, srv.Listener.Addr().String(), cfg.JWTSecret, true, nil, nil)
 	if err != nil {
 		t.Fatalf("federation: %v", err)
 	}

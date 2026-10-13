@@ -2,7 +2,7 @@
 <article class="feed-item">
   <a href="/u/{{.E.Username}}">{{if .E.AvatarPath}}<img class="avatar sm" src="{{avatar .E.AvatarPath}}" alt="">{{else}}<span class="avatar sm fallback">{{initial .E.Name}}</span>{{end}}</a>
   <div class="feed-body">
-    <p><a href="/u/{{.E.Username}}"><strong>{{.E.Name}}</strong></a>
+    <p><a href="/u/{{.E.Username}}"><strong>{{.E.Name}}</strong></a>{{if .E.Remote}} <small class="muted">@{{.E.Username}}</small>{{end}}
       {{if eq .E.Kind "watch"}}{{if gt .E.Count 1}}{{.V.T "feed.watch_many" .E.Count}}{{else if .E.ViewerWatched}}{{.V.T "feed.watch_ep" (code .E.Season .E.Episode)}}{{else}}{{.V.T "feed.watch_one"}}{{end}}
       {{else if eq .E.Kind "rating"}}{{if .E.ViewerWatched}}{{.V.T "feed.rate_ep" (code .E.Season .E.Episode)}}{{else}}{{.V.T "feed.rate"}}{{end}}
       {{else if eq .E.Kind "post"}}{{.V.T "feed.post"}}
