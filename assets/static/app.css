@@ -295,4 +295,5 @@ code { background: var(--panel-2); padding: 2px 6px; border-radius: 4px; word-br
   body[data-user="1"] { padding-bottom: 54px; }
   body[data-user="1"] .toasts { bottom: 70px; }
 }
-.source-link { color: var(--muted); font-size: .85rem; white-space: nowrap; }
+.footer-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px 16px; margin: 0 0 8px; }
+.footer-links a { color: var(--muted); }

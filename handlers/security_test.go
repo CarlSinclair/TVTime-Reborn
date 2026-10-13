@@ -708,8 +708,11 @@ func TestPrivacyPageAndAGPLSourceLink(t *testing.T) {
 	if status != 200 || !strings.Contains(body, "Privacy policy") || !strings.Contains(body, "Example Operator") || !strings.Contains(body, "privacy@example.org") {
 		t.Fatalf("privacy page: %d", status)
 	}
-	if !strings.Contains(body, `href="https://example.org/source"`) {
-		t.Fatalf("the AGPL requires a source link on every page")
+	if !strings.Contains(body, `href="/about"`) {
+		t.Fatalf("every page must link to the About page, which carries the source link")
+	}
+	if _, about := c.get("/about"); !strings.Contains(about, `href="https://example.org/source"`) {
+		t.Fatalf("the AGPL requires the About page to offer the source")
 	}
 	for _, l := range []string{"pt", "es", "it", "fr", "zh", "ru", "ja", "ko", "ar"} {
 		req, _ := http.NewRequest("GET", e.srv.URL+"/privacy", nil)

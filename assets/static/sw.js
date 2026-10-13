@@ -1,9 +1,23 @@
 const VERSION = "__VERSION__";
 const SHELL = "tt-shell-" + VERSION;
-const ASSETS = ["/static/app.css", "/static/app.js", "/static/theme.js", "/static/img/icon.svg", "/static/img/placeholder.svg", "/offline"];
+const ASSETS = ["/static/app.css?v=" + VERSION, "/static/app.js?v=" + VERSION, "/static/theme.js?v=" + VERSION, "/static/img/icon.svg", "/static/img/placeholder.svg", "/offline"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(SHELL).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  event.waitUntil(
+    caches
+      .open(SHELL)
+      .then((c) =>
+        Promise.all(
+          ASSETS.map((u) =>
+            fetch(new Request(u, { cache: "reload" })).then((res) => {
+              if (!res.ok) throw new Error("precache " + u + " status " + res.status);
+              return c.put(u, res);
+            })
+          )
+        )
+      )
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", (event) => {
@@ -18,7 +32,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== location.origin || url.pathname.startsWith("/api/")) return;
   if (url.pathname.startsWith("/static/")) {
-    event.respondWith(caches.match(req.url.split("?")[0]).then((hit) => hit || fetch(req)));
+    event.respondWith(caches.match(req.url).then((hit) => hit || fetch(req)));
     return;
   }
   if (req.mode === "navigate") {

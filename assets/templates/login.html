@@ -12,6 +12,5 @@
   {{if .PasskeysEnabled}}<p><button class="btn ghost wide" type="button" id="passkey-login">{{.T "auth.passkey_login"}}</button></p>{{end}}
   {{if .TelegramBot}}{{template "telegram_widget" (dict "BotID" .TelegramBotID "Label" (.T "auth.telegram_login") "Action" "login")}}{{end}}
   <p class="muted"><a href="/forgot">{{.T "auth.forgot"}}</a> &middot; <a href="/register">{{.T "auth.register"}}</a></p>
-<p class="muted"><a href="/privacy">{{.T "footer.privacy"}}</a> &middot; <a href="/about">{{.T "nav.about"}}</a></p>
 </section>
 {{end}}

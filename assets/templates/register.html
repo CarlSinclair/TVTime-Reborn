@@ -10,6 +10,5 @@
   </form>
   {{if .TelegramBot}}{{template "telegram_widget" (dict "BotID" .TelegramBotID "Label" (.T "auth.telegram_login") "Action" "login")}}{{end}}
   <p class="muted"><a href="/login">{{.T "auth.have_account"}}</a></p>
-<p class="muted"><a href="/privacy">{{.T "footer.privacy"}}</a> &middot; <a href="/about">{{.T "nav.about"}}</a></p>
 </section>
 {{end}}
