@@ -75,6 +75,8 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/admin/config", a.apiAdminConfigSave)
 	mux.HandleFunc("POST /api/admin/config/test", a.apiAdminConfigTest)
 	mux.HandleFunc("POST /api/admin/restart", a.apiAdminRestart)
+	mux.HandleFunc("POST /api/admin/servers/share", a.apiAdminServerShare)
+	mux.HandleFunc("POST /api/remote-comments/{id}/report", a.apiReportRemoteComment)
 	mux.HandleFunc("POST /api/admin/servers/block", a.apiAdminServer(false))
 	mux.HandleFunc("POST /api/admin/servers/forget", a.apiAdminServer(true))
 
@@ -138,6 +140,7 @@ func (a *App) routes(mux *http.ServeMux) {
 		mux.HandleFunc("GET /.well-known/tvt", a.Fed.WellKnown)
 		mux.HandleFunc("GET /federation/user/{name}", a.Fed.UserInfo)
 		mux.HandleFunc("POST /federation/inbox", a.Fed.Inbox)
+		mux.HandleFunc("POST /federation/renew", a.Fed.Renew)
 	}
 	mux.HandleFunc("GET /api/people", a.apiPeople)
 	mux.HandleFunc("GET /api/friends", a.apiFriendsList)

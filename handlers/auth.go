@@ -515,6 +515,7 @@ func (a *App) apiDeactivateAccount(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, apiErr{http.StatusBadRequest, "err.confirm_username"})
 		return
 	}
+	a.withdrawAll(u)
 	if err := a.applyCommentMode(u.ID, mode); err != nil {
 		a.fail(w, r, err)
 		return
@@ -534,6 +535,7 @@ func (a *App) apiDeactivateAccount(w http.ResponseWriter, r *http.Request) {
 // told the friendship ended; a failure to remove uploaded images is logged but
 // does not undo the deletion.
 func (a *App) deleteAccount(ctx context.Context, u *store.User, mode string) error {
+	a.withdrawAll(u)
 	if err := a.Store.TransferUserComments(u.ID, mode); err != nil {
 		return err
 	}

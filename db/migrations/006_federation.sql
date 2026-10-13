@@ -6,7 +6,8 @@ CREATE TABLE federation_peers (
   first_seen TEXT NOT NULL,
   last_seen TEXT NOT NULL,
   blocked INTEGER NOT NULL DEFAULT 0,
-  acked INTEGER NOT NULL DEFAULT 0
+  acked INTEGER NOT NULL DEFAULT 0,
+  share INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE fed_outbox (
@@ -54,3 +55,22 @@ CREATE TABLE username_history (
 );
 CREATE INDEX idx_username_history_name ON username_history(old_name);
 CREATE INDEX idx_username_history_user ON username_history(user_id);
+
+CREATE TABLE remote_comments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  host TEXT NOT NULL,
+  ref TEXT NOT NULL,
+  parent_ref TEXT NOT NULL DEFAULT '',
+  show_tmdb INTEGER NOT NULL,
+  season INTEGER NOT NULL,
+  episode INTEGER NOT NULL,
+  body TEXT NOT NULL,
+  spoiler INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  edited_at TEXT NOT NULL DEFAULT '',
+  expires_at TEXT NOT NULL,
+  UNIQUE(host, ref)
+);
+CREATE INDEX idx_remote_comments_episode ON remote_comments(show_tmdb, season, episode);
+CREATE INDEX idx_remote_comments_exp ON remote_comments(expires_at);

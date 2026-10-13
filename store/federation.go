@@ -126,10 +126,11 @@ type PeerInfo struct {
 	LastSeen  string
 	Blocked   bool
 	New       bool
+	Share     bool
 }
 
 func (s *Store) Peers() ([]PeerInfo, error) {
-	rows, err := s.DB.Query(`SELECT host, first_seen, last_seen, blocked, acked FROM federation_peers ORDER BY acked, host`)
+	rows, err := s.DB.Query(`SELECT host, first_seen, last_seen, blocked, acked, share FROM federation_peers ORDER BY acked, host`)
 	if err != nil {
 		return nil, fmt.Errorf("list peers: %w", err)
 	}
@@ -137,12 +138,60 @@ func (s *Store) Peers() ([]PeerInfo, error) {
 	var out []PeerInfo
 	for rows.Next() {
 		var p PeerInfo
-		var b, ack int
-		if err := rows.Scan(&p.Host, &p.FirstSeen, &p.LastSeen, &b, &ack); err != nil {
+		var b, ack, sh int
+		if err := rows.Scan(&p.Host, &p.FirstSeen, &p.LastSeen, &b, &ack, &sh); err != nil {
 			return nil, err
 		}
-		p.Blocked, p.New = b == 1, ack == 0
+		p.Blocked, p.New, p.Share = b == 1, ack == 0, sh == 1
 		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
+// SetPeerShare allow-lists a server: activity and episode comments are shared
+// with it and accepted from it.
+func (s *Store) SetPeerShare(host string, share bool) error {
+	v := 0
+	if share {
+		v = 1
+	}
+	res, err := s.DB.Exec(`UPDATE federation_peers SET share = ? WHERE host = ?`, v, strings.ToLower(host))
+	if err != nil {
+		return fmt.Errorf("share peer %s: %w", host, err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// PeerShares says whether a server is allow-listed for sharing.
+func (s *Store) PeerShares(host string) (bool, error) {
+	var v int
+	err := s.DB.QueryRow(`SELECT share FROM federation_peers WHERE host = ? AND blocked = 0`, strings.ToLower(host)).Scan(&v)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("peer share %s: %w", host, err)
+	}
+	return v == 1, nil
+}
+
+// SharePeers lists the allow-listed servers.
+func (s *Store) SharePeers() ([]string, error) {
+	rows, err := s.DB.Query(`SELECT host FROM federation_peers WHERE share = 1 AND blocked = 0 ORDER BY host`)
+	if err != nil {
+		return nil, fmt.Errorf("list share peers: %w", err)
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var h string
+		if err := rows.Scan(&h); err != nil {
+			return nil, err
+		}
+		out = append(out, h)
 	}
 	return out, rows.Err()
 }
@@ -269,6 +318,9 @@ func (s *Store) PurgeExpiredRemote() error {
 	if _, err := s.DB.Exec(`DELETE FROM remote_events WHERE expires_at < ?`, Now()); err != nil {
 		return fmt.Errorf("purge remote events: %w", err)
 	}
+	if _, err := s.DB.Exec(`DELETE FROM remote_comments WHERE expires_at < ?`, Now()); err != nil {
+		return fmt.Errorf("purge remote comments: %w", err)
+	}
 	return nil
 }
 
@@ -278,4 +330,142 @@ func (s *Store) DropRemoteEvents(userID int64) error {
 		return fmt.Errorf("drop remote events uid=%d: %w", userID, err)
 	}
 	return nil
+}
+
+// CommentLease is how long a copy of another server's comment is kept unless
+// that server confirms it still exists.
+const CommentLease = 24 * time.Hour
+
+// RemoteComment is a copy of a comment written on another server.
+type RemoteComment struct {
+	ID                int64
+	UserID            int64
+	Handle, Name      string
+	Host, Ref         string
+	ParentRef         string
+	ShowTMDB          int64
+	Season, Episode   int
+	Body              string
+	Spoiler           bool
+	CreatedAt, Edited string
+	ExpiresAt         string
+}
+
+func (s *Store) SaveRemoteComment(c RemoteComment) error {
+	sp := 0
+	if c.Spoiler {
+		sp = 1
+	}
+	if _, err := s.DB.Exec(`INSERT INTO remote_comments (user_id, host, ref, parent_ref, show_tmdb, season, episode, body, spoiler, created_at, edited_at, expires_at)
+	  VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+	  ON CONFLICT(host, ref) DO UPDATE SET body = excluded.body, spoiler = excluded.spoiler, edited_at = excluded.edited_at, expires_at = excluded.expires_at`,
+		c.UserID, strings.ToLower(c.Host), c.Ref, c.ParentRef, c.ShowTMDB, c.Season, c.Episode, c.Body, sp, c.CreatedAt, c.Edited, Ts(time.Now().Add(CommentLease))); err != nil {
+		return fmt.Errorf("save remote comment %s/%s: %w", c.Host, c.Ref, err)
+	}
+	return nil
+}
+
+// RenewRemoteComment extends a lease and refreshes what the home server says
+// the comment now reads.
+func (s *Store) RenewRemoteComment(host, ref, body string, spoiler bool, edited string) error {
+	sp := 0
+	if spoiler {
+		sp = 1
+	}
+	if _, err := s.DB.Exec(`UPDATE remote_comments SET body = ?, spoiler = ?, edited_at = ?, expires_at = ? WHERE host = ? AND ref = ?`,
+		body, sp, edited, Ts(time.Now().Add(CommentLease)), strings.ToLower(host), ref); err != nil {
+		return fmt.Errorf("renew remote comment %s/%s: %w", host, ref, err)
+	}
+	return nil
+}
+
+// DeleteRemoteComment removes a copy (and any replies to it from the same
+// server) once its home server says it is gone.
+func (s *Store) DeleteRemoteComment(host, ref string) error {
+	if _, err := s.DB.Exec(`DELETE FROM remote_comments WHERE host = ? AND (ref = ? OR parent_ref = ?)`, strings.ToLower(host), ref, ref); err != nil {
+		return fmt.Errorf("delete remote comment %s/%s: %w", host, ref, err)
+	}
+	return nil
+}
+
+// DeleteRemoteCommentsOf removes every copy of one person's comments.
+func (s *Store) DeleteRemoteCommentsOf(userID int64) error {
+	if _, err := s.DB.Exec(`DELETE FROM remote_comments WHERE user_id = ?`, userID); err != nil {
+		return fmt.Errorf("delete remote comments uid=%d: %w", userID, err)
+	}
+	return nil
+}
+
+func (s *Store) RemoteCommentAuthor(host, ref string) (int64, error) {
+	var id int64
+	err := s.DB.QueryRow(`SELECT user_id FROM remote_comments WHERE host = ? AND ref = ?`, strings.ToLower(host), ref).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, ErrNotFound
+	}
+	if err != nil {
+		return 0, fmt.Errorf("remote comment author %s/%s: %w", host, ref, err)
+	}
+	return id, nil
+}
+
+// RemoteCommentsFor lists the copies of other servers' comments on one episode
+// that the viewer may see: their authors are neither blocked nor suspended.
+func (s *Store) RemoteCommentsFor(showTMDB int64, season, episode int, viewerID int64) ([]RemoteComment, error) {
+	rows, err := s.DB.Query(`SELECT c.id, c.user_id, u.username, u.display_name, c.host, c.ref, c.parent_ref, c.show_tmdb, c.season, c.episode, c.body, c.spoiler, c.created_at, c.edited_at, c.expires_at
+	  FROM remote_comments c JOIN users u ON u.id = c.user_id
+	  WHERE c.show_tmdb = ? AND c.season = ? AND c.episode = ? AND c.expires_at > ? AND u.is_deactivated = 0
+	    AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id = ? AND b.blocked_id = c.user_id) OR (b.blocker_id = c.user_id AND b.blocked_id = ?))
+	  ORDER BY c.created_at ASC, c.id ASC LIMIT 200`, showTMDB, season, episode, Now(), viewerID, viewerID)
+	if err != nil {
+		return nil, fmt.Errorf("remote comments show=%d s%de%d: %w", showTMDB, season, episode, err)
+	}
+	defer rows.Close()
+	var out []RemoteComment
+	for rows.Next() {
+		var c RemoteComment
+		var sp int
+		if err := rows.Scan(&c.ID, &c.UserID, &c.Handle, &c.Name, &c.Host, &c.Ref, &c.ParentRef, &c.ShowTMDB, &c.Season, &c.Episode, &c.Body, &sp, &c.CreatedAt, &c.Edited, &c.ExpiresAt); err != nil {
+			return nil, err
+		}
+		c.Spoiler = sp == 1
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) RemoteCommentByID(id int64) (*RemoteComment, error) {
+	var c RemoteComment
+	var sp int
+	err := s.DB.QueryRow(`SELECT c.id, c.user_id, u.username, u.display_name, c.host, c.ref, c.parent_ref, c.show_tmdb, c.season, c.episode, c.body, c.spoiler, c.created_at, c.edited_at, c.expires_at
+	  FROM remote_comments c JOIN users u ON u.id = c.user_id WHERE c.id = ?`, id).Scan(&c.ID, &c.UserID, &c.Handle, &c.Name, &c.Host, &c.Ref, &c.ParentRef, &c.ShowTMDB, &c.Season, &c.Episode, &c.Body, &sp, &c.CreatedAt, &c.Edited, &c.ExpiresAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("remote comment %d: %w", id, err)
+	}
+	c.Spoiler = sp == 1
+	return &c, nil
+}
+
+// DueRenewals lists copies whose lease ends within the window, newest first,
+// so each can be re-confirmed with its home server.
+func (s *Store) DueRenewals(within time.Duration, limit int) ([]RemoteComment, error) {
+	rows, err := s.DB.Query(`SELECT id, user_id, '', '', host, ref, parent_ref, show_tmdb, season, episode, body, spoiler, created_at, edited_at, expires_at
+	  FROM remote_comments WHERE expires_at < ? ORDER BY host, expires_at LIMIT ?`, Ts(time.Now().Add(within)), limit)
+	if err != nil {
+		return nil, fmt.Errorf("due renewals: %w", err)
+	}
+	defer rows.Close()
+	var out []RemoteComment
+	for rows.Next() {
+		var c RemoteComment
+		var sp int
+		if err := rows.Scan(&c.ID, &c.UserID, &c.Handle, &c.Name, &c.Host, &c.Ref, &c.ParentRef, &c.ShowTMDB, &c.Season, &c.Episode, &c.Body, &sp, &c.CreatedAt, &c.Edited, &c.ExpiresAt); err != nil {
+			return nil, err
+		}
+		c.Spoiler = sp == 1
+		out = append(out, c)
+	}
+	return out, rows.Err()
 }

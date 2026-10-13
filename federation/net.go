@@ -105,12 +105,17 @@ func newClient(insecure bool) *http.Client {
 
 const maxBody = 64 << 10
 
-func readLimited(r io.Reader) ([]byte, error) {
-	b, err := io.ReadAll(io.LimitReader(r, maxBody+1))
+func readLimited(r io.Reader) ([]byte, error) { return readUpTo(r, maxBody) }
+
+// maxReply bounds what a server may answer to a renewal: a batch of comments.
+const maxReply = 1 << 20
+
+func readUpTo(r io.Reader, n int) ([]byte, error) {
+	b, err := io.ReadAll(io.LimitReader(r, int64(n)+1))
 	if err != nil {
 		return nil, err
 	}
-	if len(b) > maxBody {
+	if len(b) > n {
 		return nil, errors.New("federation: body too large")
 	}
 	return b, nil

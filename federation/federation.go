@@ -357,6 +357,23 @@ type message struct {
 	Ref   string `json:"ref,omitempty"`
 	// NewName is the username a person changed to; From carries the old one.
 	NewName string `json:"new_name,omitempty"`
+	// Comment is an episode comment shared with every allow-listed server.
+	Comment *CommentMsg `json:"comment,omitempty"`
+	Reason  string      `json:"reason,omitempty"`
+}
+
+// CommentMsg is an episode comment as it travels between servers. Ref names it
+// on its home server; Parent names the comment it answers, on the same server.
+type CommentMsg struct {
+	Ref      string `json:"ref"`
+	Parent   string `json:"parent,omitempty"`
+	ShowTMDB int64  `json:"show_tmdb"`
+	Season   int    `json:"season"`
+	Episode  int    `json:"episode"`
+	Body     string `json:"body"`
+	Spoiler  bool   `json:"spoiler,omitempty"`
+	Created  string `json:"created"`
+	Edited   string `json:"edited,omitempty"`
 }
 
 func newID() string {
@@ -420,25 +437,86 @@ func (s *Service) Emit(u *store.User, ev Event) {
 	if u == nil || u.IsRemote() || !u.ShareActivity {
 		return
 	}
-	friends, err := s.Store.RemoteFriends(u.ID)
-	if err != nil {
-		logger.Error("FEDERATION emit uid=%d: %v", u.ID, err)
-		return
-	}
-	if len(friends) == 0 {
+	hosts, err := s.audience(u, true)
+	if err != nil || len(hosts) == 0 {
 		return
 	}
 	if ev.At == "" {
 		ev.At = store.Now()
 	}
-	hosts := map[string]bool{}
-	for _, f := range friends {
-		hosts[f.Host] = true
-	}
-	for h := range hosts {
+	for _, h := range hosts {
 		e := ev
 		s.enqueue(h, message{Type: "activity", From: person(u), Event: &e})
 	}
+}
+
+// audience is the servers a person's activity goes to: those of their remote
+// friends and every allow-listed server. Friendship still decides what anyone
+// sees in their feed. friends=false limits it to allow-listed servers.
+func (s *Service) audience(u *store.User, friends bool) ([]string, error) {
+	set := map[string]bool{}
+	if friends {
+		fl, err := s.Store.RemoteFriends(u.ID)
+		if err != nil {
+			logger.Error("FEDERATION audience uid=%d: %v", u.ID, err)
+			return nil, err
+		}
+		for _, f := range fl {
+			set[f.Host] = true
+		}
+	}
+	shared, err := s.Store.SharePeers()
+	if err != nil {
+		logger.Error("FEDERATION audience uid=%d: %v", u.ID, err)
+		return nil, err
+	}
+	for _, h := range shared {
+		set[h] = true
+	}
+	out := make([]string, 0, len(set))
+	for h := range set {
+		out = append(out, h)
+	}
+	return out, nil
+}
+
+// ShareComment sends an episode comment (new or edited) to every allow-listed
+// server. The copies are leased: they lapse after a day unless the home server
+// keeps confirming them.
+func (s *Service) ShareComment(u *store.User, c CommentMsg) {
+	if u == nil || u.IsRemote() || u.IsDeactivated || !u.ShareActivity {
+		return
+	}
+	hosts, err := s.audience(u, false)
+	if err != nil {
+		return
+	}
+	for _, h := range hosts {
+		cc := c
+		s.enqueue(h, message{Type: "comment", From: person(u), Comment: &cc})
+	}
+}
+
+// WithdrawComment takes a comment back from every allow-listed server.
+func (s *Service) WithdrawComment(u *store.User, ref string) {
+	if u == nil || u.IsRemote() {
+		return
+	}
+	hosts, err := s.audience(u, false)
+	if err != nil {
+		return
+	}
+	for _, h := range hosts {
+		s.enqueue(h, message{Type: "comment_retract", From: person(u), Ref: ref})
+	}
+}
+
+// ForwardReport tells a comment's home server that someone here reported it.
+func (s *Service) ForwardReport(reporter *store.User, host, ref, reason string) {
+	if reporter == nil || reporter.IsRemote() {
+		return
+	}
+	s.enqueue(host, message{Type: "report", From: person(reporter), Ref: ref, Reason: reason})
 }
 
 func (s *Service) Retract(u *store.User, ref string) {
@@ -459,15 +537,21 @@ func (s *Service) Retract(u *store.User, ref string) {
 }
 
 func (s *Service) post(ctx context.Context, host, path string, body []byte) (int, error) {
+	code, _, err := s.call(ctx, host, path, body)
+	return code, err
+}
+
+// call posts a signed message and returns the status and the (bounded) reply.
+func (s *Service) call(ctx context.Context, host, path string, body []byte) (int, []byte, error) {
 	if _, err := s.peerKey(ctx, host); err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 	date := strconv.FormatInt(time.Now().Unix(), 10)
 	digest := digestOf(body)
 	sig := ed25519.Sign(s.priv, canonical(http.MethodPost, path, host, date, digest))
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.scheme()+"://"+host+path, bytes.NewReader(body))
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-TVT-Host", s.Host)
@@ -476,10 +560,14 @@ func (s *Service) post(ctx context.Context, host, path string, body []byte) (int
 	req.Header.Set("X-TVT-Signature", base64.StdEncoding.EncodeToString(sig))
 	resp, err := s.client.Do(req)
 	if err != nil {
-		return 0, fmt.Errorf("%w: %v", ErrUnreachable, err)
+		return 0, nil, fmt.Errorf("%w: %v", ErrUnreachable, err)
 	}
 	defer resp.Body.Close()
-	return resp.StatusCode, nil
+	reply, err := readUpTo(resp.Body, maxReply)
+	if err != nil {
+		return resp.StatusCode, nil, err
+	}
+	return resp.StatusCode, reply, nil
 }
 
 // Run delivers queued messages, retrying with growing delays, and clears
@@ -487,14 +575,18 @@ func (s *Service) post(ctx context.Context, host, path string, body []byte) (int
 func (s *Service) Run(ctx context.Context) {
 	tick := time.NewTicker(15 * time.Second)
 	purge := time.NewTicker(time.Hour)
+	renew := time.NewTicker(30 * time.Minute)
 	defer tick.Stop()
 	defer purge.Stop()
+	defer renew.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-tick.C:
 			s.Flush(ctx)
+		case <-renew.C:
+			s.RenewLeases(ctx)
 		case <-purge.C:
 			if err := s.Store.PurgeExpiredRemote(); err != nil {
 				logger.Error("FEDERATION %v", err)

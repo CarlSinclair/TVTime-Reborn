@@ -287,6 +287,7 @@
     "server_host_hint": "Un altro server TVT, ad esempio tvt.example.org. La sua chiave viene recuperata e fissata.",
     "server_connect": "Connetti",
     "server_new": "Nuovo",
+    "server_share": "Condividi attività e commenti",
     "server_added": "Server connesso.",
     "federation_off": "La federazione è disattivata su questo server.",
     "mail_recent": "Email recenti",
@@ -452,6 +453,7 @@
     "verify_sent": "E-mail di verifica inviata.",
     "marked_many": "Segnati come visti: %d",
     "saved": "Salvato.",
+    "remote_comments": "Da altri server",
     "admin_reset_sent": "Email di reimpostazione inviata.",
     "config_test_ok": "Test superato:",
     "restarting": "Riavvio in corso. La pagina verrà ricaricata.",
@@ -738,7 +740,7 @@
     },
     "third": {
       "title": "Altri servizi coinvolti",
-      "body": "I dati delle serie provengono da TMDB e TVmaze e, facoltativamente, da Trakt. Il server effettua queste richieste e non invia nulla su di te. Le immagini sono scaricate una volta dal server e servite da questo sito o da uno spazio di archiviazione controllato dall'operatore, quindi il tuo browser non contatta quei servizi. Se scegli Telegram, questo riceve il tuo accesso e le notifiche inviate a te; il suo script viene caricato solo quando premi il pulsante Telegram. Le notifiche push passano dal servizio push del produttore del browser. L'e-mail passa dal provider di posta dell'operatore. Se aggiungi un amico su un altro server TVT, le tue richieste di amicizia e l'attività che condividi con gli amici (cosa guardi, i voti, i commenti aperti e i post) vengono inviate al server di quella persona e conservate lì per 14 giorni. I commenti con spoiler non vengono mai inviati. Puoi smettere di condividere nelle impostazioni del profilo."
+      "body": "I dati delle serie provengono da TMDB e TVmaze e, facoltativamente, da Trakt. Il server effettua queste richieste e non invia nulla su di te. Le immagini sono scaricate una volta dal server e servite da questo sito o da uno spazio di archiviazione controllato dall'operatore, quindi il tuo browser non contatta quei servizi. Se scegli Telegram, questo riceve il tuo accesso e le notifiche inviate a te; il suo script viene caricato solo quando premi il pulsante Telegram. Le notifiche push passano dal servizio push del produttore del browser. L'e-mail passa dal provider di posta dell'operatore. Le tue richieste di amicizia vanno al server dell'altra persona. L'attività che condividi (cosa guardi, le tue valutazioni, commenti e post) e i tuoi commenti agli episodi vengono inviati ai server autorizzati dall'operatore. L'attività vi resta per 14 giorni e i commenti agli episodi per un giorno, a meno che il tuo server confermi che esistono ancora; i commenti che elimini o nascondi vengono ritirati. I commenti contrassegnati come spoiler vengono inviati con quel contrassegno. Solo i tuoi amici vedono la tua attività nel loro feed. Puoi smettere di condividere nelle impostazioni del profilo."
     },
     "public": {
       "title": "Cosa possono vedere gli altri",

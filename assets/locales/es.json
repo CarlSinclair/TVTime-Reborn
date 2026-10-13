@@ -287,6 +287,7 @@
     "server_host_hint": "Otro servidor TVT, por ejemplo tvt.example.org. Se obtiene y fija su clave.",
     "server_connect": "Conectar",
     "server_new": "Nuevo",
+    "server_share": "Compartir actividad y comentarios",
     "server_added": "Servidor conectado.",
     "federation_off": "La federación está desactivada en este servidor.",
     "mail_recent": "Correos recientes",
@@ -452,6 +453,7 @@
     "verify_sent": "Correo de verificación enviado.",
     "marked_many": "Marcados como vistos: %d",
     "saved": "Guardado.",
+    "remote_comments": "De otros servidores",
     "admin_reset_sent": "Correo de restablecimiento enviado.",
     "config_test_ok": "Prueba superada:",
     "restarting": "Reiniciando. La página se recargará.",
@@ -738,7 +740,7 @@
     },
     "third": {
       "title": "Otros servicios implicados",
-      "body": "Los datos de las series vienen de TMDB y TVmaze y, opcionalmente, de Trakt. El servidor hace estas consultas y no envía nada sobre ti. Las imágenes las descarga una vez el servidor y se sirven desde este sitio o desde un almacenamiento controlado por el operador, así que tu navegador no contacta con esos servicios. Si eliges Telegram, este recibe tu inicio de sesión y las notificaciones que te envía; su script solo se carga cuando pulsas el botón de Telegram. Las notificaciones push pasan por el servicio push del fabricante de tu navegador. El correo pasa por el proveedor de correo del operador. Si añades a un amigo en otro servidor TVT, tus solicitudes de amistad y la actividad que compartes con amigos (lo que ves, tus valoraciones, comentarios abiertos y publicaciones) se envían al servidor de esa persona y se conservan allí 14 días. Los comentarios con spoiler nunca se envían. Puedes dejar de compartir en los ajustes del perfil."
+      "body": "Los datos de las series vienen de TMDB y TVmaze y, opcionalmente, de Trakt. El servidor hace estas consultas y no envía nada sobre ti. Las imágenes las descarga una vez el servidor y se sirven desde este sitio o desde un almacenamiento controlado por el operador, así que tu navegador no contacta con esos servicios. Si eliges Telegram, este recibe tu inicio de sesión y las notificaciones que te envía; su script solo se carga cuando pulsas el botón de Telegram. Las notificaciones push pasan por el servicio push del fabricante de tu navegador. El correo pasa por el proveedor de correo del operador. Tus solicitudes de amistad van al servidor de la otra persona. La actividad que compartes (lo que ves, tus valoraciones, comentarios y publicaciones) y tus comentarios de episodios se envían a los servidores que el operador ha autorizado. La actividad se conserva allí 14 días y los comentarios de episodios un día, salvo que tu servidor confirme que siguen existiendo; los comentarios que eliminas u ocultas se retiran. Los comentarios marcados como spoiler se envían con esa marca. Solo tus amigos ven tu actividad en su feed. Puedes dejar de compartir en los ajustes del perfil."
     },
     "public": {
       "title": "Qué pueden ver los demás",

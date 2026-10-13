@@ -16,71 +16,81 @@ import (
 	"tvt/store"
 )
 
-// Inbox receives messages from other servers. Every message must carry a
-// signature from the sending server's pinned key, over its method, path, the
-// receiving host, a fresh timestamp and a digest of the body. Nothing is
+// verify checks a request from another server and returns who sent it and the
+// body, answering the request itself when anything is wrong. Every request must
+// carry a signature from the sending server's pinned key, over its method, path,
+// the receiving host, a fresh timestamp and a digest of the body. Nothing is
 // charged to a server's own quota until its signature has checked out, so
 // someone claiming to be another server cannot use that server's allowance up.
-func (s *Service) Inbox(w http.ResponseWriter, r *http.Request) {
+func (s *Service) verify(w http.ResponseWriter, r *http.Request) (string, []byte, bool) {
 	ip := auth.ClientIP(r)
 	if !s.ipLimit.Allow("ip:" + ip) {
 		http.Error(w, "too many requests", http.StatusTooManyRequests)
-		return
+		return "", nil, false
 	}
 	from := strings.ToLower(strings.TrimSpace(r.Header.Get("X-TVT-Host")))
 	body, err := readLimited(http.MaxBytesReader(w, r.Body, maxBody+1))
 	if err != nil {
 		http.Error(w, "bad request", http.StatusRequestEntityTooLarge)
-		return
+		return "", nil, false
 	}
 	date := r.Header.Get("X-TVT-Date")
 	ts, err := strconv.ParseInt(date, 10, 64)
 	if err != nil || time.Since(time.Unix(ts, 0)) > dateSkew || time.Until(time.Unix(ts, 0)) > dateSkew {
 		http.Error(w, "stale or missing date", http.StatusUnauthorized)
-		return
+		return "", nil, false
 	}
 	digest := r.Header.Get("X-TVT-Digest")
 	if digest != digestOf(body) {
 		http.Error(w, "digest mismatch", http.StatusUnauthorized)
-		return
+		return "", nil, false
 	}
 	sig, err := base64.StdEncoding.DecodeString(r.Header.Get("X-TVT-Signature"))
 	if err != nil || len(sig) != ed25519.SignatureSize {
 		http.Error(w, "bad signature", http.StatusUnauthorized)
-		return
+		return "", nil, false
 	}
 	if _, perr := s.Store.PeerByHost(from); errors.Is(perr, store.ErrNotFound) && !s.ipFetch.Allow("ip:"+ip) {
 		http.Error(w, "too many requests", http.StatusTooManyRequests)
-		return
+		return "", nil, false
 	}
 	key, err := s.peerKey(r.Context(), from)
 	if err != nil {
 		logger.Warn("FEDERATION rejected a message from %q: %v", from, err)
 		http.Error(w, "unknown or blocked server", http.StatusForbidden)
-		return
+		return "", nil, false
 	}
 	if !ed25519.Verify(key, canonical(r.Method, r.URL.Path, s.Host, date, digest), sig) {
 		if s.keyChanged(r.Context(), from) {
 			http.Error(w, "server key changed", http.StatusForbidden)
-			return
+			return "", nil, false
 		}
 		logger.Warn("FEDERATION bad signature from %s", from)
 		http.Error(w, "bad signature", http.StatusUnauthorized)
-		return
+		return "", nil, false
 	}
 	if !s.hostLimit.Allow("host:" + from) {
 		http.Error(w, "too many requests", http.StatusTooManyRequests)
-		return
+		return "", nil, false
 	}
 	sum := sha256.Sum256(sig)
 	fresh, err := s.Store.RememberSignature(base64.StdEncoding.EncodeToString(sum[:]))
 	if err != nil {
 		logger.Error("FEDERATION %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
+		return "", nil, false
 	}
 	if !fresh {
 		http.Error(w, "replay", http.StatusConflict)
+		return "", nil, false
+	}
+	return from, body, true
+}
+
+// Inbox receives messages from other servers.
+func (s *Service) Inbox(w http.ResponseWriter, r *http.Request) {
+	from, body, ok := s.verify(w, r)
+	if !ok {
 		return
 	}
 	var m message
@@ -115,6 +125,12 @@ func (s *Service) dispatch(host string, m message) error {
 		return s.onRetract(host, m)
 	case "rename":
 		return s.onRename(host, m)
+	case "comment":
+		return s.onComment(host, m)
+	case "comment_retract":
+		return s.onCommentRetract(host, m)
+	case "report":
+		return s.onReport(host, m)
 	}
 	return errBadMessage
 }
@@ -200,18 +216,28 @@ func (s *Service) onActivity(host string, m message) error {
 	if m.Event == nil || !kinds[m.Event.Kind] || m.Event.Ref == "" || len(m.Event.Ref) > 64 {
 		return errBadMessage
 	}
-	shadow, err := s.Store.UserByUsername(store.RemoteHandle(m.From.Username, host))
+	shared, err := s.Store.PeerShares(host)
 	if err != nil {
-		if errors.Is(err, store.ErrNotFound) {
-			return nil
-		}
 		return err
+	}
+	var shadow *store.User
+	if shared {
+		if shadow, err = s.Store.EnsureRemoteUser(host, m.From.Username, cleanName(m.From.Name)); err != nil {
+			return err
+		}
+	} else {
+		if shadow, err = s.Store.UserByUsername(store.RemoteHandle(m.From.Username, host)); err != nil {
+			if errors.Is(err, store.ErrNotFound) {
+				return nil
+			}
+			return err
+		}
+		if ok, err := s.Store.HasLocalFriendOf(shadow.ID); err != nil || !ok {
+			return err
+		}
 	}
 	if !shadow.IsRemote() || shadow.IsDeactivated {
 		return nil
-	}
-	if ok, err := s.Store.HasLocalFriendOf(shadow.ID); err != nil || !ok {
-		return err
 	}
 	at := m.Event.At
 	if _, err := time.Parse("2006-01-02 15:04:05", at); err != nil {

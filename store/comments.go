@@ -506,3 +506,57 @@ func (s *Store) TransferUserComments(userID int64, mode string) error {
 	}
 	return nil
 }
+
+// OpenComment is a local episode comment that is visible to everyone, with what
+// another server needs to show it next to the right episode.
+type OpenComment struct {
+	ID              int64
+	UserID          int64
+	Username        string
+	DisplayName     string
+	ParentID        int64
+	Body            string
+	Spoiler         bool
+	CreatedAt       string
+	EditedAt        string
+	ShowTMDB        int64
+	Season, Episode int
+}
+
+// OpenEpisodeComment returns a comment only while it is shown to everyone: not
+// deleted, not hidden and written by someone who is not suspended.
+func (s *Store) OpenEpisodeComment(id int64) (*OpenComment, error) {
+	var c OpenComment
+	var sp int
+	err := s.DB.QueryRow(`SELECT c.id, c.user_id, u.username, u.display_name, COALESCE(c.parent_id,0), c.body, c.author_spoiler, c.created_at, COALESCE(c.edited_at,''), sh.tmdb_id, e.season_number, e.episode_number
+	  FROM comments c JOIN users u ON u.id = c.user_id JOIN episodes e ON e.id = c.episode_id JOIN shows sh ON sh.id = e.show_id
+	  WHERE c.id = ? AND c.deleted_at IS NULL AND c.hidden_at IS NULL AND u.is_deactivated = 0 AND u.remote_host = ''`, id).Scan(
+		&c.ID, &c.UserID, &c.Username, &c.DisplayName, &c.ParentID, &c.Body, &sp, &c.CreatedAt, &c.EditedAt, &c.ShowTMDB, &c.Season, &c.Episode)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("open episode comment %d: %w", id, err)
+	}
+	c.Spoiler = sp == 1
+	return &c, nil
+}
+
+// UserEpisodeCommentIDs lists the episode comments someone wrote that are still
+// shown, so they can be withdrawn from other servers.
+func (s *Store) UserEpisodeCommentIDs(userID int64) ([]int64, error) {
+	rows, err := s.DB.Query(`SELECT id FROM comments WHERE user_id = ? AND episode_id IS NOT NULL AND deleted_at IS NULL AND hidden_at IS NULL`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list episode comments uid=%d: %w", userID, err)
+	}
+	defer rows.Close()
+	var out []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
+}

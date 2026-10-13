@@ -534,3 +534,24 @@ func TestUsernameChangeRulesAndRedirect(t *testing.T) {
 		t.Fatalf("a change of letter case is not a new name: %d", code)
 	}
 }
+
+func TestServerShareSwitch(t *testing.T) {
+	e := newEnv(t)
+	boss := e.makeAdmin(t, "boss")
+	if err := e.store.PinPeer("friend.example", "a2V5"); err != nil {
+		t.Fatal(err)
+	}
+	_, page := boss.get("/admin?tab=servers")
+	if !strings.Contains(page, `data-server-share="friend.example"`) || strings.Contains(page, `data-server-share="friend.example" checked`) {
+		t.Fatalf("a server that connected by itself starts off the allow-list")
+	}
+	if code, out := boss.post("/api/admin/servers/share", map[string]any{"host": "friend.example", "share": true}); code != 200 {
+		t.Fatalf("share: %d %v", code, out)
+	}
+	if ok, _ := e.store.PeerShares("friend.example"); !ok {
+		t.Fatalf("share not stored")
+	}
+	if code, _ := boss.post("/api/admin/servers/share", map[string]any{"host": "nobody.example", "share": true}); code != 404 {
+		t.Fatalf("unknown server: %d", code)
+	}
+}

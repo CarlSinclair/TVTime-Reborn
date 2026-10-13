@@ -24,6 +24,7 @@ func (a *App) apiAdminDelete(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	author, aerr := a.Store.CommentByID(id)
 	if err := a.Store.DeleteComment(u.ID, true, id); err != nil {
 		if errors.Is(err, store.ErrForbidden) {
 			a.fail(w, r, errNotFound)
@@ -35,6 +36,11 @@ func (a *App) apiAdminDelete(w http.ResponseWriter, r *http.Request) {
 	if err := a.Store.ResolveReports(id); err != nil {
 		a.fail(w, r, err)
 		return
+	}
+	if a.Fed != nil && aerr == nil {
+		if au, err := a.Store.UserByID(author.UserID); err == nil {
+			a.Fed.WithdrawComment(au, "c:"+itoa(id))
+		}
 	}
 	logger.Info("ADMIN uid=%d deleted comment=%d", u.ID, id)
 	a.okJSON(w, nil)
@@ -100,6 +106,9 @@ func (a *App) apiAdminBan(w http.ResponseWriter, r *http.Request) {
 		if err := a.Store.ResolveUserReports(target.ID); err != nil {
 			logger.Error("ADMIN resolve user reports after ban target=%d: %v", target.ID, err)
 		}
+		if mode != "keep" {
+			a.withdrawAll(target)
+		}
 		if err := a.applyCommentMode(target.ID, mode); err != nil {
 			a.fail(w, r, err)
 			return
@@ -142,6 +151,7 @@ func (a *App) apiAdminDeactivate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if in.Deactivated {
+		a.withdrawAll(target)
 		if err := a.applyCommentMode(target.ID, mode); err != nil {
 			a.fail(w, r, err)
 			return
@@ -436,6 +446,11 @@ func (a *App) apiAdminServerAdd(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, apiErr{http.StatusBadGateway, "err.server_unreachable"})
 		return
 	case err != nil:
+		a.fail(w, r, err)
+		return
+	}
+	if err := a.Store.SetPeerShare(host, true); err != nil {
+		logger.Error("ADMIN uid=%d add server %s: could not allow-list it: %v", admin.ID, host, err)
 		a.fail(w, r, err)
 		return
 	}

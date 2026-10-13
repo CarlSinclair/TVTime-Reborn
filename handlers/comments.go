@@ -41,6 +41,75 @@ type commentJSON struct {
 	Reported  map[string]bool `json:"reported"`
 }
 
+// remoteCommentJSON is a leased copy of a comment from another server. Its id is
+// negative so it can never collide with a local comment's.
+type remoteCommentJSON struct {
+	ID        int64  `json:"id"`
+	User      string `json:"user"`
+	Name      string `json:"name"`
+	Host      string `json:"host"`
+	Body      string `json:"body"`
+	Spoiler   bool   `json:"spoiler"`
+	ParentID  int64  `json:"parent_id"`
+	CreatedAt string `json:"created_at"`
+	Edited    bool   `json:"edited"`
+}
+
+// remoteComments lists the other servers' comments on an episode as threads:
+// newest thread first, each followed by its replies.
+func (a *App) remoteComments(t store.Target, uid int64) []remoteCommentJSON {
+	if t.Kind != store.KindEpisode {
+		return nil
+	}
+	ep, err := a.Store.Episode(t.ID, 0)
+	if err != nil {
+		return nil
+	}
+	sh := a.showOfEpisode(ep)
+	if sh == nil {
+		return nil
+	}
+	list, err := a.Store.RemoteCommentsFor(sh.TMDBID, ep.SeasonNumber, ep.EpisodeNumber, uid)
+	if err != nil {
+		logger.Error("COMMENTS remote episode=%d: %v", t.ID, err)
+		return nil
+	}
+	if len(list) == 0 {
+		return nil
+	}
+	byRef := map[string]int64{}
+	for _, c := range list {
+		byRef[c.Host+"|"+c.Ref] = -c.ID
+	}
+	to := func(c store.RemoteComment) remoteCommentJSON {
+		name := c.Name
+		if name == "" {
+			name = c.Handle
+			if i := strings.LastIndex(name, "@"); i > 0 {
+				name = name[:i]
+			}
+		}
+		return remoteCommentJSON{ID: -c.ID, User: c.Handle, Name: name, Host: c.Host, Body: c.Body, Spoiler: c.Spoiler,
+			CreatedAt: c.CreatedAt, Edited: c.Edited != "", ParentID: byRef[c.Host+"|"+c.ParentRef]}
+	}
+	replies := map[int64][]remoteCommentJSON{}
+	var tops []remoteCommentJSON
+	for _, c := range list {
+		j := to(c)
+		if j.ParentID != 0 {
+			replies[j.ParentID] = append(replies[j.ParentID], j)
+		} else {
+			tops = append(tops, j)
+		}
+	}
+	var out []remoteCommentJSON
+	for i := len(tops) - 1; i >= 0; i-- {
+		out = append(out, tops[i])
+		out = append(out, replies[tops[i].ID]...)
+	}
+	return out
+}
+
 const commentPage = 20
 
 func (a *App) targetOf(r *http.Request) (store.Target, error) {
@@ -172,7 +241,13 @@ func (a *App) apiListComments() http.HandlerFunc {
 				CreatedAt: c.CreatedAt, Edited: c.EditedAt != "", Deleted: c.Deleted, Hidden: c.Hidden, Mine: uid != 0 && c.UserID == uid, Reported: c.MyReports,
 			})
 		}
-		a.okJSON(w, map[string]any{"comments": out, "total": total, "viewer_watched": watched, "more": more, "next_offset": offset + commentPage})
+		resp := map[string]any{"comments": out, "total": total, "viewer_watched": watched, "more": more, "next_offset": offset + commentPage}
+		if offset == 0 {
+			if remote := a.remoteComments(t, uid); len(remote) > 0 {
+				resp["remote"] = remote
+			}
+		}
+		a.okJSON(w, resp)
 	}
 }
 
@@ -319,6 +394,7 @@ func (a *App) apiDeleteComment(w http.ResponseWriter, r *http.Request) {
 	}
 	if a.Fed != nil {
 		a.Fed.Retract(u, "c:"+itoa(id))
+		a.Fed.WithdrawComment(u, "c:"+itoa(id))
 	}
 	a.okJSON(w, nil)
 }

@@ -726,6 +726,10 @@
         const other = el.closest(".comment-toggles").querySelector(el.name === "hide_comments" ? '[name="delete_comments"]' : '[name="hide_comments"]');
         other.checked = false;
       }
+    } else if ("serverShare" in el.dataset) {
+      const data = await run(el, () => api("/api/admin/servers/share", { host: el.dataset.serverShare, share: el.checked }));
+      if (data) toast(t("saved"), "ok");
+      else el.checked = !el.checked;
     } else if (el.id === "signups-switch") {
       const data = await run(el, () => api("/api/admin/signups", { closed: !el.checked }));
       if (data) toast(t("saved"), "ok");
@@ -1326,13 +1330,21 @@
       count.textContent = "(" + data.total + ")";
       if (!append) list.textContent = "";
       if (kind === "profile") root.hidden = data.total === 0 && !document.getElementById("comment-form");
-      if (data.comments.length === 0 && !append && kind !== "profile") {
+      const remote = data.remote || [];
+      if (data.comments.length === 0 && remote.length === 0 && !append && kind !== "profile") {
         const li = document.createElement("li");
         li.className = "muted";
         li.textContent = t("comments_empty");
         list.appendChild(li);
       }
       data.comments.forEach((c) => list.appendChild(renderComment(c)));
+      if (!append && remote.length) {
+        const head = document.createElement("li");
+        head.className = "muted remote-heading";
+        head.textContent = t("remote_comments");
+        list.appendChild(head);
+        remote.forEach((c) => list.appendChild(renderComment(c)));
+      }
       nextOffset = data.next_offset;
       more.hidden = !data.more;
     };
@@ -1464,7 +1476,7 @@
         });
         show.className = "btn small";
         cover.append(label, show);
-        if (logged) {
+        if (logged && !c.host) {
           const notSpoiler = button(t("report_not_spoiler"), async (b) => {
             const ok = await report(b, c.id, "not_spoiler");
             if (ok) {
@@ -1489,8 +1501,31 @@
 
       const actions = document.createElement("div");
       actions.className = "comment-actions";
-      if (verified) actions.appendChild(button(t("reply"), () => replyForm(c, li)));
-      if (c.mine) {
+      if (verified && !c.host) actions.appendChild(button(t("reply"), () => replyForm(c, li)));
+      if (c.host) {
+        li.classList.add("remote");
+        const from = document.createElement("span");
+        from.className = "tag";
+        from.textContent = c.host;
+        head.appendChild(from);
+        if (logged) {
+          actions.appendChild(
+            button(t("report_abuse"), async (b) => {
+              const reason = window.prompt(t("report_reason"));
+              if (reason === null) return;
+              const data = await run(b, () => api("/api/remote-comments/" + -c.id + "/report", { reason }));
+              if (data) toast(t("reported"), "ok");
+            })
+          );
+          actions.appendChild(
+            button(t("block"), async (b) => {
+              if (!window.confirm(t("block_confirm"))) return;
+              const data = await run(b, () => api("/api/users/block", { username: c.user }));
+              if (data) reload();
+            })
+          );
+        }
+      } else if (c.mine) {
         actions.appendChild(button(t("edit"), () => editForm(c, body)));
         actions.appendChild(
           button(t("delete"), async (b) => {
@@ -1528,7 +1563,7 @@
           })
         );
       }
-      if (admin && !c.mine) {
+      if (admin && !c.mine && !c.host) {
         actions.appendChild(
           button(t("admin_delete"), async (b) => {
             if (!window.confirm(t("delete_confirm"))) return;

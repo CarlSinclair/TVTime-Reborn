@@ -287,6 +287,7 @@
     "server_host_hint": "Another TVT server, for example tvt.example.org. Its key is fetched and pinned.",
     "server_connect": "Connect",
     "server_new": "New",
+    "server_share": "Share activity and comments",
     "server_added": "Server connected.",
     "federation_off": "Federation is turned off on this server.",
     "mail_recent": "Recent emails",
@@ -452,6 +453,7 @@
     "verify_sent": "Verification email sent.",
     "marked_many": "Marked as watched: %d",
     "saved": "Saved.",
+    "remote_comments": "From other servers",
     "admin_reset_sent": "Password reset email sent.",
     "config_test_ok": "Test passed:",
     "restarting": "Restarting. The page will reload.",
@@ -738,7 +740,7 @@
     },
     "third": {
       "title": "Other services involved",
-      "body": "Show data comes from TMDB and TVmaze, and optionally Trakt. The server makes these requests and sends nothing about you. Artwork is fetched once by the server and served from this site or from storage the operator controls, so your browser does not contact those services. If you choose Telegram, Telegram receives your sign-in and the notifications sent to you; its script is loaded only when you press the Telegram button. Push notifications pass through your browser vendor's push service. Email passes through the operator's mail provider. If you befriend someone on another TVT server, your friend requests and the activity you share with friends (what you watch, your ratings, open comments and posts) are sent to that person's server and kept there for 14 days. Spoiler comments are never sent. You can stop sharing in your profile settings."
+      "body": "Show data comes from TMDB and TVmaze, and optionally Trakt. The server makes these requests and sends nothing about you. Artwork is fetched once by the server and served from this site or from storage the operator controls, so your browser does not contact those services. If you choose Telegram, Telegram receives your sign-in and the notifications sent to you; its script is loaded only when you press the Telegram button. Push notifications pass through your browser vendor's push service. Email passes through the operator's mail provider. Your friend requests go to the other person's server. The activity you share (what you watch, your ratings, your comments and posts) and your episode comments are sent to the servers the operator has allow-listed. Activity is kept there for 14 days, and episode comments for one day unless your server confirms they still exist; comments you delete or hide are withdrawn. Comments you tag as spoilers are sent flagged as spoilers. Only your friends see your activity in their feed. You can stop sharing in your profile settings."
     },
     "public": {
       "title": "What others can see",

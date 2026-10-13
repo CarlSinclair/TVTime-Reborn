@@ -13,7 +13,7 @@ Licensed under the [GNU AGPL v3](LICENSE); see [NOTICE](NOTICE) for attribution,
 - Show catalogue from TMDB: synopses, ratings, posters and per-episode stills, kept fresh by a changes-feed poller; titles and synopses are always stored in each user's own language: every followed show is fetched in the language of each user who follows it, in the background, and refreshed weekly.
 - Import from TV Time: upload the GDPR export zip in Settings. Shows are matched through TMDB's TVDB lookup, watched episodes keep their original dates, followed, favorite and saved-for-later shows come across, and nothing you already track is changed. Movies are not imported. The zip is read in memory and not kept.
 - Friends: add people by exact username (no fuzzy search), a private friends list, and a home feed of what friends watch, rate and comment on. Spoiler comments never appear, and an episode is only named to a friend who has seen it. Blocked people see nothing. Friendships are addressed by handle so they can later span servers. People can post updates on their own profile; replies are ordinary comments, with the same spoiler flags, reports and moderation.
-- Federation: add friends on other TVT servers by handle (`name@server`). Servers know each other by a signing key learned from `/.well-known/tvt` on first contact and pinned afterwards; every message is signed. Friend requests and the activity you share with friends travel to that friend's server and are kept for 14 days; spoiler comments never leave. Turn it off with `TVT_FEDERATION=0`, block servers with `TVT_FEDERATION_BLOCK`.
+- Federation: add friends on other TVT servers by handle (`name@server`). Servers know each other by a signing key learned from `/.well-known/tvt` on first contact and pinned afterwards; every message is signed. Friend requests go to the friend's server. Activity (kept 14 days) and episode comments (leased for a day and re-confirmed by their home server, so deletions reach every copy within a day) are shared with every server the admin allow-lists; friendship decides what shows in a feed. Comments tagged as spoilers travel flagged as spoilers. Turn federation off with `TVT_FEDERATION=0` or in Admin > Servers, block servers with `TVT_FEDERATION_BLOCK` or per server, and allow-list per server with its Share switch.
 - Admin dashboard: overview (counts, system status, recent emails and whether they sent, recent errors), config (mail, storage, API keys, Telegram, site identity, with test buttons), user management (search, add, edit, ban, delete, open or close sign-ups), servers (add, block, forget) and the report queue, with badges for what is waiting.
 - Usernames can be changed (once every 30 days); the old name redirects and stays reserved for 14 days, and friends on other servers are told. People can deactivate their own account, and whenever an account is banned, deactivated or deleted, its comments can be hidden, deleted or kept, with replies never lost.
 - Tracking: follow, status, favorites, mark episode / season / everything-up-to-here, ratings, up-next, calendar.
@@ -76,13 +76,13 @@ signed HTTP POSTs to an inbox. Everything after that differs.
 
 | | TVT federation | ActivityPub |
 |---|---|---|
-| Default audience | Private: only servers that hold an accepted friendship | Public by default; delivery follows followers and public addressing |
+| Default audience | Only servers an admin has allow-listed; friendship decides who sees it in a feed | Public by default; delivery follows followers and public addressing |
 | Relationship | Mutual friendship, accepted by both people | One-way follow |
-| Data kept elsewhere | Short lease: 14 days, dropped sooner when the friendship ends | Kept until a Delete arrives, which receivers may ignore |
-| Vocabulary | Five small fixed messages (friend request, accept, end, activity, retract) | JSON-LD activity streams: a large open vocabulary |
+| Data kept elsewhere | Short leases: 14 days for activity, one day for comments (re-confirmed by the home server); a deleted comment answers "gone" | Kept until a Delete arrives, which receivers may ignore |
+| Vocabulary | A few small fixed messages (friend request, accept, end, activity, retract, comment, comment withdrawal, rename, report, lease renewal) | JSON-LD activity streams: a large open vocabulary |
 | Signing key | One Ed25519 key per server, pinned on first contact | A key per person (usually RSA) fetched from each actor document |
-| Fetching | Servers only talk to servers where someone has a friend | Servers fetch actors, collections and remote objects from anywhere |
-| Spoilers | Spoiler comments are never sent; episodes are named only to friends who have seen them | Content-warning field exists, but nothing enforces it |
+| Fetching | Servers only talk to allow-listed servers and servers where someone has a friend | Servers fetch actors, collections and remote objects from anywhere |
+| Spoilers | Spoiler-tagged comments are sent flagged as spoilers and hidden behind the same spoiler cover; episodes are named in activity only to friends who have seen them | Content-warning field exists, but nothing enforces it |
 
 Why it is not supported:
 
@@ -110,7 +110,6 @@ ordinary comments. It should never carry friend activity. Plan for these:
 
 ## Roadmap
 
-- Leased replication: opt-in sharing of episode comments between instances without federation's permanence. Each comment is signed by its home instance and copied to peers on a short lease (about a day); peers must re-fetch to renew it, and a deleted comment answers "410 Gone", so deletions propagate within one lease and nothing is immutable. Needs peer allowlists, cross-instance blocking and reporting, and signed identities.
 - More importers: Trakt, Simkl, Letterboxd, IMDb (the TV Time importer is done).
 - Operator announcements to all users.
 - Support for sending messages to Telegram group chats.

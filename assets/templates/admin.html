@@ -201,6 +201,7 @@
   <li class="panel">
     <p><strong>{{.Host}}</strong> {{if .Blocked}}<span class="tag">{{$.T "admin.server_blocked"}}</span>{{end}} {{if .New}}<span class="tag">{{$.T "admin.server_new"}}</span>{{end}}</p>
     <p class="muted">{{$.T "admin.server_seen" .FirstSeen .LastSeen}}</p>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="share-{{.Host}}" data-server-share="{{.Host}}" {{if .Share}}checked{{end}}><label for="share-{{.Host}}" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="share-{{.Host}}">{{$.T "admin.server_share"}}</label></div>
     <p class="actions">
       <button class="btn small {{if not .Blocked}}danger{{else}}ghost{{end}}" type="button" data-server-block="{{.Host}}" data-blocked="{{if .Blocked}}0{{else}}1{{end}}">{{if .Blocked}}{{$.T "admin.server_unblock"}}{{else}}{{$.T "admin.server_block"}}{{end}}</button>
       <button class="btn ghost small" type="button" data-server-forget="{{.Host}}">{{$.T "admin.server_forget"}}</button>

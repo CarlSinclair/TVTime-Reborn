@@ -58,14 +58,25 @@ bucket and none of the rest of this section applies. With a bucket:
 
 ## Federation
 
-If an account befriends someone on another TVT server, that server receives the friend
-requests and the activity the account shares with friends: episodes watched, ratings,
-open (non-spoiler) comments and profile posts, each with show title, episode numbers
-and a timestamp. It keeps them for 14 days and drops them sooner when the friendship
-ends. Nothing is sent to servers where the account has no friend, spoiler comments are
-never sent, and "Share my activity with friends" in the profile settings stops all of
-it. Every message is signed by the sending server; the receiving server only accepts
-activity from people who are friends with someone on it.
+Servers that an operator has allow-listed (Admin > Servers) share two things with each
+other. Friend requests go only to the other person's server.
+
+- **Activity** (episodes watched, ratings, open comments and profile posts, each with show
+  title, episode numbers and a timestamp) is sent to every allow-listed server and kept
+  there for 14 days, or less if the friendship that entitled it ends. Only the person's
+  friends see it in their feed.
+- **Episode comments** are sent to every allow-listed server and shown there next to the
+  discussion of the same episode, marked as coming from another server. Copies are leased
+  for one day: the receiving server must ask the home server to confirm each copy, and a
+  comment that was deleted, hidden or whose author was banned or deactivated is answered
+  "gone" and removed. Comments tagged as spoilers are sent too, flagged as spoilers. Edits
+  travel with the next confirmation.
+
+"Share my activity with friends" in the profile settings stops both. Nothing is sent to
+servers that are not allow-listed. Every message is signed by the sending server, and a
+server only accepts messages from servers it has allow-listed (or, for friend requests and
+friends' activity, from servers where one of its people has a friend). Reports made about a
+comment on another server are forwarded to that server's moderators.
 
 ## Deactivating and deleting an account
 
