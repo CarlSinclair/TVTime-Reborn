@@ -18,6 +18,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"tvt/logger"
 )
 
 var (
@@ -37,12 +39,22 @@ type Bot struct {
 
 	seenMu sync.Mutex
 	seen   map[string]time.Time
+
+	paceMu   sync.Mutex
+	nextAny  time.Time
+	nextChat map[string]time.Time
 }
+
+const (
+	globalGap     = 500 * time.Millisecond
+	perChatGap    = 1100 * time.Millisecond
+	maxRetryAfter = 30 * time.Second
+)
 
 func New(token, username, webhookSecret string) *Bot {
 	return &Bot{
 		Token: strings.TrimSpace(token), Username: strings.TrimPrefix(strings.TrimSpace(username), "@"), Secret: webhookSecret,
-		API: apiBase, http: &http.Client{Timeout: 15 * time.Second}, seen: map[string]time.Time{},
+		API: apiBase, http: &http.Client{Timeout: 15 * time.Second}, seen: map[string]time.Time{}, nextChat: map[string]time.Time{},
 	}
 }
 
@@ -142,6 +154,15 @@ type apiResponse struct {
 	OK          bool   `json:"ok"`
 	ErrorCode   int    `json:"error_code"`
 	Description string `json:"description"`
+	Parameters  struct {
+		RetryAfter int `json:"retry_after"`
+	} `json:"parameters"`
+}
+
+type rateLimitedError struct{ wait time.Duration }
+
+func (e rateLimitedError) Error() string {
+	return fmt.Sprintf("telegram rate limited, retry after %s", e.wait)
 }
 
 func (b *Bot) call(ctx context.Context, method string, payload any) error {
@@ -171,9 +192,45 @@ func (b *Bot) call(ctx context.Context, method string, payload any) error {
 		if out.ErrorCode == http.StatusForbidden || (out.ErrorCode == http.StatusBadRequest && strings.Contains(out.Description, "chat not found")) {
 			return fmt.Errorf("%w: %s", ErrBotBlocked, out.Description)
 		}
+		if out.ErrorCode == http.StatusTooManyRequests {
+			return rateLimitedError{wait: time.Duration(out.Parameters.RetryAfter) * time.Second}
+		}
 		return fmt.Errorf("telegram %s: %d %s", method, out.ErrorCode, out.Description)
 	}
 	return nil
+}
+
+// pace blocks until a message to chat may be sent: at most two messages a
+// second overall and one a second per chat, which keeps clear of Telegram's
+// limits.
+func (b *Bot) pace(ctx context.Context, chat string) error {
+	b.paceMu.Lock()
+	now := time.Now()
+	at := b.nextAny
+	if c := b.nextChat[chat]; c.After(at) {
+		at = c
+	}
+	if at.Before(now) {
+		at = now
+	}
+	b.nextAny = at.Add(globalGap)
+	b.nextChat[chat] = at.Add(perChatGap)
+	if len(b.nextChat) > 5000 {
+		for k, v := range b.nextChat {
+			if v.Before(now) {
+				delete(b.nextChat, k)
+			}
+		}
+	}
+	b.paceMu.Unlock()
+	t := time.NewTimer(time.Until(at))
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-t.C:
+		return nil
+	}
 }
 
 func scrub(err error, token string) error {
@@ -187,7 +244,22 @@ func (b *Bot) SendMessage(ctx context.Context, chatID, text string) error {
 	if len(text) > 4000 {
 		text = text[:4000]
 	}
-	return b.call(ctx, "sendMessage", map[string]any{"chat_id": chatID, "text": text, "disable_web_page_preview": true})
+	payload := map[string]any{"chat_id": chatID, "text": text, "disable_web_page_preview": true}
+	if err := b.pace(ctx, chatID); err != nil {
+		return err
+	}
+	err := b.call(ctx, "sendMessage", payload)
+	var rl rateLimitedError
+	if errors.As(err, &rl) && rl.wait > 0 && rl.wait <= maxRetryAfter {
+		logger.Warn("TELEGRAM rate limited chat=%s, retrying in %s", chatID, rl.wait)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(rl.wait):
+		}
+		return b.call(ctx, "sendMessage", payload)
+	}
+	return err
 }
 
 func (b *Bot) SetWebhook(ctx context.Context, webhookURL string) error {
