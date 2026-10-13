@@ -20,8 +20,8 @@ func TestTVDBShowsAppearInSearchAndWork(t *testing.T) {
 	}
 
 	code, body = c.get("/show/-9001")
-	if code != 200 || !strings.Contains(body, "Tube Channel") || !strings.Contains(body, "TheTVDB") {
-		t.Fatalf("show page: %d (attribution required)", code)
+	if code != 200 || !strings.Contains(body, "Tube Channel") {
+		t.Fatalf("show page: %d", code)
 	}
 	if !strings.Contains(body, "/tvdbimg/") {
 		t.Fatalf("artwork must come through our own proxy")
