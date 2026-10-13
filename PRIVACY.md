@@ -3,8 +3,8 @@
 TVT is built to hold as little about its users as it can and to keep that data on
 the operator's own server. This file describes what the software does; the
 running site shows the same policy at `/privacy` in the visitor's language, with
-the operator's name and contact filled in from `TVT_OPERATOR_NAME` and
-`TVT_PRIVACY_CONTACT`. Operators are responsible for their own legal compliance;
+the operator's name and contact filled in from the operator name and privacy contact
+set in Admin > Config. Operators are responsible for their own legal compliance;
 nothing here is legal advice.
 
 ## What the software stores
@@ -21,6 +21,7 @@ nothing here is legal advice.
 | Comments, reports, blocks | Discussion and moderation | Deleted comments lose their text immediately. Hidden comments keep their text but are not shown; hiding is undone when the account is restored |
 | Notifications, preferences, push subscriptions | Alerts | Notifications are deleted after 90 days |
 | Session tokens | Staying signed in | Stored as hashes |
+| Contact form message | Reaching the operator | Sent by email to the operator's contact address; not stored by TVT (it appears in the email log only as masked recipient and subject) |
 | Previous username | Redirecting to a renamed account and keeping the name from being taken | Kept for 14 days after a change, then removed |
 | Email delivery log | Letting an admin see whether mail works | Time, recipient with most of the address hidden (`j***@example.com`), subject (a notification's subject can name a show or episode) and success or error; never the body or sign-in links; only the latest 200 entries are kept |
 
@@ -43,7 +44,7 @@ fonts, CDNs or embeds. The only cookie is one essential session cookie (it also 
 Uploads (avatars, banners) and the artwork cache are kept on local disk under
 `TVT_DATA_DIR/media` and served by the app, unless the operator configures an
 S3-compatible bucket (Cloudflare R2, AWS S3, MinIO, Backblaze B2) together with
-its public domain in `TVT_MEDIA_PUBLIC_URL`. With no bucket settings there is no
+its public domain (Admin > Config). With no bucket settings there is no
 bucket and none of the rest of this section applies. With a bucket:
 
 - user content is kept off the application server, so a compromised or discarded
@@ -66,11 +67,12 @@ other. Friend requests go only to the other person's server.
   there for 14 days, or less if the friendship that entitled it ends. Only the person's
   friends see it in their feed.
 - **Episode comments** are sent to every allow-listed server and shown there next to the
-  discussion of the same episode, marked as coming from another server. Copies are leased
+  discussion of the same episode. Copies are leased
   for one day: the receiving server must ask the home server to confirm each copy, and a
   comment that was deleted, hidden or whose author was banned or deactivated is answered
   "gone" and removed. Comments tagged as spoilers are sent too, flagged as spoilers. Edits
-  travel with the next confirmation.
+  travel with the next confirmation. Replies to comments on other servers travel the same way, and the
+  server that holds the parent comment notifies its author.
 
 "Share my activity with friends" in the profile settings stops both. Nothing is sent to
 servers that are not allow-listed. Every message is signed by the sending server, and a
@@ -123,8 +125,8 @@ for rate limiting and are not stored. Set a short retention for the proxy's own 
 
 ## Operator checklist
 
-1. Set `TVT_OPERATOR_NAME` and `TVT_PRIVACY_CONTACT` so `/privacy` names who is responsible.
+1. Set the operator name and privacy contact in Admin > Config so `/privacy` names who is responsible. The privacy page can be customized in Admin > Pages; keep it accurate.
 2. Keep secrets out of the bucket (it should hold only images); never use `TVT_DEV_LOG_MAIL` in production (it prints sign-in links to the log; the app refuses to start with it on an https site).
 3. Decide a log and backup retention period and tell users in the contact details.
-4. Keep `TVT_SOURCE_URL` pointing at the exact source you run (AGPL section 13).
+4. Keep the source URL (Admin > Config) pointing at the exact source you run (AGPL section 13).
 5. Handle data requests with the in-app export and delete tools, or directly in the database.

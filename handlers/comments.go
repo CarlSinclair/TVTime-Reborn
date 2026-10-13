@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode"
@@ -39,25 +40,24 @@ type commentJSON struct {
 	Hidden    bool            `json:"hidden"`
 	Mine      bool            `json:"mine"`
 	Reported  map[string]bool `json:"reported"`
+	Host      string          `json:"host,omitempty"`
 }
 
-// remoteCommentJSON is a leased copy of a comment from another server. Its id is
-// negative so it can never collide with a local comment's.
-type remoteCommentJSON struct {
-	ID        int64  `json:"id"`
-	User      string `json:"user"`
-	Name      string `json:"name"`
-	Host      string `json:"host"`
-	Body      string `json:"body"`
-	Spoiler   bool   `json:"spoiler"`
-	ParentID  int64  `json:"parent_id"`
-	CreatedAt string `json:"created_at"`
-	Edited    bool   `json:"edited"`
+// remoteComments is what the other servers contribute to one episode's
+// discussion: whole threads of their own, and replies to comments written here.
+type remoteComments struct {
+	threads [][]commentJSON
+	// replies answer local comments; ParentID is that local comment's id.
+	replies []commentJSON
+	// byRef finds a remote comment's (negative) id from its host and ref, so
+	// local replies to it can be attached.
+	byRef map[string]int64
 }
 
-// remoteComments lists the other servers' comments on an episode as threads:
-// newest thread first, each followed by its replies.
-func (a *App) remoteComments(t store.Target, uid int64) []remoteCommentJSON {
+// remoteThreads gathers the other servers' comments on an episode. Their ids are
+// negative so they never collide with a local comment's. A reply to a reply is
+// grouped under the top of its thread, as local replies are.
+func (a *App) remoteThreads(t store.Target, uid int64) *remoteComments {
 	if t.Kind != store.KindEpisode {
 		return nil
 	}
@@ -74,14 +74,18 @@ func (a *App) remoteComments(t store.Target, uid int64) []remoteCommentJSON {
 		logger.Error("COMMENTS remote episode=%d: %v", t.ID, err)
 		return nil
 	}
-	if len(list) == 0 {
-		return nil
+	localHost := ""
+	if a.Fed != nil {
+		localHost = a.Fed.Host
 	}
-	byRef := map[string]int64{}
+	out := &remoteComments{byRef: map[string]int64{}}
 	for _, c := range list {
-		byRef[c.Host+"|"+c.Ref] = -c.ID
+		out.byRef[c.Host+"|"+c.Ref] = -c.ID
 	}
-	to := func(c store.RemoteComment) remoteCommentJSON {
+	root := map[int64]int64{}
+	replies := map[int64][]commentJSON{}
+	var tops []commentJSON
+	for _, c := range list {
 		name := c.Name
 		if name == "" {
 			name = c.Handle
@@ -89,23 +93,100 @@ func (a *App) remoteComments(t store.Target, uid int64) []remoteCommentJSON {
 				name = name[:i]
 			}
 		}
-		return remoteCommentJSON{ID: -c.ID, User: c.Handle, Name: name, Host: c.Host, Body: c.Body, Spoiler: c.Spoiler,
-			CreatedAt: c.CreatedAt, Edited: c.Edited != "", ParentID: byRef[c.Host+"|"+c.ParentRef]}
-	}
-	replies := map[int64][]remoteCommentJSON{}
-	var tops []remoteCommentJSON
-	for _, c := range list {
-		j := to(c)
-		if j.ParentID != 0 {
-			replies[j.ParentID] = append(replies[j.ParentID], j)
-		} else {
+		j := commentJSON{ID: -c.ID, User: c.Handle, Name: name, Host: c.Host, Body: c.Body, Spoiler: c.Spoiler, CreatedAt: c.CreatedAt, Edited: c.Edited != ""}
+		parentHost := c.ParentHost
+		if parentHost == "" {
+			parentHost = c.Host
+		}
+		switch {
+		case c.ParentRef == "":
+			root[j.ID] = j.ID
 			tops = append(tops, j)
+		case parentHost == localHost && localHost != "":
+			if id, err := strconv.ParseInt(strings.TrimPrefix(c.ParentRef, "c:"), 10, 64); err == nil {
+				j.ParentID = id
+				out.replies = append(out.replies, j)
+			}
+		default:
+			pid, ok := out.byRef[parentHost+"|"+c.ParentRef]
+			if !ok {
+				continue
+			}
+			top := root[pid]
+			if top == 0 {
+				continue
+			}
+			root[j.ID] = top
+			j.ParentID = top
+			replies[top] = append(replies[top], j)
 		}
 	}
-	var out []remoteCommentJSON
 	for i := len(tops) - 1; i >= 0; i-- {
-		out = append(out, tops[i])
-		out = append(out, replies[tops[i].ID]...)
+		out.threads = append(out.threads, append([]commentJSON{tops[i]}, replies[tops[i].ID]...))
+	}
+	return out
+}
+
+// weaveRemote merges the other servers' comments into a page of local comments
+// by time, and puts replies under the comments they answer. A page of local
+// threads covers a stretch of time; remote threads are placed within that
+// stretch, so paging through shows each comment once.
+func weaveRemote(local []commentJSON, rc *remoteComments, localReplies []store.Comment, uid int64, more bool, before string) []commentJSON {
+	var threads [][]commentJSON
+	for _, c := range local {
+		if c.ParentID == 0 || len(threads) == 0 {
+			threads = append(threads, []commentJSON{c})
+		} else {
+			threads[len(threads)-1] = append(threads[len(threads)-1], c)
+		}
+	}
+	lower := ""
+	if more && len(threads) > 0 {
+		lower = threads[len(threads)-1][0].CreatedAt
+	}
+	for _, th := range rc.threads {
+		at := th[0].CreatedAt
+		if (before != "" && at >= before) || (lower != "" && at < lower) {
+			continue
+		}
+		threads = append(threads, th)
+	}
+	// replies from other servers to local comments, and local replies to remote ones
+	attach := func(parentID int64, c commentJSON) {
+		for i, th := range threads {
+			for _, m := range th {
+				if m.ID == parentID {
+					threads[i] = append(threads[i], c)
+					return
+				}
+			}
+		}
+	}
+	for _, c := range rc.replies {
+		attach(c.ParentID, c)
+	}
+	for _, c := range localReplies {
+		pid, ok := rc.byRef[c.ParentHost+"|"+c.ParentRef]
+		if !ok {
+			continue
+		}
+		name := c.DisplayName
+		if name == "" {
+			name = c.Username
+		}
+		attach(pid, commentJSON{ID: c.ID, User: c.Username, Name: name, Body: c.Body, Spoiler: c.IsSpoiler(), ParentID: pid, CreatedAt: c.CreatedAt,
+			Edited: c.EditedAt != "", Deleted: c.Deleted, Hidden: c.Hidden, Mine: uid != 0 && c.UserID == uid})
+	}
+	for i := range threads {
+		if len(threads[i]) > 2 {
+			rest := threads[i][1:]
+			sort.SliceStable(rest, func(a, b int) bool { return rest[a].CreatedAt < rest[b].CreatedAt })
+		}
+	}
+	sort.SliceStable(threads, func(i, j int) bool { return threads[i][0].CreatedAt > threads[j][0].CreatedAt })
+	var out []commentJSON
+	for _, th := range threads {
+		out = append(out, th...)
 	}
 	return out
 }
@@ -241,13 +322,16 @@ func (a *App) apiListComments() http.HandlerFunc {
 				CreatedAt: c.CreatedAt, Edited: c.EditedAt != "", Deleted: c.Deleted, Hidden: c.Hidden, Mine: uid != 0 && c.UserID == uid, Reported: c.MyReports,
 			})
 		}
-		resp := map[string]any{"comments": out, "total": total, "viewer_watched": watched, "more": more, "next_offset": offset + commentPage}
-		if offset == 0 {
-			if remote := a.remoteComments(t, uid); len(remote) > 0 {
-				resp["remote"] = remote
+		if remote := a.remoteThreads(t, uid); remote != nil {
+			var localReplies []store.Comment
+			if t.Kind == store.KindEpisode {
+				if localReplies, err = a.Store.RemoteParentReplies(t.ID, uid); err != nil {
+					logger.Error("COMMENTS replies to remote comments episode=%d: %v", t.ID, err)
+				}
 			}
+			out = weaveRemote(out, remote, localReplies, uid, more, r.URL.Query().Get("before"))
 		}
-		a.okJSON(w, resp)
+		a.okJSON(w, map[string]any{"comments": out, "total": total, "viewer_watched": watched, "more": more, "next_offset": offset + commentPage})
 	}
 }
 
@@ -291,6 +375,10 @@ func (a *App) apiAddComment() http.HandlerFunc {
 			a.fail(w, r, err)
 			return
 		}
+		if in.ParentID < 0 {
+			a.replyToRemote(w, r, u, t, in.ParentID, body, in.Spoiler)
+			return
+		}
 		cid, err := a.Store.AddComment(u.ID, t, in.ParentID, body, in.Spoiler)
 		if err != nil {
 			if errors.Is(err, store.ErrNotFound) {
@@ -306,6 +394,50 @@ func (a *App) apiAddComment() http.HandlerFunc {
 		a.emitComment(u, t, in.ParentID, cid, body, in.Spoiler)
 		a.okJSON(w, map[string]any{"id": cid})
 	}
+}
+
+// replyToRemote answers a comment that lives on another server. The reply is
+// stored here, shown under its parent, and shared with the other servers like any
+// comment; the parent's home server tells its author.
+func (a *App) replyToRemote(w http.ResponseWriter, r *http.Request, u *store.User, t store.Target, parentID int64, body string, spoiler bool) {
+	if t.Kind != store.KindEpisode {
+		a.fail(w, r, errBadRequest)
+		return
+	}
+	rc, err := a.Store.RemoteCommentByID(-parentID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			a.fail(w, r, errNotFound)
+		} else {
+			a.fail(w, r, err)
+		}
+		return
+	}
+	ep, err := a.Store.Episode(t.ID, 0)
+	if err != nil {
+		a.fail(w, r, errNotFound)
+		return
+	}
+	sh := a.showOfEpisode(ep)
+	if sh == nil || sh.TMDBID != rc.ShowTMDB || ep.SeasonNumber != rc.Season || ep.EpisodeNumber != rc.Episode {
+		a.fail(w, r, errNotFound)
+		return
+	}
+	if blocked, err := a.Store.BlockedEither(u.ID, rc.UserID); err != nil || blocked {
+		if err != nil {
+			a.fail(w, r, err)
+		} else {
+			a.fail(w, r, errNotFound)
+		}
+		return
+	}
+	cid, err := a.Store.AddRemoteReply(u.ID, t.ID, rc.Host, rc.Ref, body, spoiler)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	a.emitComment(u, t, 0, cid, body, spoiler)
+	a.okJSON(w, map[string]any{"id": cid})
 }
 
 func (a *App) notifyReply(author *store.User, t store.Target, parentID int64, body string) {

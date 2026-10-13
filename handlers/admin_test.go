@@ -189,10 +189,13 @@ func TestAdminConfigSavesOverridesAndSealsSecrets(t *testing.T) {
 		t.Fatalf("plain settings are stored as typed")
 	}
 	_, page := boss.get("/admin?tab=config")
-	if strings.Contains(page, "hunter2") || !strings.Contains(page, `value="smtp.example.org"`) || !strings.Contains(page, "data-restart") && !strings.Contains(page, "Saved settings differ") {
-		t.Fatalf("config tab should show saved values, hide secrets and warn that a restart is pending")
+	if !strings.Contains(page, `value="hunter2-secret"`) || !strings.Contains(page, `value="smtp.example.org"`) || !strings.Contains(page, "Saved settings differ") {
+		t.Fatalf("config tab shows the current values in the fields (the secret masked by its password input) and warns that a restart is pending")
 	}
-	if code, out := boss.post("/api/admin/config", map[string]any{"group": "mail", "smtp_host": "", "smtp_port": "", "clear_smtp_pass": true}); code != 200 {
+	if strings.Contains(page, "Set in the environment") || strings.Contains(page, `placeholder="smtp.example.org"`) {
+		t.Fatalf("current values are values, not placeholders")
+	}
+	if code, out := boss.post("/api/admin/config", map[string]any{"group": "mail", "smtp_host": "", "smtp_port": "", "smtp_pass": ""}); code != 200 {
 		t.Fatalf("clear: %d %v", code, out)
 	}
 	if e.store.KVGet("cfg.smtp_host") != "" || e.store.KVGet("cfg.smtp_pass") != "" {
@@ -208,8 +211,8 @@ func TestAdminConfigSavesOverridesAndSealsSecrets(t *testing.T) {
 		t.Fatalf("federation toggle: %d %v", code, out)
 	}
 	_, servers := boss.get("/admin?tab=servers")
-	if !strings.Contains(servers, `data-federation="1"`) {
-		t.Fatalf("the Servers tab should offer to turn federation back on")
+	if !strings.Contains(servers, `id="federation-switch"`) || strings.Contains(servers, `id="federation-switch" checked`) {
+		t.Fatalf("the Servers tab shows federation as a switch, now off")
 	}
 	if code, out := boss.post("/api/admin/config/test", map[string]any{"group": "telegram"}); code != 400 {
 		t.Fatalf("telegram test without settings: %d %v", code, out)
@@ -542,14 +545,18 @@ func TestServerShareSwitch(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, page := boss.get("/admin?tab=servers")
-	if !strings.Contains(page, `data-server-share="friend.example"`) || strings.Contains(page, `data-server-share="friend.example" checked`) {
-		t.Fatalf("a server that connected by itself starts off the allow-list")
+	if !strings.Contains(page, `data-server-approve="friend.example"`) || !strings.Contains(page, "Pending approval") {
+		t.Fatalf("a server that connected by itself waits for approval")
 	}
 	if code, out := boss.post("/api/admin/servers/share", map[string]any{"host": "friend.example", "share": true}); code != 200 {
 		t.Fatalf("share: %d %v", code, out)
 	}
 	if ok, _ := e.store.PeerShares("friend.example"); !ok {
 		t.Fatalf("share not stored")
+	}
+	_, page = boss.get("/admin?tab=servers")
+	if strings.Contains(page, `data-server-approve="friend.example"`) {
+		t.Fatalf("an approved server has no approve button")
 	}
 	if code, _ := boss.post("/api/admin/servers/share", map[string]any{"host": "nobody.example", "share": true}); code != 404 {
 		t.Fatalf("unknown server: %d", code)

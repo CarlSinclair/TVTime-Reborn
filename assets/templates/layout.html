@@ -15,7 +15,7 @@
 </head>
 <body data-user="{{if .User}}1{{else}}0{{end}}">
 <header class="topbar">
-  <a class="brand" href="/">{{.AppName}}</a>
+  <a class="brand" href="/" aria-label="{{.AppName}}"><img class="brand-logo" src="{{logoURL}}" alt="{{.AppName}}"></a>
   {{if .User}}
   <nav class="nav">
     <a href="/" {{if eq .Path "/"}}aria-current="page"{{end}}>{{.T "nav.home"}}</a>
@@ -84,7 +84,7 @@
 </nav>
 {{end}}
 <footer class="footer">
-  <p class="footer-links"><a href="/privacy">{{.T "footer.privacy"}}</a><a href="/about">{{.T "nav.about"}}</a></p>
+  <p class="footer-links"><a href="/welcome">{{.AppName}}</a>{{range .FooterPages}}<a href="/{{.Slug}}">{{.Title}}</a>{{end}}{{if not .CustomPrivacy}}<a href="/privacy">{{.T "footer.privacy"}}</a>{{end}}<a href="/about">{{.T "nav.about"}}</a><a href="/{{.ContactSlug}}">{{.T "footer.contact"}}</a></p>
   <span class="cslove" translate="no">
     <span class="cslove-t">{{.T "footer.made_with"}}</span>
     <svg class="cslove-h" viewBox="0 0 24 24" width="1em" height="1em" role="img" aria-label="love" focusable="false" fill="#03c03c"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>

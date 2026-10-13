@@ -3,11 +3,13 @@ package mailer
 import (
 	"bytes"
 	"crypto/rand"
+	"crypto/tls"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"mime"
 	"mime/quotedprintable"
+	"net"
 	"net/smtp"
 	"strings"
 	"time"
@@ -91,10 +93,69 @@ func (m *Mailer) deliver(to, subject, textBody, htmlBody string) error {
 	if m.cfg.SMTPUser != "" {
 		auth = smtp.PlainAuth("", m.cfg.SMTPUser, m.cfg.SMTPPass, m.cfg.SMTPHost)
 	}
-	if err := smtp.SendMail(addr, auth, m.cfg.MailFrom, []string{to}, msg.Bytes()); err != nil {
+	if err := m.deliverSMTP(addr, auth, to, msg.Bytes()); err != nil {
 		logger.Error("MAIL send failed to=%s subject=%q host=%s: %v", to, subject, addr, err)
 		return fmt.Errorf("send mail: %w", err)
 	}
 	logger.Info("MAIL sent to=%s subject=%q", to, subject)
 	return nil
+}
+
+// deliverSMTP sends one message with timeouts, using implicit TLS on port 465
+// and STARTTLS wherever the server offers it, which net/smtp's SendMail does not
+// do for 465 and never times out for.
+func (m *Mailer) deliverSMTP(addr string, auth smtp.Auth, to string, msg []byte) error {
+	host := m.cfg.SMTPHost
+	dialer := &net.Dialer{Timeout: 15 * time.Second}
+	var conn net.Conn
+	var err error
+	tlsConf := &tls.Config{ServerName: host, MinVersion: tls.VersionTLS12}
+	if m.cfg.SMTPPort == 465 {
+		conn, err = tls.DialWithDialer(dialer, "tcp", addr, tlsConf)
+	} else {
+		conn, err = dialer.Dial("tcp", addr)
+	}
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	if err := conn.SetDeadline(time.Now().Add(45 * time.Second)); err != nil {
+		return err
+	}
+	c, err := smtp.NewClient(conn, host)
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+	if m.cfg.SMTPPort != 465 {
+		if ok, _ := c.Extension("STARTTLS"); ok {
+			if err := c.StartTLS(tlsConf); err != nil {
+				return err
+			}
+		}
+	}
+	if auth != nil {
+		if ok, _ := c.Extension("AUTH"); ok {
+			if err := c.Auth(auth); err != nil {
+				return err
+			}
+		}
+	}
+	if err := c.Mail(m.cfg.MailFrom); err != nil {
+		return err
+	}
+	if err := c.Rcpt(to); err != nil {
+		return err
+	}
+	w, err := c.Data()
+	if err != nil {
+		return err
+	}
+	if _, err := w.Write(msg); err != nil {
+		return err
+	}
+	if err := w.Close(); err != nil {
+		return err
+	}
+	return c.Quit()
 }

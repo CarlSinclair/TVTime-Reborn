@@ -13,7 +13,8 @@ Licensed under the [GNU AGPL v3](LICENSE); see [NOTICE](NOTICE) for attribution,
 - Show catalogue from TMDB: synopses, ratings, posters and per-episode stills, kept fresh by a changes-feed poller; titles and synopses are always stored in each user's own language: every followed show is fetched in the language of each user who follows it, in the background, and refreshed weekly.
 - Import from TV Time: upload the GDPR export zip in Settings. Shows are matched through TMDB's TVDB lookup, watched episodes keep their original dates, followed, favorite and saved-for-later shows come across, and nothing you already track is changed. Movies are not imported. The zip is read in memory and not kept.
 - Friends: add people by exact username (no fuzzy search), a private friends list, and a home feed of what friends watch, rate and comment on. Spoiler comments never appear, and an episode is only named to a friend who has seen it. Blocked people see nothing. Friendships are addressed by handle so they can later span servers. People can post updates on their own profile; replies are ordinary comments, with the same spoiler flags, reports and moderation.
-- Federation: add friends on other TVT servers by handle (`name@server`). Servers know each other by a signing key learned from `/.well-known/tvt` on first contact and pinned afterwards; every message is signed. Friend requests go to the friend's server. Activity (kept 14 days) and episode comments (leased for a day and re-confirmed by their home server, so deletions reach every copy within a day) are shared with every server the admin allow-lists; friendship decides what shows in a feed. Comments tagged as spoilers travel flagged as spoilers. Turn federation off with `TVT_FEDERATION=0` or in Admin > Servers, block servers with `TVT_FEDERATION_BLOCK` or per server, and allow-list per server with its Share switch.
+- Federation: add friends on other TVT servers by handle (`name@server`). Servers know each other by a signing key learned from `/.well-known/tvt` on first contact and pinned afterwards; every message is signed. Friend requests go to the friend's server. Activity (kept 14 days) and episode comments (leased for a day and re-confirmed by their home server, so deletions reach every copy within a day) are shared with every server the admin allow-lists; friendship decides what shows in a feed. Replies work across servers: you can answer a comment from another server and its author is notified there. Comments tagged as spoilers travel flagged as spoilers. Turn federation off with `TVT_FEDERATION=0` or in Admin > Servers, block servers with `TVT_FEDERATION_BLOCK` or per server, and allow-list per server with its Share switch.
+- Public homepage for visitors, a standard Contact page (a form that emails the operator), a built-in privacy policy that can be customized, and optional operator-written pages (terms and so on) in every language, edited in Admin > Pages and linked from the footer.
 - Admin dashboard: overview (counts, system status, recent emails and whether they sent, recent errors), config (mail, storage, API keys, Telegram, site identity, with test buttons), user management (search, add, edit, ban, delete, open or close sign-ups), servers (add, block, forget) and the report queue, with badges for what is waiting.
 - Usernames can be changed (once every 30 days); the old name redirects and stays reserved for 14 days, and friends on other servers are told. People can deactivate their own account, and whenever an account is banned, deactivated or deleted, its comments can be hidden, deleted or kept, with replies never lost.
 - Tracking: follow, status, favorites, mark episode / season / everything-up-to-here, ratings, up-next, calendar.
@@ -29,12 +30,12 @@ Licensed under the [GNU AGPL v3](LICENSE); see [NOTICE](NOTICE) for attribution,
 
 Download the binary for your system from the [releases page](https://github.com/CarlSinclair/tvt/releases/latest), check it against `SHA256SUMS`, and run it. Nothing else is needed: templates, assets, translations, database migrations and time zone data are all inside the file. Every deployment publishes a new release. To build from source instead:
 
-    cp tvt.env.example tvt.env      # set TVT_JWT_SECRET (32+ chars) and TVT_TMDB_KEY
+    cp tvt.env.example tvt.env      # set TVT_JWT_SECRET (32+ chars), TVT_BASE_URL and TVT_ADMIN_EMAIL
     set -a; . ./tvt.env; set +a
     CGO_ENABLED=0 go build -o tvt .
     ./tvt
 
-A free TMDB API key is at themoviedb.org/settings/api. For local development use `TVT_DEV_LOG_MAIL=1` to print emails to the log (refused when the base URL is https).
+Sign up with the admin email, then open Admin > Config and add a free TMDB API key (themoviedb.org/settings/api) and, if you want them, mail, storage and the other settings. For local development use `TVT_DEV_LOG_MAIL=1` to print emails to the log (refused when the base URL is https).
 
 Passkeys need a real domain (or `localhost`) because browsers bind them to it; set `TVT_BASE_URL` to the exact public origin.
 
@@ -47,7 +48,7 @@ Passkeys need a real domain (or `localhost`) because browsers bind them to it; s
 
 ## Configuration
 
-Configuration starts as environment variables; see `tvt.env.example`. Nothing secret is stored in the repository. An admin can override mail (SMTP), object storage (R2/S3), metadata keys, the Telegram bot, site identity and the federation switch from Admin > Config and Admin > Servers, with test buttons for mail, storage and Telegram. Saved values win over the environment, secrets are stored encrypted, and changes apply on the next restart (the page offers a restart button; the service manager must start the process again, as the sample systemd unit does with `Restart=on-failure`). `TVT_JWT_SECRET`, the database path, data directory, listen address, base URL, client-IP header and admin email stay environment-only.
+Only what the process needs before it can open its database stays in the environment: listen address, base URL, database and data paths, the JWT secret, the admin email, the client-IP header, and the federation block/allow lists (see `tvt.env.example`). Everything else is set in Admin > Config (mail with a test button, R2/S3 storage with a test button, TMDB/TVDB/Trakt keys, the Telegram bot with a test button, site name, default language, operator details, contact email, logo) and Admin > Servers (federation on or off). Secrets are stored encrypted. An existing install imports the old environment values once on its first start after upgrading and never reads them again, so those lines can be deleted from the env file. Changes apply after a restart; the page has a restart button.
 
 ## Spoiler rules
 

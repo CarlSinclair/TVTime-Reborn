@@ -39,6 +39,10 @@ func (a *App) routes(mux *http.ServeMux) {
 	})
 
 	mux.HandleFunc("GET /{$}", a.pageHome)
+	mux.HandleFunc("GET /welcome", a.pageLanding)
+	mux.HandleFunc("GET /{slug}", a.pagePublic)
+	mux.HandleFunc("POST /api/contact", a.apiContact)
+	mux.HandleFunc("POST /api/admin/pages", a.apiAdminPages)
 	mux.HandleFunc("GET /search", a.pageSearch)
 	mux.HandleFunc("GET /show/{tmdb}", a.pageShow)
 	mux.HandleFunc("GET /show/{tmdb}/season/{n}", a.pageSeason)
@@ -72,6 +76,8 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/admin/users/{id}/deactivate", a.apiAdminDeactivate)
 	mux.HandleFunc("POST /api/admin/users/{id}/reset-password", a.apiAdminResetLink)
 	mux.HandleFunc("POST /api/admin/signups", a.apiAdminSignups)
+	mux.HandleFunc("POST /api/admin/logo", a.apiAdminLogoUpload)
+	mux.HandleFunc("POST /api/admin/logo/remove", a.apiAdminLogoRemove)
 	mux.HandleFunc("POST /api/admin/config", a.apiAdminConfigSave)
 	mux.HandleFunc("POST /api/admin/config/test", a.apiAdminConfigTest)
 	mux.HandleFunc("POST /api/admin/restart", a.apiAdminRestart)
@@ -249,7 +255,17 @@ func (a *App) langOf(w http.ResponseWriter, r *http.Request) string {
 	return a.lang(w, r, auth.UserFrom(r.Context()))
 }
 
+// pageLanding is the public front page: what TVT is and how to join. Visitors
+// see it at the root; everyone can open it at /welcome.
+func (a *App) pageLanding(w http.ResponseWriter, r *http.Request) {
+	a.page(w, r, "landing", "home.hero_title", map[string]any{})
+}
+
 func (a *App) pageHome(w http.ResponseWriter, r *http.Request) {
+	if auth.UserFrom(r.Context()) == nil {
+		a.pageLanding(w, r)
+		return
+	}
 	lang := a.langOf(w, r)
 	data := map[string]any{"NoMetadata": !a.TMDB.Configured()}
 	if u := auth.UserFrom(r.Context()); u != nil {
@@ -546,7 +562,13 @@ func (a *App) pageMyShows(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.localizeEntries(a.langOf(w, r), list)
-	a.page(w, r, "myshows", "nav.shows", map[string]any{"Entries": list, "Status": status, "Statuses": []string{"watching", "plan", "completed", "paused", "dropped"}})
+	counts, err := a.Store.StatusCounts(u.ID)
+	if err != nil {
+		logger.Error("PAGE my shows counts uid=%d: %v", u.ID, err)
+		a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
+		return
+	}
+	a.page(w, r, "myshows", "nav.shows", map[string]any{"Counts": counts, "Entries": list, "Status": status, "Statuses": []string{"watching", "plan", "completed", "paused", "dropped"}})
 }
 
 func (a *App) pageCalendar(w http.ResponseWriter, r *http.Request) {
@@ -607,6 +629,10 @@ var privacySections = []string{"data", "signin", "cookies", "third", "public", "
 
 func (a *App) pagePrivacy(w http.ResponseWriter, r *http.Request) {
 	lang := a.langOf(w, r)
+	if p, ok := a.resolvePage("privacy", lang); ok {
+		a.renderPage(w, r, p)
+		return
+	}
 	operator := a.Cfg.OperatorName
 	if operator == "" {
 		operator = a.I18n.T(lang, "privacy.operator_default")

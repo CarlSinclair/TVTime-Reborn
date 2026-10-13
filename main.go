@@ -50,6 +50,11 @@ func main() {
 	auth.ClientIPHeader = cfg.ClientIPHeader
 	st := store.New(d)
 	settings := appconfig.New(st, cfg.JWTSecret, cfg)
+	if keys, err := settings.ImportEnv(); err != nil {
+		logger.Error("could not import the settings from the environment: %v", err)
+	} else if len(keys) > 0 {
+		logger.Info("imported %d settings from the environment into Admin > Config (%s); the environment is no longer read for them, so those lines can be removed from the env file", len(keys), strings.Join(keys, ", "))
+	}
 	if err := settings.Apply(cfg); err != nil {
 		logger.Error("settings saved in the admin UI were ignored, using the environment: %v", err)
 	}

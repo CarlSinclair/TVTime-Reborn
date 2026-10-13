@@ -55,11 +55,14 @@ func (a *App) configErr(w http.ResponseWriter, r *http.Request, status int, key 
 	writeJSON(w, status, map[string]any{"ok": false, "error": msg, "key": key})
 }
 
-// configChanges reads the posted fields of one group. Blank plain fields clear
-// the override, blank secrets are left as they are unless "clear_<key>" is set.
+// configChanges reads the posted fields of one group. A blank field goes back to
+// its default.
 func configChanges(group string, in map[string]any) map[string]*string {
 	changes := map[string]*string{}
 	for _, f := range appconfig.InGroup(group) {
+		if _, posted := in[f.Key]; !posted {
+			continue
+		}
 		switch {
 		case f.Bool:
 			if b, ok := in[f.Key].(bool); ok {
@@ -67,13 +70,6 @@ func configChanges(group string, in map[string]any) map[string]*string {
 				if b {
 					v = "1"
 				}
-				changes[f.Key] = &v
-			}
-		case f.Secret:
-			if clear, _ := in["clear_"+f.Key].(bool); clear {
-				changes[f.Key] = nil
-			} else if v, _ := in[f.Key].(string); strings.TrimSpace(v) != "" {
-				v = strings.TrimSpace(v)
 				changes[f.Key] = &v
 			}
 		default:

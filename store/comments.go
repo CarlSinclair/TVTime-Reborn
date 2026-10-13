@@ -53,7 +53,9 @@ type Comment struct {
 	EditedAt          string
 	Deleted           bool
 	Hidden            bool
-	MyReports         map[string]bool
+	// ParentHost and ParentRef name the other server's comment this one answers.
+	ParentHost, ParentRef string
+	MyReports             map[string]bool
 }
 
 // IsSpoiler is the display rule: the author's own tag always stands; otherwise
@@ -106,7 +108,7 @@ func (s *Store) AddComment(userID int64, t Target, parentID int64, body string, 
 }
 
 const commentSelect = `SELECT c.id, COALESCE(c.episode_id,0), COALESCE(c.profile_id,0), c.user_id, u.username, u.display_name, COALESCE(c.parent_id,0), c.body,
-	    c.author_spoiler, c.spoiler_reports, c.not_spoiler_reports, c.created_at, COALESCE(c.edited_at,''), c.deleted_at IS NOT NULL, c.hidden_at IS NOT NULL
+	    c.author_spoiler, c.spoiler_reports, c.not_spoiler_reports, c.created_at, COALESCE(c.edited_at,''), c.deleted_at IS NOT NULL, c.hidden_at IS NOT NULL, c.parent_host, c.parent_ref
 	  FROM comments c JOIN users u ON u.id = c.user_id `
 
 func scanComment(row interface{ Scan(...any) error }) (Comment, error) {
@@ -114,7 +116,7 @@ func scanComment(row interface{ Scan(...any) error }) (Comment, error) {
 	var ep, prof int64
 	var as, del, hid int
 	if err := row.Scan(&c.ID, &ep, &prof, &c.UserID, &c.Username, &c.DisplayName, &c.ParentID, &c.Body, &as, &c.SpoilerReports, &c.NotSpoilerReports,
-		&c.CreatedAt, &c.EditedAt, &del, &hid); err != nil {
+		&c.CreatedAt, &c.EditedAt, &del, &hid, &c.ParentHost, &c.ParentRef); err != nil {
 		return c, err
 	}
 	if prof != 0 {
@@ -136,7 +138,7 @@ const notBlocked = `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id =
 // Comments returns one page of top-level threads (newest first) followed by
 // each thread's replies. More reports whether another page exists.
 func (s *Store) Comments(t Target, viewerID int64, limit, offset int) (list []Comment, more bool, err error) {
-	rows, err := s.DB.Query(commentSelect+`WHERE c.`+t.col()+` = ? AND c.parent_id IS NULL `+notBlocked+`
+	rows, err := s.DB.Query(commentSelect+`WHERE c.`+t.col()+` = ? AND c.parent_id IS NULL AND c.parent_ref = '' `+notBlocked+`
 	    AND ((c.deleted_at IS NULL AND c.hidden_at IS NULL) OR EXISTS (SELECT 1 FROM comments r WHERE r.parent_id = c.id AND r.deleted_at IS NULL AND r.hidden_at IS NULL))
 	  ORDER BY c.created_at DESC, c.id DESC LIMIT ? OFFSET ?`, t.ID, viewerID, viewerID, limit+1, offset)
 	if err != nil {
@@ -521,6 +523,8 @@ type OpenComment struct {
 	EditedAt        string
 	ShowTMDB        int64
 	Season, Episode int
+	ParentHost      string
+	ParentRef       string
 }
 
 // OpenEpisodeComment returns a comment only while it is shown to everyone: not
@@ -528,10 +532,10 @@ type OpenComment struct {
 func (s *Store) OpenEpisodeComment(id int64) (*OpenComment, error) {
 	var c OpenComment
 	var sp int
-	err := s.DB.QueryRow(`SELECT c.id, c.user_id, u.username, u.display_name, COALESCE(c.parent_id,0), c.body, c.author_spoiler, c.created_at, COALESCE(c.edited_at,''), sh.tmdb_id, e.season_number, e.episode_number
+	err := s.DB.QueryRow(`SELECT c.id, c.user_id, u.username, u.display_name, COALESCE(c.parent_id,0), c.body, c.author_spoiler, c.created_at, COALESCE(c.edited_at,''), sh.tmdb_id, e.season_number, e.episode_number, c.parent_host, c.parent_ref
 	  FROM comments c JOIN users u ON u.id = c.user_id JOIN episodes e ON e.id = c.episode_id JOIN shows sh ON sh.id = e.show_id
 	  WHERE c.id = ? AND c.deleted_at IS NULL AND c.hidden_at IS NULL AND u.is_deactivated = 0 AND u.remote_host = ''`, id).Scan(
-		&c.ID, &c.UserID, &c.Username, &c.DisplayName, &c.ParentID, &c.Body, &sp, &c.CreatedAt, &c.EditedAt, &c.ShowTMDB, &c.Season, &c.Episode)
+		&c.ID, &c.UserID, &c.Username, &c.DisplayName, &c.ParentID, &c.Body, &sp, &c.CreatedAt, &c.EditedAt, &c.ShowTMDB, &c.Season, &c.Episode, &c.ParentHost, &c.ParentRef)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -557,6 +561,42 @@ func (s *Store) UserEpisodeCommentIDs(userID int64) ([]int64, error) {
 			return nil, err
 		}
 		out = append(out, id)
+	}
+	return out, rows.Err()
+}
+
+// AddRemoteReply stores a comment that answers a comment on another server.
+func (s *Store) AddRemoteReply(userID, episodeID int64, parentHost, parentRef, body string, spoiler bool) (int64, error) {
+	sp := 0
+	if spoiler {
+		sp = 1
+	}
+	res, err := s.DB.Exec(`INSERT INTO comments (episode_id, user_id, parent_host, parent_ref, body, author_spoiler, created_at)
+	  SELECT id, ?, ?, ?, ?, ?, ? FROM episodes WHERE id = ?`, userID, strings.ToLower(parentHost), parentRef, body, sp, Now(), episodeID)
+	if err != nil {
+		return 0, fmt.Errorf("add remote reply uid=%d episode=%d: %w", userID, episodeID, err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return 0, ErrNotFound
+	}
+	return res.LastInsertId()
+}
+
+// RemoteParentReplies lists the comments on an episode that answer comments on
+// other servers, so they can be shown under their parents.
+func (s *Store) RemoteParentReplies(episodeID, viewerID int64) ([]Comment, error) {
+	rows, err := s.DB.Query(commentSelect+`WHERE c.episode_id = ? AND c.parent_ref <> '' `+notBlocked+` ORDER BY c.created_at ASC, c.id ASC`, episodeID, viewerID, viewerID)
+	if err != nil {
+		return nil, fmt.Errorf("remote parent replies episode=%d: %w", episodeID, err)
+	}
+	defer rows.Close()
+	var out []Comment
+	for rows.Next() {
+		c, err := scanComment(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, c)
 	}
 	return out, rows.Err()
 }

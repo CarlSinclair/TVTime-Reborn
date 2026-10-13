@@ -436,8 +436,8 @@
       if (data) toast(t("config_test_ok") + " " + data.detail, "ok");
       return;
     }
-    if ("federation" in d) {
-      const data = await run(el, () => api("/api/admin/config", { group: "federation", federation: d.federation === "1" }));
+    if ("serverApprove" in d) {
+      const data = await run(el, () => api("/api/admin/servers/share", { host: d.serverApprove, share: true }));
       if (data) window.location.reload();
       return;
     }
@@ -448,6 +448,17 @@
         toast(t("restarting"), "ok");
         setTimeout(() => window.location.reload(), 4000);
       }
+      return;
+    }
+    if ("pagesAction" in d) {
+      if (d.confirm && !window.confirm(d.confirm)) return;
+      const data = await run(el, () => api("/api/admin/pages", { action: d.pagesAction, page_id: d.pageId ? parseInt(d.pageId, 10) : 0 }));
+      if (data) window.location.reload();
+      return;
+    }
+    if ("logoRemove" in d) {
+      const data = await run(el, () => api("/api/admin/logo/remove"));
+      if (data) window.location.reload();
       return;
     }
     if ("userEdit" in d) {
@@ -726,9 +737,9 @@
         const other = el.closest(".comment-toggles").querySelector(el.name === "hide_comments" ? '[name="delete_comments"]' : '[name="hide_comments"]');
         other.checked = false;
       }
-    } else if ("serverShare" in el.dataset) {
-      const data = await run(el, () => api("/api/admin/servers/share", { host: el.dataset.serverShare, share: el.checked }));
-      if (data) toast(t("saved"), "ok");
+    } else if (el.id === "federation-switch") {
+      const data = await run(el, () => api("/api/admin/config", { group: "federation", federation: el.checked }));
+      if (data) window.location.reload();
       else el.checked = !el.checked;
     } else if (el.id === "signups-switch") {
       const data = await run(el, () => api("/api/admin/signups", { closed: !el.checked }));
@@ -749,7 +760,8 @@
     } else if (el.matches("[data-upload]")) {
       const file = el.files && el.files[0];
       if (!file) return;
-      const data = await run(null, () => upload("/api/profile/" + (el.dataset.upload === "avatars" ? "avatar" : "banner"), file));
+      const target = el.dataset.upload === "logo" ? "/api/admin/logo" : "/api/profile/" + (el.dataset.upload === "avatars" ? "avatar" : "banner");
+      const data = await run(null, () => upload(target, file));
       el.value = "";
       if (!data) return;
       toast(t("saved"), "ok");
@@ -862,7 +874,7 @@
   const accountMenu = document.getElementById("account-menu");
   if (accountMenu) {
     document.addEventListener("click", (event) => {
-      if (!accountMenu.contains(event.target)) accountMenu.open = false;
+      if (!accountMenu.contains(event.target) || event.target.closest(".menu a, .menu button")) accountMenu.open = false;
     });
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") accountMenu.open = false;
@@ -1308,6 +1320,7 @@
     const revealed = new Set();
     let viewerWatched = false;
     let nextOffset = 0;
+    let oldestTop = "";
 
     const button = (label, onClick, pressed) => {
       const b = document.createElement("button");
@@ -1321,7 +1334,7 @@
     const load = async (append) => {
       let data;
       try {
-        data = await api(base + "?offset=" + (append ? nextOffset : 0), null, "GET");
+        data = await api(base + "?offset=" + (append ? nextOffset : 0) + (append && oldestTop ? "&before=" + encodeURIComponent(oldestTop) : ""), null, "GET");
       } catch (err) {
         toast(err.message, "error");
         return;
@@ -1330,21 +1343,16 @@
       count.textContent = "(" + data.total + ")";
       if (!append) list.textContent = "";
       if (kind === "profile") root.hidden = data.total === 0 && !document.getElementById("comment-form");
-      const remote = data.remote || [];
-      if (data.comments.length === 0 && remote.length === 0 && !append && kind !== "profile") {
+      if (data.comments.length === 0 && !append && kind !== "profile") {
         const li = document.createElement("li");
         li.className = "muted";
         li.textContent = t("comments_empty");
         list.appendChild(li);
       }
       data.comments.forEach((c) => list.appendChild(renderComment(c)));
-      if (!append && remote.length) {
-        const head = document.createElement("li");
-        head.className = "muted remote-heading";
-        head.textContent = t("remote_comments");
-        list.appendChild(head);
-        remote.forEach((c) => list.appendChild(renderComment(c)));
-      }
+      data.comments.forEach((c) => {
+        if (!c.parent_id) oldestTop = c.created_at;
+      });
       nextOffset = data.next_offset;
       more.hidden = !data.more;
     };
@@ -1501,13 +1509,8 @@
 
       const actions = document.createElement("div");
       actions.className = "comment-actions";
-      if (verified && !c.host) actions.appendChild(button(t("reply"), () => replyForm(c, li)));
+      if (verified) actions.appendChild(button(t("reply"), () => replyForm(c, li)));
       if (c.host) {
-        li.classList.add("remote");
-        const from = document.createElement("span");
-        from.className = "tag";
-        from.textContent = c.host;
-        head.appendChild(from);
         if (logged) {
           actions.appendChild(
             button(t("report_abuse"), async (b) => {
@@ -1822,6 +1825,10 @@
     if (push) history.pushState({}, "", final.pathname + final.search + final.hash);
     here = final.pathname + final.search;
     document.querySelectorAll("dialog[open]").forEach((dlg) => dlg.close());
+    const menu = document.getElementById("account-menu");
+    if (menu) menu.open = false;
+    const bellMenu = document.getElementById("bell-menu");
+    if (bellMenu) bellMenu.hidden = true;
     clearInterval(tgPoll);
     document.title = doc.title;
     const main = document.querySelector("main.container");

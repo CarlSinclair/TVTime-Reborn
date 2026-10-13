@@ -209,6 +209,26 @@ func (s *Store) SeasonProgress(userID, showID int64) (map[int]Progress, error) {
 
 func (p Progress) Done() bool { return p.Aired > 0 && p.Watched >= p.Aired }
 
+// StatusCounts says how many shows someone has under each status.
+func (s *Store) StatusCounts(userID int64) (map[string]int, error) {
+	rows, err := s.DB.Query(`SELECT status, COUNT(*) FROM follows WHERE user_id = ? GROUP BY status`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("status counts uid=%d: %w", userID, err)
+	}
+	defer rows.Close()
+	out := map[string]int{}
+	for rows.Next() {
+		var st string
+		var n int
+		if err := rows.Scan(&st, &n); err != nil {
+			return nil, err
+		}
+		out[st] = n
+		out["all"] += n
+	}
+	return out, rows.Err()
+}
+
 type ShowEntry struct {
 	Show     Show
 	Follow   Follow

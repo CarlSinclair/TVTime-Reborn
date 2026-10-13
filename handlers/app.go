@@ -48,8 +48,11 @@ type App struct {
 	Fed      *federation.Service
 	// Settings holds the options an admin may change from the web UI; Restart,
 	// when set, stops the process cleanly with a non-zero status.
-	Settings *appconfig.Manager
-	Restart  func()
+	Settings     *appconfig.Manager
+	logo         logoState
+	pageCache    pageCache
+	contactLimit *auth.Limiter
+	Restart      func()
 
 	tmpl     map[string]*template.Template
 	mfaLimit *auth.Limiter
@@ -86,7 +89,10 @@ func New(cfg *config.Config, st *store.Store, a *auth.Service, sy *syncer.Syncer
 		imgLimit:     auth.NewLimiter(600, time.Minute),
 		pageLimit:    auth.NewLimiter(600, time.Minute),
 		writeLimit:   auth.NewLimiter(120, time.Minute),
+		contactLimit: auth.NewLimiter(3, time.Hour),
 	}
+	app.logo.set(st.KVGet(logoKV))
+	app.reloadPages()
 	app.Importer = &importer.Runner{Store: st, Sync: sy, TMDB: tm, Notify: nt}
 	if n, err := st.FailInterruptedImports(); err != nil {
 		logger.Error("IMPORT could not clear interrupted jobs: %v", err)
@@ -213,6 +219,7 @@ func (a *App) loadTemplates() error {
 		"avatar":   func(name string) string { return a.mediaURL("avatars", name) },
 		"banner":   func(name string) string { return a.mediaURL("banners", name) },
 		"assetV":   func() string { return assetVersion },
+		"logoURL":  a.logoURL,
 	}
 	sub, err := fs.Sub(assets.FS, "templates")
 	if err != nil {
@@ -366,8 +373,8 @@ var publicPages = map[string]bool{
 // publicRoute lists everything reachable without signing in: the sign-in and
 // recovery pages, the legal pages, static files and the machine endpoints.
 // Everything else needs an account.
-func publicRoute(p string) bool {
-	return isStatic(p) || publicPages[p] || strings.HasPrefix(p, "/t/") || strings.HasPrefix(p, "/api/auth/") || p == "/api/telegram/webhook" ||
+func (a *App) publicRoute(p string) bool {
+	return isStatic(p) || publicPages[p] || p == "/" || p == "/welcome" || p == "/api/contact" || a.isContactSlug(p) || a.isPageSlug(p) || strings.HasPrefix(p, "/t/") || strings.HasPrefix(p, "/api/auth/") || p == "/api/telegram/webhook" ||
 		p == "/.well-known/tvt" || strings.HasPrefix(p, "/federation/")
 }
 
@@ -436,7 +443,7 @@ func (a *App) middleware(next http.Handler) http.Handler {
 			}
 		}
 		r = r.WithContext(ctx)
-		if auth.UserFrom(ctx) == nil && !publicRoute(r.URL.Path) {
+		if auth.UserFrom(ctx) == nil && !a.publicRoute(r.URL.Path) {
 			if strings.HasPrefix(r.URL.Path, "/api/") {
 				a.fail(sw, r, errUnauth)
 				return

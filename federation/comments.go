@@ -61,11 +61,48 @@ func (s *Service) onComment(host string, m message) error {
 	if c.Edited != "" {
 		edited = parseStamp(c.Edited)
 	}
-	return s.Store.SaveRemoteComment(store.RemoteComment{
-		UserID: shadow.ID, Host: host, Ref: c.Ref, ParentRef: c.Parent, ShowTMDB: c.ShowTMDB,
+	parentHost := strings.ToLower(strings.TrimSpace(c.ParentHost))
+	if parentHost != "" && !ValidHost(parentHost, s.Insecure) {
+		return errBadMessage
+	}
+	if parentHost == host {
+		parentHost = ""
+	}
+	_, lookup := s.Store.RemoteCommentAuthor(host, c.Ref)
+	alreadyHeld := lookup == nil
+	if err := s.Store.SaveRemoteComment(store.RemoteComment{
+		UserID: shadow.ID, Host: host, Ref: c.Ref, ParentRef: c.Parent, ParentHost: parentHost, ShowTMDB: c.ShowTMDB,
 		Season: clampInt(c.Season, 0, 5000), Episode: clampInt(c.Episode, 0, 100000),
 		Body: body, Spoiler: c.Spoiler, CreatedAt: parseStamp(c.Created), Edited: edited,
-	})
+	}); err != nil {
+		return err
+	}
+	if alreadyHeld || c.Parent == "" || parentHost != s.Host || !commentRefRe.MatchString(c.Parent) {
+		return nil
+	}
+	s.notifyLocalParent(shadow, c.Parent, body)
+	return nil
+}
+
+// notifyLocalParent tells the author of a local comment that someone on another
+// server replied to it.
+func (s *Service) notifyLocalParent(replier *store.User, parentRef, body string) {
+	id, err := strconv.ParseInt(strings.TrimPrefix(parentRef, "c:"), 10, 64)
+	if err != nil {
+		return
+	}
+	parent, err := s.Store.CommentByID(id)
+	if err != nil || parent.Deleted || parent.Hidden {
+		return
+	}
+	if blocked, err := s.Store.BlockedEither(replier.ID, parent.UserID); err != nil || blocked {
+		return
+	}
+	link := "/"
+	if parent.Target.Kind == store.KindEpisode {
+		link = "/episode/" + strconv.FormatInt(parent.Target.ID, 10)
+	}
+	s.notifyUser(parent.UserID, "comment_reply", link, map[string]any{"user": replier.Name() + " (" + replier.Username + ")", "excerpt": clip(body, 90)})
 }
 
 // onCommentRetract drops a copy when its author withdraws the comment.
@@ -144,7 +181,10 @@ type renewResponse struct {
 func CommentMessage(c *store.OpenComment) CommentMsg {
 	m := CommentMsg{Ref: "c:" + strconv.FormatInt(c.ID, 10), ShowTMDB: c.ShowTMDB, Season: c.Season, Episode: c.Episode,
 		Body: c.Body, Spoiler: c.Spoiler, Created: c.CreatedAt, Edited: c.EditedAt}
-	if c.ParentID != 0 {
+	switch {
+	case c.ParentRef != "":
+		m.Parent, m.ParentHost = c.ParentRef, c.ParentHost
+	case c.ParentID != 0:
 		m.Parent = "c:" + strconv.FormatInt(c.ParentID, 10)
 	}
 	return m

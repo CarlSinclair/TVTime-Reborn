@@ -278,13 +278,13 @@ func (e *env) signup(t *testing.T, name string, verify bool) *client {
 func TestPagesRenderForVisitor(t *testing.T) {
 	e := newEnv(t)
 	anon := newClient(t, e.srv.URL)
-	for _, p := range []string{"/login", "/register", "/forgot", "/privacy", "/about", "/offline", "/t/verify?token=x"} {
+	for _, p := range []string{"/", "/welcome", "/login", "/register", "/forgot", "/privacy", "/about", "/offline", "/t/verify?token=x"} {
 		code, body := anon.get(p)
 		if code != 200 || !strings.Contains(body, "</html>") {
 			t.Errorf("anonymous GET %s: status %d", p, code)
 		}
 	}
-	for _, p := range []string{"/", "/shows", "/calendar", "/settings", "/search?q=fake", "/show/555", "/u/someone", "/nope"} {
+	for _, p := range []string{"/shows", "/calendar", "/settings", "/search?q=fake", "/show/555", "/u/someone", "/nope"} {
 		resp, err := anon.http.Get(anon.base + p)
 		if err != nil {
 			t.Fatal(err)

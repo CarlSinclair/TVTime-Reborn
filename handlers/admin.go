@@ -374,6 +374,11 @@ func (a *App) pageAdmin(w http.ResponseWriter, r *http.Request) {
 			fail("config", err)
 			return
 		}
+	case "pages":
+		if err := a.pagesAdminData(data); err != nil {
+			fail("pages", err)
+			return
+		}
 	case "reports":
 		reports, err := a.Store.OpenAbuseReports(100)
 		if err != nil {

@@ -365,15 +365,18 @@ type message struct {
 // CommentMsg is an episode comment as it travels between servers. Ref names it
 // on its home server; Parent names the comment it answers, on the same server.
 type CommentMsg struct {
-	Ref      string `json:"ref"`
-	Parent   string `json:"parent,omitempty"`
-	ShowTMDB int64  `json:"show_tmdb"`
-	Season   int    `json:"season"`
-	Episode  int    `json:"episode"`
-	Body     string `json:"body"`
-	Spoiler  bool   `json:"spoiler,omitempty"`
-	Created  string `json:"created"`
-	Edited   string `json:"edited,omitempty"`
+	Ref    string `json:"ref"`
+	Parent string `json:"parent,omitempty"`
+	// ParentHost is the server the parent comment lives on when it is not the
+	// sender's own.
+	ParentHost string `json:"parent_host,omitempty"`
+	ShowTMDB   int64  `json:"show_tmdb"`
+	Season     int    `json:"season"`
+	Episode    int    `json:"episode"`
+	Body       string `json:"body"`
+	Spoiler    bool   `json:"spoiler,omitempty"`
+	Created    string `json:"created"`
+	Edited     string `json:"edited,omitempty"`
 }
 
 func newID() string {

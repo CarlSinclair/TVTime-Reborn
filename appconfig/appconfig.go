@@ -27,8 +27,12 @@ type Field struct {
 	Group  string
 	Secret bool
 	Bool   bool
-	get    func(*config.Config) string
-	set    func(*config.Config, string) error
+	// Default is what applies while nothing is saved; Example is a suggestion
+	// shown as the field's placeholder.
+	Default string
+	Example string
+	get     func(*config.Config) string
+	set     func(*config.Config, string) error
 }
 
 func str(get func(*config.Config) *string) (func(*config.Config) string, func(*config.Config, string) error) {
@@ -101,8 +105,27 @@ var Fields = []Field{
 	field("operator_name", "branding", false, func(c *config.Config) *string { return &c.OperatorName }),
 	field("privacy_contact", "branding", false, func(c *config.Config) *string { return &c.PrivacyContact }),
 	field("source_url", "branding", false, func(c *config.Config) *string { return &c.SourceURL }),
+	field("contact_email", "branding", false, func(c *config.Config) *string { return &c.ContactEmail }),
 
 	boolField("federation", "federation", func(c *config.Config) *bool { return &c.Federation }),
+}
+
+// defaults and examples by key. Anything not listed defaults to blank.
+var defaults = map[string]string{"smtp_port": "587", "app_name": "TVT", "default_lang": "en", "source_url": "https://github.com/CarlSinclair/tvt", "disable_tvmaze": "0", "federation": "1"}
+
+var examples = map[string]string{
+	"smtp_host": "smtp.example.com", "smtp_port": "587", "smtp_user": "username", "mail_from": "TVT <no-reply@example.com>",
+	"s3_endpoint": "https://ACCOUNT.r2.cloudflarestorage.com", "s3_region": "auto", "s3_bucket": "tvt-media", "s3_prefix": "tvt",
+	"media_public_url": "https://media.example.com", "trakt_client_id": "", "telegram_name": "MyTvtBot",
+	"app_name": "TVT", "default_lang": "en", "operator_name": "Your name or company", "privacy_contact": "privacy@example.com",
+	"contact_email": "contact@example.com", "source_url": "https://github.com/you/tvt",
+}
+
+func init() {
+	for i := range Fields {
+		Fields[i].Default = defaults[Fields[i].Key]
+		Fields[i].Example = examples[Fields[i].Key]
+	}
 }
 
 func Lookup(key string) (Field, bool) {
@@ -129,11 +152,54 @@ func InGroup(group string) []Field {
 type Manager struct {
 	St     *store.Store
 	Secret string
-	Env    config.Config
+	// Env is the configuration as the environment defined it at start-up. It is
+	// read once, to import the managed settings into the database; after that the
+	// environment no longer matters for them.
+	Env config.Config
+	// Base is the configuration with every managed setting at its default.
+	Base config.Config
 }
 
 func New(st *store.Store, secret string, env *config.Config) *Manager {
-	return &Manager{St: st, Secret: secret, Env: *env}
+	m := &Manager{St: st, Secret: secret, Env: *env, Base: *env}
+	for _, f := range Fields {
+		if err := f.set(&m.Base, f.Default); err != nil {
+			continue
+		}
+	}
+	return m
+}
+
+const importedKey = "cfg.imported"
+
+// ImportEnv copies the managed settings from the environment into the database
+// the first time it runs, without overwriting anything already saved, and
+// returns the keys it imported. From then on the environment is not read for
+// them.
+func (m *Manager) ImportEnv() ([]string, error) {
+	if m.St.KVGet(importedKey) != "" {
+		return nil, nil
+	}
+	var done []string
+	for _, f := range Fields {
+		envVal := f.get(&m.Env)
+		if envVal == "" || envVal == f.Default {
+			continue
+		}
+		if _, saved, err := m.Saved(f); err != nil {
+			return done, err
+		} else if saved {
+			continue
+		}
+		if err := m.Set(f, envVal); err != nil {
+			return done, err
+		}
+		done = append(done, f.Key)
+	}
+	if err := m.St.KVSet(importedKey, "1"); err != nil {
+		return done, err
+	}
+	return done, nil
 }
 
 // Saved returns the override stored for a key, if any.
@@ -173,7 +239,7 @@ func (m *Manager) Set(f Field, value string) error {
 // Overlay applies the saved overrides, plus the given pending changes (a nil
 // pointer clears one), to a copy of the environment configuration.
 func (m *Manager) Overlay(changes map[string]*string) (*config.Config, error) {
-	c := m.Env
+	c := m.Base
 	c.FedBlock = append([]string(nil), m.Env.FedBlock...)
 	c.FedAllow = append([]string(nil), m.Env.FedAllow...)
 	for _, f := range Fields {
@@ -230,40 +296,24 @@ func (m *Manager) Differs(run *config.Config) ([]string, error) {
 
 var ErrUnknownField = errors.New("appconfig: unknown field")
 
-// Value is a field as the Config tab shows it.
+// Value is a field as the Config tab shows it: its current value, filled into
+// the input, and a suggestion for the placeholder.
 type Value struct {
-	Key    string
-	Secret bool
-	Bool   bool
-	// Text is the saved value for plain fields; secrets never leave the server.
-	Text string
-	// Saved is true when an override is stored; Set is true when a secret has a value.
-	Saved bool
-	// Fallback is the environment's value for plain fields, shown as a hint.
-	Fallback string
-	EnvSet   bool
+	Key     string
+	Secret  bool
+	Bool    bool
+	Text    string
+	Example string
 }
 
 func (m *Manager) Values(group string) ([]Value, error) {
+	c, err := m.Overlay(nil)
+	if err != nil {
+		return nil, err
+	}
 	var out []Value
 	for _, f := range InGroup(group) {
-		v, ok, err := m.Saved(f)
-		if err != nil {
-			return nil, err
-		}
-		val := Value{Key: f.Key, Secret: f.Secret, Bool: f.Bool, Saved: ok}
-		envVal := f.get(&m.Env)
-		val.EnvSet = envVal != "" && !(f.Bool && envVal == "0")
-		if !f.Secret {
-			val.Fallback = envVal
-			switch {
-			case ok:
-				val.Text = v
-			case f.Bool:
-				val.Text = envVal
-			}
-		}
-		out = append(out, val)
+		out = append(out, Value{Key: f.Key, Secret: f.Secret, Bool: f.Bool, Text: f.get(c), Example: f.Example})
 	}
 	return out, nil
 }

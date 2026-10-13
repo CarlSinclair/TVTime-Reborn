@@ -1,0 +1,16 @@
+{{define "content"}}
+<section class="hero">
+  <h1>{{.T "home.hero_title"}}</h1>
+  <p>{{.T "home.hero_text"}}</p>
+  <p class="hero-actions">
+    {{if .User}}<a class="btn" href="/">{{.T "nav.home"}}</a>{{else}}<a class="btn" href="/register">{{.T "auth.register"}}</a> <a class="btn ghost" href="/login">{{.T "auth.login"}}</a>{{end}}
+  </p>
+</section>
+<section class="features">
+  <article><h2>{{.T "landing.f1_title"}}</h2><p>{{.T "landing.f1_text"}}</p></article>
+  <article><h2>{{.T "landing.f2_title"}}</h2><p>{{.T "landing.f2_text"}}</p></article>
+  <article><h2>{{.T "landing.f3_title"}}</h2><p>{{.T "landing.f3_text"}}</p></article>
+  <article><h2>{{.T "landing.f4_title"}}</h2><p>{{.T "landing.f4_text"}}</p></article>
+  <article><h2>{{.T "landing.f5_title"}}</h2><p>{{.T "landing.f5_text"}}</p></article>
+</section>
+{{end}}

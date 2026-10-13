@@ -1,0 +1,19 @@
+{{define "content"}}
+<article class="legal-page">
+  <h1>{{.T "contact.title"}}</h1>
+  {{if .Data.Available}}
+  <p class="muted">{{.T "contact.intro"}}</p>
+  <form class="stack" data-api="/api/contact" data-success="{{.T "contact.sent"}}">
+    <label>{{.T "contact.name"}}<input type="text" name="name" maxlength="100" autocomplete="name" required value="{{if .User}}{{.User.Name}}{{end}}"></label>
+    <label>{{.T "contact.email"}}<input type="email" name="email" autocomplete="email" required value="{{if .User}}{{.User.Email}}{{end}}"></label>
+    <label>{{.T "contact.message"}}<textarea name="message" rows="7" maxlength="5000" required></textarea></label>
+    <label class="hp" aria-hidden="true">Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+    <p class="form-error" role="alert" hidden></p>
+    <div><button class="btn" type="submit">{{.T "contact.send"}}</button></div>
+  </form>
+  {{else}}
+  <p class="muted">{{.T "contact.unavailable"}}</p>
+  {{if .Data.PrivacyContact}}<p>{{.Data.PrivacyContact}}</p>{{end}}
+  {{end}}
+</article>
+{{end}}

@@ -338,11 +338,14 @@ const CommentLease = 24 * time.Hour
 
 // RemoteComment is a copy of a comment written on another server.
 type RemoteComment struct {
-	ID                int64
-	UserID            int64
-	Handle, Name      string
-	Host, Ref         string
-	ParentRef         string
+	ID           int64
+	UserID       int64
+	Handle, Name string
+	Host, Ref    string
+	ParentRef    string
+	// ParentHost is the server the parent comment lives on; empty means the
+	// same server as this comment.
+	ParentHost        string
 	ShowTMDB          int64
 	Season, Episode   int
 	Body              string
@@ -356,10 +359,10 @@ func (s *Store) SaveRemoteComment(c RemoteComment) error {
 	if c.Spoiler {
 		sp = 1
 	}
-	if _, err := s.DB.Exec(`INSERT INTO remote_comments (user_id, host, ref, parent_ref, show_tmdb, season, episode, body, spoiler, created_at, edited_at, expires_at)
-	  VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+	if _, err := s.DB.Exec(`INSERT INTO remote_comments (user_id, host, ref, parent_ref, parent_host, show_tmdb, season, episode, body, spoiler, created_at, edited_at, expires_at)
+	  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
 	  ON CONFLICT(host, ref) DO UPDATE SET body = excluded.body, spoiler = excluded.spoiler, edited_at = excluded.edited_at, expires_at = excluded.expires_at`,
-		c.UserID, strings.ToLower(c.Host), c.Ref, c.ParentRef, c.ShowTMDB, c.Season, c.Episode, c.Body, sp, c.CreatedAt, c.Edited, Ts(time.Now().Add(CommentLease))); err != nil {
+		c.UserID, strings.ToLower(c.Host), c.Ref, c.ParentRef, strings.ToLower(c.ParentHost), c.ShowTMDB, c.Season, c.Episode, c.Body, sp, c.CreatedAt, c.Edited, Ts(time.Now().Add(CommentLease))); err != nil {
 		return fmt.Errorf("save remote comment %s/%s: %w", c.Host, c.Ref, err)
 	}
 	return nil
@@ -411,7 +414,7 @@ func (s *Store) RemoteCommentAuthor(host, ref string) (int64, error) {
 // RemoteCommentsFor lists the copies of other servers' comments on one episode
 // that the viewer may see: their authors are neither blocked nor suspended.
 func (s *Store) RemoteCommentsFor(showTMDB int64, season, episode int, viewerID int64) ([]RemoteComment, error) {
-	rows, err := s.DB.Query(`SELECT c.id, c.user_id, u.username, u.display_name, c.host, c.ref, c.parent_ref, c.show_tmdb, c.season, c.episode, c.body, c.spoiler, c.created_at, c.edited_at, c.expires_at
+	rows, err := s.DB.Query(`SELECT c.id, c.user_id, u.username, u.display_name, c.host, c.ref, c.parent_ref, c.parent_host, c.show_tmdb, c.season, c.episode, c.body, c.spoiler, c.created_at, c.edited_at, c.expires_at
 	  FROM remote_comments c JOIN users u ON u.id = c.user_id
 	  WHERE c.show_tmdb = ? AND c.season = ? AND c.episode = ? AND c.expires_at > ? AND u.is_deactivated = 0
 	    AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id = ? AND b.blocked_id = c.user_id) OR (b.blocker_id = c.user_id AND b.blocked_id = ?))
@@ -424,7 +427,7 @@ func (s *Store) RemoteCommentsFor(showTMDB int64, season, episode int, viewerID 
 	for rows.Next() {
 		var c RemoteComment
 		var sp int
-		if err := rows.Scan(&c.ID, &c.UserID, &c.Handle, &c.Name, &c.Host, &c.Ref, &c.ParentRef, &c.ShowTMDB, &c.Season, &c.Episode, &c.Body, &sp, &c.CreatedAt, &c.Edited, &c.ExpiresAt); err != nil {
+		if err := rows.Scan(&c.ID, &c.UserID, &c.Handle, &c.Name, &c.Host, &c.Ref, &c.ParentRef, &c.ParentHost, &c.ShowTMDB, &c.Season, &c.Episode, &c.Body, &sp, &c.CreatedAt, &c.Edited, &c.ExpiresAt); err != nil {
 			return nil, err
 		}
 		c.Spoiler = sp == 1
@@ -436,8 +439,8 @@ func (s *Store) RemoteCommentsFor(showTMDB int64, season, episode int, viewerID 
 func (s *Store) RemoteCommentByID(id int64) (*RemoteComment, error) {
 	var c RemoteComment
 	var sp int
-	err := s.DB.QueryRow(`SELECT c.id, c.user_id, u.username, u.display_name, c.host, c.ref, c.parent_ref, c.show_tmdb, c.season, c.episode, c.body, c.spoiler, c.created_at, c.edited_at, c.expires_at
-	  FROM remote_comments c JOIN users u ON u.id = c.user_id WHERE c.id = ?`, id).Scan(&c.ID, &c.UserID, &c.Handle, &c.Name, &c.Host, &c.Ref, &c.ParentRef, &c.ShowTMDB, &c.Season, &c.Episode, &c.Body, &sp, &c.CreatedAt, &c.Edited, &c.ExpiresAt)
+	err := s.DB.QueryRow(`SELECT c.id, c.user_id, u.username, u.display_name, c.host, c.ref, c.parent_ref, c.parent_host, c.show_tmdb, c.season, c.episode, c.body, c.spoiler, c.created_at, c.edited_at, c.expires_at
+	  FROM remote_comments c JOIN users u ON u.id = c.user_id WHERE c.id = ?`, id).Scan(&c.ID, &c.UserID, &c.Handle, &c.Name, &c.Host, &c.Ref, &c.ParentRef, &c.ParentHost, &c.ShowTMDB, &c.Season, &c.Episode, &c.Body, &sp, &c.CreatedAt, &c.Edited, &c.ExpiresAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -451,7 +454,7 @@ func (s *Store) RemoteCommentByID(id int64) (*RemoteComment, error) {
 // DueRenewals lists copies whose lease ends within the window, newest first,
 // so each can be re-confirmed with its home server.
 func (s *Store) DueRenewals(within time.Duration, limit int) ([]RemoteComment, error) {
-	rows, err := s.DB.Query(`SELECT id, user_id, '', '', host, ref, parent_ref, show_tmdb, season, episode, body, spoiler, created_at, edited_at, expires_at
+	rows, err := s.DB.Query(`SELECT id, user_id, '', '', host, ref, parent_ref, parent_host, show_tmdb, season, episode, body, spoiler, created_at, edited_at, expires_at
 	  FROM remote_comments WHERE expires_at < ? ORDER BY host, expires_at LIMIT ?`, Ts(time.Now().Add(within)), limit)
 	if err != nil {
 		return nil, fmt.Errorf("due renewals: %w", err)
@@ -461,7 +464,7 @@ func (s *Store) DueRenewals(within time.Duration, limit int) ([]RemoteComment, e
 	for rows.Next() {
 		var c RemoteComment
 		var sp int
-		if err := rows.Scan(&c.ID, &c.UserID, &c.Handle, &c.Name, &c.Host, &c.Ref, &c.ParentRef, &c.ShowTMDB, &c.Season, &c.Episode, &c.Body, &sp, &c.CreatedAt, &c.Edited, &c.ExpiresAt); err != nil {
+		if err := rows.Scan(&c.ID, &c.UserID, &c.Handle, &c.Name, &c.Host, &c.Ref, &c.ParentRef, &c.ParentHost, &c.ShowTMDB, &c.Season, &c.Episode, &c.Body, &sp, &c.CreatedAt, &c.Edited, &c.ExpiresAt); err != nil {
 			return nil, err
 		}
 		c.Spoiler = sp == 1

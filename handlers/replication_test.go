@@ -8,23 +8,33 @@ import (
 	"time"
 )
 
+type remoteItem struct {
+	ID       int64  `json:"id"`
+	User     string `json:"user"`
+	Host     string `json:"host"`
+	Body     string `json:"body"`
+	Spoiler  bool   `json:"spoiler"`
+	ParentID int64  `json:"parent_id"`
+}
+
 type remoteList struct {
-	Remote []struct {
-		ID       int64  `json:"id"`
-		User     string `json:"user"`
-		Host     string `json:"host"`
-		Body     string `json:"body"`
-		Spoiler  bool   `json:"spoiler"`
-		ParentID int64  `json:"parent_id"`
-	} `json:"remote"`
+	Remote []remoteItem
 }
 
 func remoteOf(t *testing.T, c *client, epID int64) remoteList {
 	t.Helper()
 	_, raw := c.get("/api/episode/" + itoa64(epID) + "/comments")
-	var out remoteList
-	if err := json.Unmarshal([]byte(raw), &out); err != nil {
+	var all struct {
+		Comments []remoteItem `json:"comments"`
+	}
+	if err := json.Unmarshal([]byte(raw), &all); err != nil {
 		t.Fatalf("comments json: %v %s", err, raw)
+	}
+	var out remoteList
+	for _, c := range all.Comments {
+		if c.Host != "" {
+			out.Remote = append(out.Remote, c)
+		}
 	}
 	return out
 }
@@ -191,5 +201,109 @@ func TestActivityGoesToAllowListedServersButOnlyFriendsSeeIt(t *testing.T) {
 	}
 	if html, _ := bob.getJSON("/api/feed")["html"].(string); strings.Contains(html, "alice@") {
 		t.Fatalf("but only friends see it in their feed")
+	}
+}
+
+func TestRemoteCommentsAreWovenIntoTheLocalThreadByTime(t *testing.T) {
+	a, b := newEnv(t), newEnv(t)
+	ctx := context.Background()
+	alice := a.signup(t, "alice", true)
+	bob := b.signup(t, "bobby", true)
+	alice.post("/api/show/555/follow", map[string]string{"status": "watching"})
+	bob.post("/api/show/555/follow", map[string]string{"status": "watching"})
+	a.fed.Connect(ctx, hostOf(b))
+	b.fed.Connect(ctx, hostOf(a))
+	a.store.SetPeerShare(hostOf(b), true)
+	b.store.SetPeerShare(hostOf(a), true)
+	shA, _ := a.store.ShowByTMDB(555)
+	shB, _ := b.store.ShowByTMDB(555)
+	epA, _ := a.store.EpisodeByNumber(shA.ID, 1, 1)
+	epB, _ := b.store.EpisodeByNumber(shB.ID, 1, 1)
+	alice.post("/api/episode/"+itoa64(epA.ID)+"/comments", map[string]any{"body": "from alice"})
+	a.flush(t)
+	b.store.DB.Exec(`UPDATE remote_comments SET created_at = '2020-01-01 00:00:00'`)
+	bob.post("/api/episode/"+itoa64(epB.ID)+"/comments", map[string]any{"body": "from bobby"})
+	_, raw := bob.get("/api/episode/" + itoa64(epB.ID) + "/comments")
+	bobAt, aliceAt := strings.Index(raw, "from bobby"), strings.Index(raw, "from alice")
+	if bobAt < 0 || aliceAt < 0 || bobAt > aliceAt {
+		t.Fatalf("one list, newest first, no separate section: %s", raw)
+	}
+	if strings.Contains(raw, `"remote"`) {
+		t.Fatalf("there is no separate remote section any more")
+	}
+}
+
+func TestRepliesAcrossServers(t *testing.T) {
+	a, b := newEnv(t), newEnv(t)
+	ctx := context.Background()
+	alice := a.signup(t, "alice", true)
+	bob := b.signup(t, "bobby", true)
+	alice.post("/api/show/555/follow", map[string]string{"status": "watching"})
+	bob.post("/api/show/555/follow", map[string]string{"status": "watching"})
+	a.fed.Connect(ctx, hostOf(b))
+	b.fed.Connect(ctx, hostOf(a))
+	a.store.SetPeerShare(hostOf(b), true)
+	b.store.SetPeerShare(hostOf(a), true)
+	shA, _ := a.store.ShowByTMDB(555)
+	shB, _ := b.store.ShowByTMDB(555)
+	epA, _ := a.store.EpisodeByNumber(shA.ID, 1, 1)
+	epB, _ := b.store.EpisodeByNumber(shB.ID, 1, 1)
+	listA := "/api/episode/" + itoa64(epA.ID) + "/comments"
+	listB := "/api/episode/" + itoa64(epB.ID) + "/comments"
+
+	alice.post(listA, map[string]any{"body": "alice asks something"})
+	a.flush(t)
+	got := remoteOf(t, bob, epB.ID)
+	if len(got.Remote) != 1 {
+		t.Fatalf("bob sees alice's comment: %+v", got)
+	}
+	if code, out := bob.post(listB, map[string]any{"body": "bobby answers across servers", "parent_id": got.Remote[0].ID}); code != 200 {
+		t.Fatalf("reply to a comment on another server: %d %v", code, out)
+	}
+	_, rawB := bob.get(listB)
+	if strings.Index(rawB, "alice asks something") > strings.Index(rawB, "bobby answers across servers") || !strings.Contains(rawB, "bobby answers") {
+		t.Fatalf("on bob's server the reply sits under the comment it answers: %s", rawB)
+	}
+	var topsB int
+	b.store.DB.QueryRow(`SELECT COUNT(*) FROM comments WHERE parent_id IS NULL AND parent_ref = ''`).Scan(&topsB)
+	if topsB != 0 {
+		t.Fatalf("it is a reply, not a new top-level comment")
+	}
+
+	b.flush(t)
+	_, rawA := alice.get(listA)
+	if !strings.Contains(rawA, "bobby answers across servers") || !strings.Contains(rawA, `"user":"bobby@`+hostOf(b)+`"`) {
+		t.Fatalf("on alice's server bob's reply shows under her comment: %s", rawA)
+	}
+	var top struct {
+		Comments []struct {
+			ID       int64  `json:"id"`
+			Body     string `json:"body"`
+			ParentID int64  `json:"parent_id"`
+		}
+	}
+	json.Unmarshal([]byte(rawA), &top)
+	var aliceID int64
+	a.store.DB.QueryRow(`SELECT id FROM comments WHERE body = 'alice asks something'`).Scan(&aliceID)
+	if len(top.Comments) != 2 || top.Comments[0].ID != aliceID || top.Comments[1].ParentID != aliceID {
+		t.Fatalf("the reply is nested under her comment: %+v", top.Comments)
+	}
+	notes, _ := a.store.Notifications(a.mustUser(t, "alice").ID, 10, 0)
+	found := false
+	for _, n := range notes {
+		if n.Event == "comment_reply" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("alice is told about the reply from another server: %+v", notes)
+	}
+
+	var replyID int64
+	b.store.DB.QueryRow(`SELECT id FROM comments WHERE body = 'bobby answers across servers'`).Scan(&replyID)
+	bob.post("/api/comments/"+itoa64(replyID)+"/delete", nil)
+	b.flush(t)
+	if _, raw := alice.get(listA); strings.Contains(raw, "bobby answers across servers") {
+		t.Fatalf("deleting the reply withdraws it from the other server")
 	}
 }

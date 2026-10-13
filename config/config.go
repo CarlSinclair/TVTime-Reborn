@@ -43,6 +43,7 @@ type Config struct {
 	MediaPublicURL string
 	OperatorName   string
 	PrivacyContact string
+	ContactEmail   string
 }
 
 func env(key, def string) string {
@@ -93,6 +94,7 @@ func Load() (*Config, error) {
 		SourceURL:      env("TVT_SOURCE_URL", "https://github.com/CarlSinclair/tvt"),
 		OperatorName:   env("TVT_OPERATOR_NAME", ""),
 		PrivacyContact: env("TVT_PRIVACY_CONTACT", ""),
+		ContactEmail:   env("TVT_CONTACT_EMAIL", ""),
 		S3: media.S3Config{
 			Endpoint: envAny("TVT_S3_ENDPOINT"), Region: envAny("TVT_S3_REGION"),
 			Bucket: envAny("TVT_S3_BUCKET"), AccessKeyID: envAny("TVT_S3_ACCESS_KEY_ID"),

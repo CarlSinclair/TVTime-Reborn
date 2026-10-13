@@ -13,6 +13,7 @@
   <a class="tab {{if eq .Data.Tab "users"}}active{{end}}" href="/admin?tab=users">{{.T "admin.users"}}</a>
   <a class="tab {{if eq .Data.Tab "config"}}active{{end}}" href="/admin?tab=config">{{.T "admin.config"}}</a>
   <a class="tab {{if eq .Data.Tab "servers"}}active{{end}}" href="/admin?tab=servers">{{.T "admin.servers"}}{{if gt .Data.ServersBadge 0}}<span class="badge inline">{{.Data.ServersBadge}}</span>{{end}}</a>
+  <a class="tab {{if eq .Data.Tab "pages"}}active{{end}}" href="/admin?tab=pages">{{.T "admin.pages"}}</a>
   <a class="tab {{if eq .Data.Tab "reports"}}active{{end}}" href="/admin?tab=reports">{{.T "admin.reports"}}{{if gt .Data.ReportsBadge 0}}<span class="badge inline">{{.Data.ReportsBadge}}</span>{{end}}</a>
 </nav>
 
@@ -163,18 +164,26 @@
 {{else if eq .Data.Tab "config"}}
 {{template "pending" .}}
 <p class="muted">{{.T "admin.config_hint"}}</p>
+<section class="panel stack">
+  <h2>{{.T "admin.logo"}}</h2>
+  <p><img class="logo-preview" src="{{logoURL}}" alt=""></p>
+  <p class="muted">{{.T "admin.logo_hint"}}</p>
+  <div class="upload-row">
+    <label class="btn ghost small">{{.T "admin.logo_upload"}}<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-upload="logo" hidden></label>
+    <button class="btn ghost small" type="button" data-logo-remove>{{.T "admin.logo_remove"}}</button>
+  </div>
+</section>
 {{range .Data.Groups}}
 <form class="panel stack" data-api="/api/admin/config" data-reload="1" data-success="{{$.T "admin.config_saved"}}">
   <h2>{{$.T (printf "admin.cfg_group.%s" .Name)}}</h2>
   <input type="hidden" name="group" value="{{.Name}}">
   {{range .Values}}
     {{if .Bool}}
-    <label class="check"><input type="checkbox" name="{{.Key}}" {{if eq .Text "1"}}checked{{end}}> {{$.T (printf "admin.cfg.%s" .Key)}}</label>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="cfg-{{.Key}}" name="{{.Key}}" {{if eq .Text "1"}}checked{{end}}><label for="cfg-{{.Key}}" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="cfg-{{.Key}}">{{$.T (printf "admin.cfg.%s" .Key)}}</label></div>
     {{else if .Secret}}
-    <label>{{$.T (printf "admin.cfg.%s" .Key)}}<input type="password" name="{{.Key}}" autocomplete="new-password" placeholder="{{if .Saved}}{{$.T "admin.cfg_saved_secret"}}{{else if .EnvSet}}{{$.T "admin.cfg_env_secret"}}{{end}}"></label>
-    {{if .Saved}}<label class="check"><input type="checkbox" name="clear_{{.Key}}"> {{$.T "admin.cfg_clear"}}</label>{{end}}
+    <label>{{$.T (printf "admin.cfg.%s" .Key)}}<input type="password" name="{{.Key}}" value="{{.Text}}" autocomplete="new-password" spellcheck="false"></label>
     {{else}}
-    <label>{{$.T (printf "admin.cfg.%s" .Key)}}<input type="{{if eq .Key "smtp_port"}}number{{else}}text{{end}}" name="{{.Key}}" value="{{.Text}}" placeholder="{{.Fallback}}" autocomplete="off" spellcheck="false"></label>
+    <label>{{$.T (printf "admin.cfg.%s" .Key)}}<input type="{{if eq .Key "smtp_port"}}number{{else}}text{{end}}" name="{{.Key}}" value="{{.Text}}" placeholder="{{.Example}}" autocomplete="off" spellcheck="false"></label>
     {{end}}
   {{end}}
   {{if eq .Name "mail"}}<label>{{$.T "admin.cfg_test_to"}}<input type="email" name="to" value="{{$.User.Email}}" autocomplete="off"></label>{{end}}
@@ -191,7 +200,7 @@
 <div class="page-head">
   <span class="muted">{{if not .Data.FederationOn}}{{.T "admin.federation_off"}}{{end}}</span>
   <span class="page-actions">
-    {{if .Data.HasSettings}}<button class="btn ghost small" type="button" data-federation="{{if .Data.FedWant}}0{{else}}1{{end}}">{{.T "admin.federation"}}: {{if .Data.FedWant}}{{.T "admin.on"}}{{else}}{{.T "admin.off"}}{{end}}</button>{{end}}
+    {{if .Data.HasSettings}}<span class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="federation-switch" {{if .Data.FedWant}}checked{{end}}><label for="federation-switch" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="federation-switch">{{.T "admin.federation"}}</label></span>{{end}}
   {{if .Data.FederationOn}}<button class="icon-btn solid" type="button" data-modal-open="m-server-add" aria-label="{{.T "admin.server_add"}}" title="{{.T "admin.server_add"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-plus"></use></svg></button>{{end}}
   </span>
 </div>
@@ -199,10 +208,10 @@
 <ul class="reports">
   {{range .Data.Peers}}
   <li class="panel">
-    <p><strong>{{.Host}}</strong> {{if .Blocked}}<span class="tag">{{$.T "admin.server_blocked"}}</span>{{end}} {{if .New}}<span class="tag">{{$.T "admin.server_new"}}</span>{{end}}</p>
+    <p><strong>{{.Host}}</strong> {{if .Blocked}}<span class="tag">{{$.T "admin.server_blocked"}}</span>{{end}} {{if .New}}<span class="tag">{{$.T "admin.server_new"}}</span>{{end}} {{if and (not .Share) (not .Blocked)}}<span class="tag">{{$.T "admin.server_pending"}}</span>{{end}}</p>
     <p class="muted">{{$.T "admin.server_seen" .FirstSeen .LastSeen}}</p>
-    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="share-{{.Host}}" data-server-share="{{.Host}}" {{if .Share}}checked{{end}}><label for="share-{{.Host}}" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="share-{{.Host}}">{{$.T "admin.server_share"}}</label></div>
     <p class="actions">
+      {{if and (not .Share) (not .Blocked)}}<button class="btn small" type="button" data-server-approve="{{.Host}}">{{$.T "admin.server_approve"}}</button>{{end}}
       <button class="btn small {{if not .Blocked}}danger{{else}}ghost{{end}}" type="button" data-server-block="{{.Host}}" data-blocked="{{if .Blocked}}0{{else}}1{{end}}">{{if .Blocked}}{{$.T "admin.server_unblock"}}{{else}}{{$.T "admin.server_block"}}{{end}}</button>
       <button class="btn ghost small" type="button" data-server-forget="{{.Host}}">{{$.T "admin.server_forget"}}</button>
     </p>
@@ -221,6 +230,66 @@
   </form>
 </dialog>
 {{end}}
+
+{{else if eq .Data.Tab "pages"}}
+<p class="muted">{{.T "admin.pages_intro"}}</p>
+<section class="panel stack">
+  <h2>{{.T "privacy.title"}}</h2>
+  <p class="muted">{{if .Data.PrivacyCustom}}{{.T "admin.pages_privacy_custom"}}{{else}}{{.T "admin.pages_privacy_builtin"}}{{end}}</p>
+  <div>
+    {{if .Data.PrivacyCustom}}
+    <button class="btn ghost small" type="button" data-pages-action="privacy_restore" data-confirm="{{.T "admin.pages_restore_confirm"}}">{{.T "admin.pages_restore"}}</button>
+    {{else}}
+    <button class="btn ghost small" type="button" data-pages-action="privacy_customize">{{.T "admin.pages_customize"}}</button>
+    {{end}}
+  </div>
+</section>
+<section class="panel stack">
+  <h2>{{.T "admin.pages_contact"}}</h2>
+  <p class="muted">{{.T "admin.pages_contact_hint"}} <a href="/admin?tab=config">{{.T "admin.config"}}</a></p>
+</section>
+
+<form class="panel stack" data-api="/api/admin/pages" data-reload="1" data-success="{{.T "js.saved"}}">
+  <h2>{{.T "admin.pages_add"}}</h2>
+  <input type="hidden" name="action" value="add">
+  {{range .Data.PageLangs}}
+  <fieldset class="lang-fieldset">
+    <legend>{{.}}</legend>
+    <label>{{$.T "admin.pages_slug"}}<input type="text" name="slug_{{.}}" pattern="[a-z0-9][a-z0-9\-]*" maxlength="64" autocomplete="off" spellcheck="false"></label>
+    <label>{{$.T "admin.pages_title"}}<input type="text" name="title_{{.}}" maxlength="200" autocomplete="off"></label>
+    <label>{{$.T "admin.pages_body"}}<textarea name="body_{{.}}" rows="5"></textarea></label>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="add-en-{{.}}" name="enabled_{{.}}" checked><label for="add-en-{{.}}" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="add-en-{{.}}">{{$.T "admin.pages_enabled"}}</label></div>
+  </fieldset>
+  {{end}}
+  <p class="form-error" role="alert" hidden></p>
+  <div><button class="btn" type="submit">{{.T "admin.pages_add"}}</button></div>
+</form>
+
+{{range .Data.PageList}}
+<form class="panel stack" data-api="/api/admin/pages" data-reload="1" data-success="{{$.T "js.saved"}}">
+  <h2>#{{.ID}}{{range .Variants}}{{if .Slug}} &middot; /{{.Slug}}{{end}}{{end}}</h2>
+  <input type="hidden" name="action" value="save">
+  <input type="hidden" name="page_id" value="{{.ID}}">
+  <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{.ID}}-on" name="page_enabled" {{if .Enabled}}checked{{end}}><label for="pg-{{.ID}}-on" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{.ID}}-on">{{$.T "admin.pages_page_enabled"}}</label></div>
+  <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{.ID}}-upd" name="show_updated" {{if .ShowUpdated}}checked{{end}}><label for="pg-{{.ID}}-upd" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{.ID}}-upd">{{$.T "admin.pages_show_updated"}}</label></div>
+  {{$pid := .ID}}
+  {{range .Variants}}
+  <fieldset class="lang-fieldset">
+    <legend>{{.Lang}}</legend>
+    <label>{{$.T "admin.pages_slug"}}<input type="text" name="slug_{{.Lang}}" value="{{.Slug}}" pattern="[a-z0-9][a-z0-9\-]*" maxlength="64" autocomplete="off" spellcheck="false"></label>
+    <label>{{$.T "admin.pages_title"}}<input type="text" name="title_{{.Lang}}" value="{{.Title}}" maxlength="200" autocomplete="off"></label>
+    <label>{{$.T "admin.pages_body"}}<textarea name="body_{{.Lang}}" rows="10">{{.Body}}</textarea></label>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{$pid}}-{{.Lang}}-en" name="enabled_{{.Lang}}" {{if .Enabled}}checked{{end}}><label for="pg-{{$pid}}-{{.Lang}}-en" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{$pid}}-{{.Lang}}-en">{{$.T "admin.pages_enabled"}}</label></div>
+    {{if .Exists}}<div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{$pid}}-{{.Lang}}-del" name="del_{{.Lang}}"><label for="pg-{{$pid}}-{{.Lang}}-del" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{$pid}}-{{.Lang}}-del">{{$.T "admin.pages_delete_lang"}}</label></div>{{end}}
+  </fieldset>
+  {{end}}
+  <p class="form-error" role="alert" hidden></p>
+  <div class="modal-actions">
+    <button class="btn danger" type="button" data-pages-action="delete" data-page-id="{{.ID}}" data-confirm="{{$.T "admin.pages_delete_confirm"}}">{{$.T "admin.pages_delete"}}</button>
+    <button class="btn" type="submit">{{$.T "settings.save"}}</button>
+  </div>
+</form>
+{{else}}<p class="muted center">{{$.T "admin.pages_none"}}</p>{{end}}
 
 {{else}}
 {{if .Data.Reports}}
