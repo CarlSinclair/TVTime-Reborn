@@ -29,7 +29,6 @@ type Config struct {
 	TelegramBot    string
 	TelegramName   string
 	ClientIPHeader string
-	DisableTVmaze  bool
 	ImageBase      string
 	S3             media.S3Config
 	TraktClientID  string
@@ -81,7 +80,6 @@ func Load() (*Config, error) {
 		TelegramBot:    env("TVT_TELEGRAM_BOT_TOKEN", ""),
 		TelegramName:   env("TVT_TELEGRAM_BOT_USERNAME", ""),
 		ClientIPHeader: env("TVT_CLIENT_IP_HEADER", "X-Forwarded-For"),
-		DisableTVmaze:  env("TVT_DISABLE_TVMAZE", "") == "1",
 		ImageBase:      strings.TrimRight(env("TVT_IMAGE_BASE", "https://image.tmdb.org/t/p"), "/"),
 		TraktClientID:  env("TVT_TRAKT_CLIENT_ID", ""),
 		TVDBKey:        env("TVT_TVDB_KEY", ""),

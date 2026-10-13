@@ -251,6 +251,7 @@
     "refresh": "別の画像"
   },
   "landing": {
+    "star": "GitHub でスターを付ける",
     "f1_title": "見ていた場所を見失わない",
     "f1_text": "視聴済みエピソードを記録し、次に見るものがひと目で分かり、すべての番組の進捗を保てます。",
     "f2_title": "正確な放送時刻",
@@ -400,7 +401,6 @@
       "tmdb_key": "TMDB APIキー",
       "tvdb_key": "TheTVDB APIキー",
       "trakt_client_id": "Trakt クライアントID",
-      "disable_tvmaze": "TVmazeを使用しない",
       "telegram_bot": "ボットトークン",
       "telegram_name": "ボットのユーザー名",
       "app_name": "サイト名",
@@ -859,6 +859,8 @@
   },
   "about": {
     "title": "このサービスについて",
+    "intro": "TVT は TV Time の精神的な後継です。このプロジェクトへの道を切り開いてくれた TV Time に感謝します。",
+    "source_link": "GitHub のソースコード",
     "license": "TVTは、GNU Affero General Public License v3の下で公開されているフリーソフトウェアです。",
     "data_title": "データの提供元"
   },

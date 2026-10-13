@@ -95,7 +95,6 @@ var Fields = []Field{
 	field("tmdb_key", "metadata", true, func(c *config.Config) *string { return &c.TMDBKey }),
 	field("tvdb_key", "metadata", true, func(c *config.Config) *string { return &c.TVDBKey }),
 	field("trakt_client_id", "metadata", false, func(c *config.Config) *string { return &c.TraktClientID }),
-	boolField("disable_tvmaze", "metadata", func(c *config.Config) *bool { return &c.DisableTVmaze }),
 
 	field("telegram_bot", "telegram", true, func(c *config.Config) *string { return &c.TelegramBot }),
 	field("telegram_name", "telegram", false, func(c *config.Config) *string { return &c.TelegramName }),
@@ -111,7 +110,7 @@ var Fields = []Field{
 }
 
 // defaults and examples by key. Anything not listed defaults to blank.
-var defaults = map[string]string{"smtp_port": "587", "app_name": "TVT", "default_lang": "en", "source_url": "https://github.com/CarlSinclair/tvt", "disable_tvmaze": "0", "federation": "1"}
+var defaults = map[string]string{"smtp_port": "587", "app_name": "TVT", "default_lang": "en", "source_url": "https://github.com/CarlSinclair/tvt", "federation": "1"}
 
 var examples = map[string]string{
 	"smtp_host": "smtp.example.com", "smtp_port": "587", "smtp_user": "username", "mail_from": "TVT <no-reply@example.com>",

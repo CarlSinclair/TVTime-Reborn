@@ -144,7 +144,7 @@ func TestContactPageSendsToTheOperator(t *testing.T) {
 	}
 	e.cfg.SMTPHost, e.cfg.MailFrom, e.cfg.ContactEmail = "smtp.test", "no-reply@test.example", "owner@test.example"
 	_, page = anon.get("/contact")
-	for _, want := range []string{`data-api="/api/contact"`, `href="mailto:owner@test.example"`, `https://t.me/tvt_test_bot?start=support`, `class="or-divider"`, `captcha-game-container`} {
+	for _, want := range []string{`data-api="/api/contact"`, `href="mailto:owner@test.example"`, `tg://resolve?domain=tvt_test_bot&amp;start=support`, `class="or-divider"`, `captcha-game-container`} {
 		if !strings.Contains(page, want) {
 			t.Fatalf("the contact page needs %s", want)
 		}

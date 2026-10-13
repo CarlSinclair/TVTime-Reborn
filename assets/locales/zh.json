@@ -251,6 +251,7 @@
     "refresh": "换一张"
   },
   "landing": {
+    "star": "在 GitHub 上加星标",
     "f1_title": "永远不会错过进度",
     "f1_text": "标记已看的剧集，清楚看到接下来该看什么，并保存每部剧的进度。",
     "f2_title": "精确的播出时间",
@@ -400,7 +401,6 @@
       "tmdb_key": "TMDB API 密钥",
       "tvdb_key": "TheTVDB API 密钥",
       "trakt_client_id": "Trakt 客户端 ID",
-      "disable_tvmaze": "不使用 TVmaze",
       "telegram_bot": "机器人令牌",
       "telegram_name": "机器人用户名",
       "app_name": "站点名称",
@@ -859,6 +859,8 @@
   },
   "about": {
     "title": "关于",
+    "intro": "TVT 是 TV Time 的精神继承者。感谢 TV Time 为本项目开辟了道路。",
+    "source_link": "GitHub 上的源代码",
     "license": "TVT 是遵循 GNU Affero 通用公共许可证 v3 的自由软件。",
     "data_title": "数据来源"
   },

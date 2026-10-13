@@ -5,7 +5,7 @@
   {{if or .Data.Email .Data.Bot}}
   <div class="contact-options">
     {{if .Data.Email}}<a class="btn" href="mailto:{{.Data.Email}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-envelope"></use></svg> {{.T "contact.email_us"}}</a>{{end}}
-    {{if .Data.Bot}}<a class="btn" href="https://t.me/{{.Data.Bot}}?start=support" target="_blank" rel="noopener"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-telegram"></use></svg> {{.T "contact.telegram_us"}}</a>{{end}}
+    {{if .Data.Bot}}<a class="btn" href="{{.Data.TelegramURL}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-telegram"></use></svg> {{.T "contact.telegram_us"}}</a>{{end}}
   </div>
   {{end}}
   {{if .Data.FormAvailable}}
