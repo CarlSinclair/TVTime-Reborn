@@ -231,3 +231,58 @@ func TestProfileActionsAndNotificationButtons(t *testing.T) {
 		t.Fatalf("blocking must end the friendship: %v", fl)
 	}
 }
+
+func TestProfilePostsReuseComments(t *testing.T) {
+	e := newEnv(t)
+	owner := e.signup(t, "creator", true)
+	fan := e.signup(t, "fanfan", true)
+	stranger := e.signup(t, "outsider", true)
+	ou := e.mustUser(t, "creator")
+	path := "/api/profile/" + itoa64(ou.ID) + "/comments"
+
+	if code, _ := fan.post(path, map[string]any{"body": "my own top level post"}); code != 403 {
+		t.Fatalf("only the owner starts a thread on their profile: %d", code)
+	}
+	code, out := owner.post(path, map[string]any{"body": "New episode drops friday"})
+	if code != 200 {
+		t.Fatalf("owner post: %d %v", code, out)
+	}
+	pid := int64(out["id"].(float64))
+	if code, _ := fan.post(path, map[string]any{"body": "Can't wait", "parent_id": pid}); code != 200 {
+		t.Fatalf("anyone who can see the profile may reply: %d", code)
+	}
+	list := stranger.getJSON(path)
+	if int(list["total"].(float64)) != 2 || len(list["comments"].([]any)) != 2 {
+		t.Fatalf("thread = %v", list)
+	}
+
+	if code, _ := fan.post("/api/comments/"+itoa64(pid)+"/report", map[string]string{"kind": "abuse", "reason": "test"}); code != 200 {
+		t.Fatalf("posts are reported like any comment: %d", code)
+	}
+
+	fan.post("/api/friends/request", map[string]string{"username": "creator"})
+	owner.post("/api/friends/respond", map[string]any{"username": "fanfan", "accept": true})
+	owner.post(path, map[string]any{"body": "A spoiler about the finale", "spoiler": true})
+	html, _ := fan.getJSON("/api/feed")["html"].(string)
+	if !strings.Contains(html, "New episode drops friday") || strings.Contains(html, "finale") {
+		t.Fatalf("a friend's open posts appear in the feed, spoilers do not: %q", html)
+	}
+
+	if _, err := e.store.DB.Exec(`UPDATE users SET profile_public = 0 WHERE id = ?`, ou.ID); err != nil {
+		t.Fatal(err)
+	}
+	if code, _ := stranger.get(path); code != 404 {
+		t.Fatalf("a private profile's thread is not visible to strangers: %d", code)
+	}
+	if code, _ := fan.get(path); code != 200 {
+		t.Fatalf("friends still see it: %d", code)
+	}
+	_, prof := owner.get("/u/creator")
+	if !strings.Contains(prof, `data-kind="profile"`) || !strings.Contains(prof, `id="comment-form"`) {
+		t.Fatalf("the owner's profile shows the posts section with a form")
+	}
+	_, prof = fan.get("/u/creator")
+	if !strings.Contains(prof, `data-kind="profile"`) || strings.Contains(prof, `id="comment-form"`) {
+		t.Fatalf("visitors see posts but no top-level form")
+	}
+}

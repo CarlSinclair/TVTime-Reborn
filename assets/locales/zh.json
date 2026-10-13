@@ -559,7 +559,9 @@
     "view_public": "查看我的公开资料",
     "watch_time": "观看时长",
     "week": "最近 7 天",
-    "share_activity": "向好友分享我的动态"
+    "share_activity": "向好友分享我的动态",
+    "posts": "动态",
+    "post_placeholder": "向好友和粉丝分享近况"
   },
   "tg": {
     "error": "出错了，请重试。",
@@ -644,7 +646,8 @@
     "watch_ep": "看了 %s，",
     "rate": "给一集打了分，",
     "rate_ep": "给 %s 打了分，",
-    "comment_on": "评论了 %s，"
+    "comment_on": "评论了 %s，",
+    "post": "发布了"
   },
   "people": {
     "tab": "用户",

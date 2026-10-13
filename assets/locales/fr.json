@@ -559,7 +559,9 @@
     "view_public": "Voir mon profil public",
     "watch_time": "Temps de visionnage",
     "week": "7 derniers jours",
-    "share_activity": "Partager mon activité avec mes amis"
+    "share_activity": "Partager mon activité avec mes amis",
+    "posts": "Publications",
+    "post_placeholder": "Partagez une nouvelle avec vos amis et fans"
   },
   "tg": {
     "error": "Un problème est survenu. Réessayez.",
@@ -644,7 +646,8 @@
     "watch_ep": "a regardé %s de",
     "rate": "a noté un épisode de",
     "rate_ep": "a noté %s de",
-    "comment_on": "a commenté %s de"
+    "comment_on": "a commenté %s de",
+    "post": "a publié"
   },
   "people": {
     "tab": "Personnes",

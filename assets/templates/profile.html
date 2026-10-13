@@ -57,5 +57,21 @@
 </section>
 {{end}}
 {{end}}
+{{if $.Data.Posts}}
+<section id="comments" class="comments" data-kind="profile" data-target="{{.ID}}" data-logged="1" data-verified="{{if and $.User $.User.CanComment}}1{{else}}0{{end}}" data-admin="{{if and $.User $.User.IsAdmin}}1{{else}}0{{end}}">
+  <h2>{{$.T "profile.posts"}} <small id="comments-count"></small></h2>
+  {{if and $.Data.IsOwn $.User.CanComment}}
+  <form class="comment-form" id="comment-form">
+    <textarea name="body" maxlength="2000" rows="3" placeholder="{{$.T "profile.post_placeholder"}}" required></textarea>
+    <div class="comment-form-row">
+      <label><input type="checkbox" name="spoiler"> {{$.T "comments.mark_spoiler"}}</label>
+      <button class="btn" type="submit">{{$.T "comments.post"}}</button>
+    </div>
+  </form>
+  {{end}}
+  <ul class="comment-list" id="comment-list"></ul>
+  <p class="center"><button class="btn ghost" type="button" id="comments-more" hidden>{{$.T "comments.load_more"}}</button></p>
+</section>
+{{end}}
 {{end}}
 {{end}}

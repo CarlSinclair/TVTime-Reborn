@@ -559,7 +559,9 @@
     "view_public": "내 공개 프로필 보기",
     "watch_time": "시청 시간",
     "week": "최근 7일",
-    "share_activity": "내 활동을 친구와 공유"
+    "share_activity": "내 활동을 친구와 공유",
+    "posts": "게시물",
+    "post_placeholder": "친구와 팬에게 소식을 전해 보세요"
   },
   "tg": {
     "error": "문제가 발생했습니다. 다시 시도해 주세요.",
@@ -644,7 +646,8 @@
     "watch_ep": "님이 %s을(를) 시청했습니다:",
     "rate": "님이 다음 에피소드를 평가했습니다:",
     "rate_ep": "님이 %s을(를) 평가했습니다:",
-    "comment_on": "님이 %s에 댓글을 남겼습니다:"
+    "comment_on": "님이 %s에 댓글을 남겼습니다:",
+    "post": "님이 게시했습니다"
   },
   "people": {
     "tab": "사람",

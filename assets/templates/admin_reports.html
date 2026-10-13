@@ -8,7 +8,7 @@
     <blockquote>{{.Body}}</blockquote>
     {{if .Reasons}}<p class="muted">{{.Reasons}}</p>{{end}}
     <p class="actions">
-      <a class="btn ghost small" href="/episode/{{.Target.ID}}">{{$.T "admin.view"}}</a>
+      <a class="btn ghost small" href="{{if eq .Target.Kind "profile"}}/u/{{.ProfileName}}{{else}}/episode/{{.Target.ID}}{{end}}">{{$.T "admin.view"}}</a>
       <button class="btn small" type="button" data-admin-resolve="{{.CommentID}}">{{$.T "admin.dismiss"}}</button>
       <button class="btn danger small" type="button" data-admin-delete="{{.CommentID}}">{{$.T "admin.delete"}}</button>
       <button class="btn danger small" type="button" data-admin-ban="{{.AuthorID}}">{{$.T "admin.ban"}}</button>

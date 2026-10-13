@@ -277,6 +277,30 @@ func (s *Store) FriendFeed(viewerID int64, before string, limit int) ([]FeedEven
 	}
 	crows.Close()
 
+	pargs := append([]any{}, inArgs...)
+	pargs = append(pargs, before, limit)
+	prows, err := s.DB.Query(`SELECT c.user_id, u.username, u.display_name, u.avatar_path, c.body, c.created_at
+	  FROM comments c JOIN users u ON u.id = c.user_id
+	  WHERE c.profile_id = c.user_id AND c.parent_id IS NULL AND c.user_id IN (`+in+`) AND `+spoilerFree+` AND u.share_activity = 1 AND u.is_banned = 0 AND c.created_at < ?
+	  ORDER BY c.created_at DESC LIMIT ?`, pargs...)
+	if err != nil {
+		return nil, fmt.Errorf("feed posts uid=%d: %w", viewerID, err)
+	}
+	for prows.Next() {
+		ev := FeedEvent{Kind: "post"}
+		if err := prows.Scan(&ev.UserID, &ev.Username, &ev.DisplayName, &ev.AvatarPath, &ev.Excerpt, &ev.At); err != nil {
+			prows.Close()
+			return nil, err
+		}
+		ev.Excerpt = excerpt(ev.Excerpt, 400)
+		all = append(all, ev)
+	}
+	if err := prows.Err(); err != nil {
+		prows.Close()
+		return nil, err
+	}
+	prows.Close()
+
 	sort.SliceStable(all, func(i, j int) bool { return all[i].At > all[j].At })
 	if len(all) > limit {
 		all = all[:limit]

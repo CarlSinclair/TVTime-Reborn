@@ -559,7 +559,9 @@
     "view_public": "Ver mi perfil público",
     "watch_time": "Tiempo de visionado",
     "week": "Últimos 7 días",
-    "share_activity": "Compartir mi actividad con amigos"
+    "share_activity": "Compartir mi actividad con amigos",
+    "posts": "Publicaciones",
+    "post_placeholder": "Comparte una novedad con tus amigos y fans"
   },
   "tg": {
     "error": "Algo salió mal. Inténtalo de nuevo.",
@@ -644,7 +646,8 @@
     "watch_ep": "vio %s de",
     "rate": "valoró un episodio de",
     "rate_ep": "valoró %s de",
-    "comment_on": "comentó en %s de"
+    "comment_on": "comentó en %s de",
+    "post": "publicó"
   },
   "people": {
     "tab": "Personas",

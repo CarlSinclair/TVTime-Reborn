@@ -50,6 +50,9 @@ func (a *App) pageProfile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if _, err := a.canSeeProfileThread(viewer, p.ID); err == nil {
+		data["Posts"] = true
+	}
 	if viewer != nil && !isOwn {
 		state, err := a.Store.FriendState(viewer.ID, p.ID)
 		if err != nil {

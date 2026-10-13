@@ -136,6 +136,8 @@ func (a *App) routes(mux *http.ServeMux) {
 
 	mux.HandleFunc("GET /api/episode/{id}/comments", a.apiListComments())
 	mux.HandleFunc("POST /api/episode/{id}/comments", a.apiAddComment())
+	mux.HandleFunc("GET /api/profile/{id}/comments", a.apiListComments())
+	mux.HandleFunc("POST /api/profile/{id}/comments", a.apiAddComment())
 	mux.HandleFunc("POST /api/comments/{id}/edit", a.apiEditComment)
 	mux.HandleFunc("POST /api/comments/{id}/delete", a.apiDeleteComment)
 	mux.HandleFunc("POST /api/comments/{id}/report", a.apiReportComment)

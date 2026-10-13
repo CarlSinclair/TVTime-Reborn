@@ -5,10 +5,11 @@
     <p><a href="/u/{{.E.Username}}"><strong>{{.E.Name}}</strong></a>
       {{if eq .E.Kind "watch"}}{{if gt .E.Count 1}}{{.V.T "feed.watch_many" .E.Count}}{{else if .E.ViewerWatched}}{{.V.T "feed.watch_ep" (code .E.Season .E.Episode)}}{{else}}{{.V.T "feed.watch_one"}}{{end}}
       {{else if eq .E.Kind "rating"}}{{if .E.ViewerWatched}}{{.V.T "feed.rate_ep" (code .E.Season .E.Episode)}}{{else}}{{.V.T "feed.rate"}}{{end}}
+      {{else if eq .E.Kind "post"}}{{.V.T "feed.post"}}
       {{else}}{{.V.T "feed.comment_on" (code .E.Season .E.Episode)}}{{end}}
-      <a href="{{if eq .E.Kind "comment"}}/episode/{{.E.EpisodeID}}#comments{{else}}/show/{{.E.ShowTMDB}}{{end}}">{{.E.ShowName}}</a></p>
+      {{if ne .E.Kind "post"}}<a href="{{if eq .E.Kind "comment"}}/episode/{{.E.EpisodeID}}#comments{{else}}/show/{{.E.ShowTMDB}}{{end}}">{{.E.ShowName}}</a>{{end}}</p>
     {{if eq .E.Kind "rating"}}<p class="feed-stars" aria-label="{{.V.T "ep.star" .E.Stars}}">{{range seq 5}}<span class="star{{if le . $.E.Stars}} on{{end}}">&#9733;</span>{{end}}</p>{{end}}
-    {{if eq .E.Kind "comment"}}<blockquote>{{.E.Excerpt}}</blockquote>{{end}}
+    {{if or (eq .E.Kind "comment") (eq .E.Kind "post")}}<blockquote>{{if eq .E.Kind "post"}}<a href="/u/{{.E.Username}}#comments">{{.E.Excerpt}}</a>{{else}}{{.E.Excerpt}}{{end}}</blockquote>{{end}}
     <time class="muted" data-ts="{{.E.At}}">{{.E.At}}</time>
   </div>
 </article>

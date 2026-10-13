@@ -559,7 +559,9 @@
     "view_public": "Vedi il mio profilo pubblico",
     "watch_time": "Tempo di visione",
     "week": "Ultimi 7 giorni",
-    "share_activity": "Condividi la mia attività con gli amici"
+    "share_activity": "Condividi la mia attività con gli amici",
+    "posts": "Post",
+    "post_placeholder": "Condividi un aggiornamento con amici e fan"
   },
   "tg": {
     "error": "Qualcosa è andato storto. Riprova.",
@@ -644,7 +646,8 @@
     "watch_ep": "ha guardato %s di",
     "rate": "ha votato un episodio di",
     "rate_ep": "ha votato %s di",
-    "comment_on": "ha commentato %s di"
+    "comment_on": "ha commentato %s di",
+    "post": "ha pubblicato"
   },
   "people": {
     "tab": "Persone",

@@ -559,7 +559,9 @@
     "view_public": "View my public profile",
     "watch_time": "Watch time",
     "week": "Last 7 days",
-    "share_activity": "Share my activity with friends"
+    "share_activity": "Share my activity with friends",
+    "posts": "Posts",
+    "post_placeholder": "Share an update with your friends and fans"
   },
   "tg": {
     "error": "Something went wrong. Please try again.",
@@ -644,7 +646,8 @@
     "watch_ep": "watched %s of",
     "rate": "rated an episode of",
     "rate_ep": "rated %s of",
-    "comment_on": "commented on %s of"
+    "comment_on": "commented on %s of",
+    "post": "posted"
   },
   "people": {
     "tab": "People",

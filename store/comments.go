@@ -15,12 +15,28 @@ var (
 
 const MaxCommentLen = 2000
 
-// Target identifies what a comment thread hangs off; only episodes have one.
+// Target identifies what a comment thread hangs off: an episode, or a person's
+// profile, where the person's own top-level comments are their posts and
+// everyone else replies.
 type Target struct {
-	ID int64
+	Kind string
+	ID   int64
 }
 
-func EpisodeTarget(id int64) Target { return Target{ID: id} }
+const (
+	KindEpisode = "episode"
+	KindProfile = "profile"
+)
+
+func EpisodeTarget(id int64) Target { return Target{Kind: KindEpisode, ID: id} }
+func ProfileTarget(id int64) Target { return Target{Kind: KindProfile, ID: id} }
+
+func (t Target) col() string {
+	if t.Kind == KindProfile {
+		return "profile_id"
+	}
+	return "episode_id"
+}
 
 type Comment struct {
 	ID                int64
@@ -54,7 +70,7 @@ func (s *Store) AddComment(userID int64, t Target, parentID int64, body string, 
 	if parentID != 0 {
 		var pt int64
 		var pp sql.NullInt64
-		err := s.DB.QueryRow(`SELECT episode_id, parent_id FROM comments WHERE id = ? AND deleted_at IS NULL`, parentID).Scan(&pt, &pp)
+		err := s.DB.QueryRow(`SELECT COALESCE(`+t.col()+`,0), parent_id FROM comments WHERE id = ? AND deleted_at IS NULL`, parentID).Scan(&pt, &pp)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return 0, ErrNotFound
@@ -73,10 +89,14 @@ func (s *Store) AddComment(userID int64, t Target, parentID int64, body string, 
 	if spoiler {
 		sp = 1
 	}
-	res, err := s.DB.Exec(`INSERT INTO comments (episode_id, user_id, parent_id, body, author_spoiler, created_at)
-	  SELECT id, ?, ?, ?, ?, ? FROM episodes WHERE id = ?`, userID, parent, body, sp, Now(), t.ID)
+	src := "episodes"
+	if t.Kind == KindProfile {
+		src = "users"
+	}
+	res, err := s.DB.Exec(`INSERT INTO comments (`+t.col()+`, user_id, parent_id, body, author_spoiler, created_at)
+	  SELECT id, ?, ?, ?, ?, ? FROM `+src+` WHERE id = ?`, userID, parent, body, sp, Now(), t.ID)
 	if err != nil {
-		return 0, fmt.Errorf("add comment uid=%d episode=%d: %w", userID, t.ID, err)
+		return 0, fmt.Errorf("add comment uid=%d %s=%d: %w", userID, t.Kind, t.ID, err)
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
 		return 0, ErrNotFound
@@ -84,19 +104,23 @@ func (s *Store) AddComment(userID int64, t Target, parentID int64, body string, 
 	return res.LastInsertId()
 }
 
-const commentSelect = `SELECT c.id, c.episode_id, c.user_id, u.username, u.display_name, COALESCE(c.parent_id,0), c.body,
+const commentSelect = `SELECT c.id, COALESCE(c.episode_id,0), COALESCE(c.profile_id,0), c.user_id, u.username, u.display_name, COALESCE(c.parent_id,0), c.body,
 	    c.author_spoiler, c.spoiler_reports, c.not_spoiler_reports, c.created_at, COALESCE(c.edited_at,''), c.deleted_at IS NOT NULL
 	  FROM comments c JOIN users u ON u.id = c.user_id `
 
 func scanComment(row interface{ Scan(...any) error }) (Comment, error) {
 	var c Comment
-	var ep int64
+	var ep, prof int64
 	var as, del int
-	if err := row.Scan(&c.ID, &ep, &c.UserID, &c.Username, &c.DisplayName, &c.ParentID, &c.Body, &as, &c.SpoilerReports, &c.NotSpoilerReports,
+	if err := row.Scan(&c.ID, &ep, &prof, &c.UserID, &c.Username, &c.DisplayName, &c.ParentID, &c.Body, &as, &c.SpoilerReports, &c.NotSpoilerReports,
 		&c.CreatedAt, &c.EditedAt, &del); err != nil {
 		return c, err
 	}
-	c.Target = EpisodeTarget(ep)
+	if prof != 0 {
+		c.Target = ProfileTarget(prof)
+	} else {
+		c.Target = EpisodeTarget(ep)
+	}
 	c.AuthorSpoiler = as == 1
 	c.Deleted = del == 1
 	if c.Deleted {
@@ -110,11 +134,11 @@ const notBlocked = `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id =
 // Comments returns one page of top-level threads (newest first) followed by
 // each thread's replies. More reports whether another page exists.
 func (s *Store) Comments(t Target, viewerID int64, limit, offset int) (list []Comment, more bool, err error) {
-	rows, err := s.DB.Query(commentSelect+`WHERE c.episode_id = ? AND c.parent_id IS NULL `+notBlocked+`
+	rows, err := s.DB.Query(commentSelect+`WHERE c.`+t.col()+` = ? AND c.parent_id IS NULL `+notBlocked+`
 	    AND (c.deleted_at IS NULL OR EXISTS (SELECT 1 FROM comments r WHERE r.parent_id = c.id AND r.deleted_at IS NULL))
 	  ORDER BY c.created_at DESC, c.id DESC LIMIT ? OFFSET ?`, t.ID, viewerID, viewerID, limit+1, offset)
 	if err != nil {
-		return nil, false, fmt.Errorf("list comments episode=%d: %w", t.ID, err)
+		return nil, false, fmt.Errorf("list comments %s=%d: %w", t.Kind, t.ID, err)
 	}
 	var tops []Comment
 	for rows.Next() {
@@ -145,7 +169,7 @@ func (s *Store) Comments(t Target, viewerID int64, limit, offset int) (list []Co
 	args := append(ids, viewerID, viewerID)
 	rrows, err := s.DB.Query(commentSelect+`WHERE c.parent_id IN (`+strings.Join(marks, ",")+`) AND c.deleted_at IS NULL `+notBlocked+` ORDER BY c.created_at ASC, c.id ASC`, args...)
 	if err != nil {
-		return nil, false, fmt.Errorf("list replies episode=%d: %w", t.ID, err)
+		return nil, false, fmt.Errorf("list replies %s=%d: %w", t.Kind, t.ID, err)
 	}
 	replies := map[int64][]Comment{}
 	for rrows.Next() {
@@ -166,9 +190,9 @@ func (s *Store) Comments(t Target, viewerID int64, limit, offset int) (list []Co
 	}
 	if viewerID != 0 {
 		mine := map[int64]map[string]bool{}
-		rr, err := s.DB.Query(`SELECT r.comment_id, r.kind FROM comment_reports r JOIN comments c ON c.id = r.comment_id WHERE r.user_id = ? AND c.episode_id = ?`, viewerID, t.ID)
+		rr, err := s.DB.Query(`SELECT r.comment_id, r.kind FROM comment_reports r JOIN comments c ON c.id = r.comment_id WHERE r.user_id = ? AND c.`+t.col()+` = ?`, viewerID, t.ID)
 		if err != nil {
-			return nil, false, fmt.Errorf("list own reports episode=%d uid=%d: %w", t.ID, viewerID, err)
+			return nil, false, fmt.Errorf("list own reports %s=%d uid=%d: %w", t.Kind, t.ID, viewerID, err)
 		}
 		for rr.Next() {
 			var id int64
@@ -184,7 +208,7 @@ func (s *Store) Comments(t Target, viewerID int64, limit, offset int) (list []Co
 		}
 		rr.Close()
 		if err := rr.Err(); err != nil {
-			return nil, false, fmt.Errorf("list own reports episode=%d uid=%d: %w", t.ID, viewerID, err)
+			return nil, false, fmt.Errorf("list own reports %s=%d uid=%d: %w", t.Kind, t.ID, viewerID, err)
 		}
 		for i := range list {
 			list[i].MyReports = mine[list[i].ID]
@@ -195,8 +219,8 @@ func (s *Store) Comments(t Target, viewerID int64, limit, offset int) (list []Co
 
 func (s *Store) CountComments(t Target) (int, error) {
 	var n int
-	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM comments WHERE episode_id = ? AND deleted_at IS NULL`, t.ID).Scan(&n); err != nil {
-		return 0, fmt.Errorf("count comments episode=%d: %w", t.ID, err)
+	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM comments WHERE `+t.col()+` = ? AND deleted_at IS NULL`, t.ID).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count comments %s=%d: %w", t.Kind, t.ID, err)
 	}
 	return n, nil
 }
@@ -357,18 +381,19 @@ func (s *Store) Blocked(blockerID int64) ([]string, error) {
 }
 
 type AbuseReport struct {
-	CommentID int64
-	Target    Target
-	Body      string
-	Author    string
-	AuthorID  int64
-	Reporters int
-	Reasons   string
-	Last      string
+	CommentID   int64
+	Target      Target
+	ProfileName string
+	Body        string
+	Author      string
+	AuthorID    int64
+	Reporters   int
+	Reasons     string
+	Last        string
 }
 
 func (s *Store) OpenAbuseReports(limit int) ([]AbuseReport, error) {
-	rows, err := s.DB.Query(`SELECT c.id, c.episode_id, c.body, u.username, u.id, COUNT(*), COALESCE(GROUP_CONCAT(NULLIF(r.reason,''), ' | '),''), MAX(r.created_at)
+	rows, err := s.DB.Query(`SELECT c.id, COALESCE(c.episode_id,0), COALESCE(c.profile_id,0), COALESCE((SELECT username FROM users WHERE id = c.profile_id),''), c.body, u.username, u.id, COUNT(*), COALESCE(GROUP_CONCAT(NULLIF(r.reason,''), ' | '),''), MAX(r.created_at)
 	  FROM comment_reports r JOIN comments c ON c.id = r.comment_id JOIN users u ON u.id = c.user_id
 	  WHERE r.kind = 'abuse' AND r.resolved_at IS NULL AND c.deleted_at IS NULL
 	  GROUP BY c.id ORDER BY COUNT(*) DESC, MAX(r.created_at) DESC LIMIT ?`, limit)
@@ -379,11 +404,15 @@ func (s *Store) OpenAbuseReports(limit int) ([]AbuseReport, error) {
 	var out []AbuseReport
 	for rows.Next() {
 		var a AbuseReport
-		var ep int64
-		if err := rows.Scan(&a.CommentID, &ep, &a.Body, &a.Author, &a.AuthorID, &a.Reporters, &a.Reasons, &a.Last); err != nil {
+		var ep, prof int64
+		if err := rows.Scan(&a.CommentID, &ep, &prof, &a.ProfileName, &a.Body, &a.Author, &a.AuthorID, &a.Reporters, &a.Reasons, &a.Last); err != nil {
 			return nil, err
 		}
-		a.Target = EpisodeTarget(ep)
+		if prof != 0 {
+			a.Target = ProfileTarget(prof)
+		} else {
+			a.Target = EpisodeTarget(ep)
+		}
 		out = append(out, a)
 	}
 	return out, rows.Err()

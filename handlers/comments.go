@@ -47,12 +47,68 @@ func (a *App) targetOf(r *http.Request) (store.Target, error) {
 	if err != nil || id <= 0 {
 		return store.Target{}, errNotFound
 	}
+	if strings.HasPrefix(r.URL.Path, "/api/profile/") {
+		return store.ProfileTarget(id), nil
+	}
 	return store.EpisodeTarget(id), nil
 }
 
-func (a *App) targetLink(t store.Target) string { return "/episode/" + itoa(t.ID) }
+func (a *App) targetLink(t store.Target) string {
+	if t.Kind == store.KindProfile {
+		if u, err := a.Store.UserByID(t.ID); err == nil {
+			return "/u/" + u.Username + "#comments"
+		}
+		return "/"
+	}
+	return "/episode/" + itoa(t.ID)
+}
+
+// canSeeProfileThread is who may read and reply to a person's posts: anyone
+// when the profile is public, otherwise the owner, friends and moderators.
+// Banned owners and blocks make the thread not exist.
+func (a *App) canSeeProfileThread(viewer *store.User, ownerID int64) (*store.User, error) {
+	owner, err := a.Store.UserByID(ownerID)
+	if err != nil {
+		return nil, errNotFound
+	}
+	if owner.IsBanned && (viewer == nil || !viewer.IsAdmin) {
+		return nil, errNotFound
+	}
+	if viewer != nil && viewer.ID == owner.ID {
+		return owner, nil
+	}
+	if viewer != nil {
+		blocked, err := a.Store.BlockedEither(viewer.ID, owner.ID)
+		if err != nil {
+			return nil, err
+		}
+		if blocked {
+			return nil, errNotFound
+		}
+		if viewer.IsAdmin {
+			return owner, nil
+		}
+		if !owner.ProfilePublic {
+			state, err := a.Store.FriendState(viewer.ID, owner.ID)
+			if err != nil {
+				return nil, err
+			}
+			if state != "friends" {
+				return nil, errNotFound
+			}
+		}
+		return owner, nil
+	}
+	if !owner.ProfilePublic {
+		return nil, errNotFound
+	}
+	return owner, nil
+}
 
 func (a *App) viewerWatched(t store.Target, uid int64) (bool, error) {
+	if t.Kind == store.KindProfile {
+		return false, nil
+	}
 	if uid == 0 {
 		return false, nil
 	}
@@ -71,8 +127,15 @@ func (a *App) apiListComments() http.HandlerFunc {
 			return
 		}
 		var uid int64
-		if u := auth.UserFrom(r.Context()); u != nil {
-			uid = u.ID
+		viewer := auth.UserFrom(r.Context())
+		if viewer != nil {
+			uid = viewer.ID
+		}
+		if t.Kind == store.KindProfile {
+			if _, err := a.canSeeProfileThread(viewer, t.ID); err != nil {
+				a.fail(w, r, err)
+				return
+			}
 		}
 		watched, err := a.viewerWatched(t, uid)
 		if err != nil {
@@ -132,6 +195,16 @@ func (a *App) apiAddComment() http.HandlerFunc {
 		if err := decode(r, &in); err != nil {
 			a.fail(w, r, err)
 			return
+		}
+		if t.Kind == store.KindProfile {
+			if _, err := a.canSeeProfileThread(u, t.ID); err != nil {
+				a.fail(w, r, err)
+				return
+			}
+			if in.ParentID == 0 && u.ID != t.ID {
+				a.fail(w, r, errForbidden)
+				return
+			}
 		}
 		body, ok := cleanBody(in.Body)
 		if !ok {
