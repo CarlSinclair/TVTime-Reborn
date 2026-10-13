@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"html/template"
 	"net/http"
 	"strings"
 	"unicode/utf8"
 
 	"tvt/auth"
+	"tvt/captcha"
 	"tvt/legalpages"
 	"tvt/logger"
 )
@@ -41,20 +43,67 @@ func (a *App) isContactSlug(slug string) bool {
 func (v *View) ContactSlug() string { return v.App.contactSlug(v.Lang) }
 
 // pageContact serves the contact page at its address in the visitor's language;
-// the address in any other language redirects there.
+// the address in any other language redirects there. It offers email, the
+// Telegram bot's support chat, and a form guarded by a captcha.
 func (a *App) pageContact(w http.ResponseWriter, r *http.Request) {
 	own := a.contactSlug(a.langOf(w, r))
 	if want := "/" + own; r.URL.Path != want {
 		http.Redirect(w, r, want, http.StatusMovedPermanently)
 		return
 	}
-	a.page(w, r, "contact", "contact.title", map[string]any{"Available": a.contactTo() != "" && a.Mail != nil && a.Mail.Configured(), "PrivacyContact": a.Cfg.PrivacyContact})
+	email := a.contactTo()
+	bot := ""
+	if a.Bot.Configured() {
+		bot = a.Bot.Username
+	}
+	formOK := email != "" && a.Mail != nil && a.Mail.Configured()
+	data := map[string]any{"Email": email, "Bot": bot, "FormAvailable": formOK, "PrivacyContact": a.Cfg.PrivacyContact}
+	if formOK {
+		ip := auth.ClientIP(r)
+		id, img, _, err := captcha.Generate(a.Auth.CSRFToken(w, r), ip)
+		if err != nil {
+			logger.Error("CONTACT captcha: %v", err)
+			data["FormAvailable"] = false
+		} else {
+			data["CaptchaID"], data["CaptchaImage"] = id, template.URL(img)
+		}
+	}
+	a.page(w, r, "contact", "contact.title", data)
 }
 
-// apiContact sends a visitor's message to the operator by email.
+func (a *App) apiCaptchaNew(w http.ResponseWriter, r *http.Request) {
+	id, img, _, err := captcha.Generate(a.Auth.CSRFToken(w, r), auth.ClientIP(r))
+	if err != nil || img == "" {
+		logger.Error("CAPTCHA new: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"id": id, "image": img})
+}
+
+func (a *App) apiCaptchaVerify(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 8<<10)
+	if err := r.ParseForm(); err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{"success": false, "expired": true})
+		return
+	}
+	id := strings.TrimSpace(r.FormValue("captcha_id"))
+	if id == "" {
+		writeJSON(w, http.StatusOK, map[string]any{"success": false, "expired": true})
+		return
+	}
+	committed := strings.TrimSpace(r.FormValue("committed")) != "0"
+	ok, expired := captcha.Verify(id, strings.TrimSpace(r.FormValue("captcha_solution")), r.Header.Get("X-CSRF-Token"),
+		strings.TrimSpace(r.FormValue("pow_nonce")), auth.ClientIP(r), committed)
+	writeJSON(w, http.StatusOK, map[string]any{"success": ok, "expired": expired})
+}
+
+// apiContact sends a visitor's message to the operator by email, once the
+// captcha has been solved.
 func (a *App) apiContact(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Name, Email, Message, Website string
+		CaptchaID                     string `json:"captcha_id"`
 	}
 	if err := decode(r, &in); err != nil {
 		a.fail(w, r, err)
@@ -66,6 +115,10 @@ func (a *App) apiContact(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := a.allow(a.contactLimit, "contact:"+auth.ClientIP(r)); err != nil {
 		a.fail(w, r, err)
+		return
+	}
+	if !captcha.IsSolved(in.CaptchaID) {
+		a.fail(w, r, apiErr{http.StatusBadRequest, "err.captcha_failed"})
 		return
 	}
 	name, msg := strings.TrimSpace(in.Name), strings.TrimSpace(in.Message)

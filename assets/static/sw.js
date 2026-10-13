@@ -1,6 +1,6 @@
 const VERSION = "__VERSION__";
 const SHELL = "tt-shell-" + VERSION;
-const ASSETS = ["/static/app.css?v=" + VERSION, "/static/app.js?v=" + VERSION, "/static/theme.js?v=" + VERSION, "/static/img/icon.svg", "/static/img/placeholder.svg", "/offline"];
+const ASSETS = ["/static/app.css?v=" + VERSION, "/static/app.js?v=" + VERSION, "/static/captcha.js?v=" + VERSION, "/static/theme.js?v=" + VERSION, "/static/img/icon.svg", "/static/img/placeholder.svg", "/offline"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

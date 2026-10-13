@@ -231,6 +231,9 @@
   "contact": {
     "title": "Contact",
     "slug": "contact",
+    "email_us": "Email us",
+    "telegram_us": "Chat on Telegram",
+    "or": "or",
     "intro": "Send a message to the person who runs this site.",
     "name": "Your name",
     "email": "Your email",
@@ -239,16 +242,24 @@
     "sent": "Message sent. Thank you.",
     "unavailable": "The contact form is not available right now."
   },
+  "captcha": {
+    "instructions": "Rotate the image until it is upright.",
+    "expired": "Expired. Refreshing...",
+    "securing": "Securing connection...",
+    "secured": "Secured.",
+    "complete_first": "Solve the captcha first.",
+    "refresh": "New image"
+  },
   "landing": {
     "f1_title": "Never lose your place",
     "f1_text": "Mark episodes as watched, see exactly what to watch next and keep your progress for every show.",
     "f2_title": "Exact air times",
     "f2_text": "Get notified by email, push or Telegram when a new episode really airs, in your own time zone.",
-    "f3_title": "Talk without spoilers",
-    "f3_text": "Discuss every episode; spoilers stay hidden until you have seen it.",
-    "f4_title": "Friends, even on other servers",
-    "f4_text": "See what friends watch and rate, and join the conversation with people on other TVT servers.",
-    "f5_title": "Yours to keep",
+    "f3_title": "Rate and talk without spoilers",
+    "f3_text": "Rate every episode and discuss it; spoilers stay hidden until you have seen it.",
+    "f4_title": "Self-hostable and federated",
+    "f4_text": "Run TVT on your own server and own your data: no business has to be trusted with your watch history. Federated servers share activity and comments with each other, so you can still follow friends and join the conversation anywhere.",
+    "f5_title": "Private, free, and open-source",
     "f5_text": "Import from TV Time and export your data any time. No ads, no trackers, and the code is open source."
   },
   "admin": {
@@ -418,6 +429,7 @@
     "page_slug_taken": "That address is already used by another page.",
     "page_slug_bad": "Use only lowercase letters, digits and hyphens, starting with a letter or digit.",
     "contact_unavailable": "The contact form is not available right now.",
+    "captcha_failed": "The captcha was not solved or has expired. Please try again.",
     "no_email": "This account has no email address.",
     "config_invalid": "Those settings are not valid",
     "test_failed": "The test failed",
@@ -762,13 +774,22 @@
   },
   "tg": {
     "error": "Something went wrong. Please try again.",
-    "help": "Commands: /start to check your link status, /stop to turn off notifications.",
+    "help": "Commands: /start to check your link status, /stop to turn off notifications, /support to talk to the team.",
     "link_invalid": "That link is invalid or expired. Create a new one in the app settings.",
-    "linked": "Linked. You will now get notifications here.",
+    "linked": "Connected! You can now:\n1. Log in to {app} using Telegram with one click.\n2. Receive {app} notifications via Telegram!\n\nYou can go back to {app} now to configure your notification preferences if you want. Or continue browsing normally.\n\nHappy watching!",
     "private_only": "Please message me in a private chat.",
     "status_linked": "This chat is linked to your account.",
     "status_unlinked": "This chat is not linked yet. Open the app settings, Notifications, and press Connect Telegram.",
-    "stopped": "Notifications turned off for this chat."
+    "stopped": "Notifications turned off for this chat.",
+    "support_hello": "Hi! I'm the {app} support bot. What's your name?",
+    "support_ask_issue": "Nice to meet you, {name}! What do you need help with? Describe the issue and I'll pass it on to the team.",
+    "support_received": "Thanks, {name}. Your message was sent to the {app} team. They'll answer right here. You can keep writing to add details, and send /close when you're done.",
+    "support_closed": "This conversation is closed. Send /support if you need help again.",
+    "support_unavailable": "Support chat is not available right now. Please use the contact form on the website.",
+    "support_none": "You don't have an open conversation. Send /support to start one.",
+    "support_op_unknown": "I can't tell which conversation that belongs to. Reply directly to a message that starts with 🆘 or #.",
+    "support_op_closed": "Conversation #{id} closed.",
+    "support_op_failed": "Couldn't deliver your reply to conversation #{id}. The person may have blocked the bot."
   },
   "privacy": {
     "title": "Privacy policy",
@@ -778,7 +799,7 @@
     "contact_none": "Contact details are on the site or in its source repository.",
     "data": {
       "title": "What is stored",
-      "body": "Your account (username, an email address if you add one, a hashed password if you set one, display name, bio, profile images, language and timezone); your Telegram ID and handle if you use Telegram; the public keys of your passkeys; the shows you follow, what you have watched and rated; your comments, reports and blocks; your notification settings, notifications and push subscriptions. After you change your username, the old one is kept for 14 days so that it can redirect to you and nobody else can take it. If you use the contact form, your name, email address and message are emailed to the operator and are not stored by this site."
+      "body": "Your account (username, an email address if you add one, a hashed password if you set one, display name, bio, profile images, language and timezone); your Telegram ID and handle if you use Telegram; the public keys of your passkeys; the shows you follow, what you have watched and rated; your comments, reports and blocks; your notification settings, notifications and push subscriptions. After you change your username, the old one is kept for 14 days so that it can redirect to you and nobody else can take it. If you use the contact form, your name, email address and message are emailed to the operator and are not stored by this site. If you chat with the support bot on Telegram, your name, Telegram ID and handle, and the language are kept with the conversation for up to 90 days after it closes, and your messages are passed to the operator through the bot; the text of the messages is not stored by this site."
     },
     "signin": {
       "title": "Sign-in and security data",

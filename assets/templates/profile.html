@@ -70,7 +70,7 @@
   <form class="comment-form" id="comment-form">
     <textarea name="body" maxlength="2000" rows="3" placeholder="{{$.T "profile.post_placeholder"}}" required></textarea>
     <div class="comment-form-row">
-      <label><input type="checkbox" name="spoiler"> {{$.T "comments.mark_spoiler"}}</label>
+      <span class="notify-row spoiler-row"><span class="tswitch sm"><input type="checkbox" class="tswitch-input" id="prof-spoiler" name="spoiler"><label for="prof-spoiler" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="prof-spoiler">{{$.T "comments.mark_spoiler"}}</label></span>
       <button class="btn" type="submit">{{$.T "comments.post"}}</button>
     </div>
   </form>

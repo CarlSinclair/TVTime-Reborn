@@ -201,7 +201,10 @@ func newTelegramFake(t *testing.T) (*tgFake, string) {
 			}
 			f.mu.Lock()
 			f.sent = append(f.sent, body)
+			n := len(f.sent)
 			f.mu.Unlock()
+			w.Write([]byte(fmt.Sprintf(`{"ok":true,"result":{"message_id":%d}}`, 1000+n)))
+			return
 		}
 		w.Write([]byte(`{"ok":true}`))
 	})

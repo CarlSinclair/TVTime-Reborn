@@ -231,6 +231,9 @@
   "contact": {
     "title": "Contact",
     "slug": "contact",
+    "email_us": "Nous écrire par e-mail",
+    "telegram_us": "Discuter sur Telegram",
+    "or": "ou",
     "intro": "Envoyez un message à la personne qui gère ce site.",
     "name": "Votre nom",
     "email": "Votre e-mail",
@@ -239,16 +242,24 @@
     "sent": "Message envoyé. Merci.",
     "unavailable": "Le formulaire de contact n'est pas disponible pour le moment."
   },
+  "captcha": {
+    "instructions": "Faites pivoter l'image jusqu'à ce qu'elle soit droite.",
+    "expired": "Expiré. Actualisation...",
+    "securing": "Sécurisation de la connexion...",
+    "secured": "Sécurisé.",
+    "complete_first": "Résolvez d'abord le captcha.",
+    "refresh": "Nouvelle image"
+  },
   "landing": {
     "f1_title": "Ne perdez jamais le fil",
     "f1_text": "Marquez les épisodes comme vus, voyez exactement quoi regarder ensuite et gardez votre progression pour chaque série.",
     "f2_title": "Horaires de diffusion exacts",
     "f2_text": "Soyez prévenu par e-mail, push ou Telegram quand un nouvel épisode sort vraiment, dans votre fuseau horaire.",
-    "f3_title": "Discutez sans spoilers",
-    "f3_text": "Discutez chaque épisode ; les spoilers restent masqués tant que vous ne l'avez pas vu.",
-    "f4_title": "Des amis, même sur d'autres serveurs",
-    "f4_text": "Voyez ce que regardent et notent vos amis et participez à la conversation avec des gens d'autres serveurs TVT.",
-    "f5_title": "À vous, pour de bon",
+    "f3_title": "Notez et discutez sans spoilers",
+    "f3_text": "Notez chaque épisode et discutez-en ; les spoilers restent masqués tant que vous ne l'avez pas vu.",
+    "f4_title": "Auto-hébergeable et fédéré",
+    "f4_text": "Hébergez TVT sur votre propre serveur et gardez vos données : aucune entreprise n'a à détenir votre historique. Les serveurs fédérés partagent activité et commentaires, ce qui permet de suivre vos amis et de participer partout.",
+    "f5_title": "Privé, gratuit et open source",
     "f5_text": "Importez depuis TV Time et exportez vos données à tout moment. Sans pub ni traqueurs, et le code est open source."
   },
   "admin": {
@@ -418,6 +429,7 @@
     "page_slug_taken": "Cette adresse est déjà utilisée par une autre page.",
     "page_slug_bad": "Utilisez uniquement des minuscules, chiffres et tirets, en commençant par une lettre ou un chiffre.",
     "contact_unavailable": "Le formulaire de contact n'est pas disponible pour le moment.",
+    "captcha_failed": "Le captcha n'a pas été résolu ou a expiré. Réessayez.",
     "no_email": "Ce compte n'a pas d'adresse e-mail.",
     "config_invalid": "Ces réglages ne sont pas valides",
     "test_failed": "Le test a échoué",
@@ -762,13 +774,22 @@
   },
   "tg": {
     "error": "Un problème est survenu. Réessayez.",
-    "help": "Commandes : /start pour voir l'état du lien, /stop pour désactiver les notifications.",
+    "help": "Commandes : /start pour voir l'état du lien, /stop pour désactiver les notifications, /support pour parler à l'équipe.",
     "link_invalid": "Ce lien est invalide ou a expiré. Créez-en un nouveau dans les paramètres de l'app.",
-    "linked": "Lié. Vous recevrez désormais les notifications ici.",
+    "linked": "Connecté ! Vous pouvez maintenant :\n1. Vous connecter à {app} avec Telegram en un clic.\n2. Recevoir les notifications de {app} via Telegram !\n\nVous pouvez retourner sur {app} pour régler vos préférences de notification si vous le souhaitez. Ou continuer à naviguer normalement.\n\nBon visionnage !",
     "private_only": "Écrivez-moi dans une conversation privée, s'il vous plaît.",
     "status_linked": "Cette conversation est liée à votre compte.",
     "status_unlinked": "Cette conversation n'est pas encore liée. Ouvrez les paramètres de l'app, Notifications, et appuyez sur Connecter Telegram.",
-    "stopped": "Notifications désactivées pour cette conversation."
+    "stopped": "Notifications désactivées pour cette conversation.",
+    "support_hello": "Bonjour ! Je suis le bot d'assistance de {app}. Comment vous appelez-vous ?",
+    "support_ask_issue": "Enchanté, {name} ! De quoi avez-vous besoin ? Décrivez le problème et je le transmettrai à l'équipe.",
+    "support_received": "Merci, {name}. Votre message a été envoyé à l'équipe {app}. Elle répondra ici même. Vous pouvez continuer à écrire pour ajouter des détails et envoyer /close quand vous avez terminé.",
+    "support_closed": "Cette conversation est fermée. Envoyez /support si vous avez de nouveau besoin d'aide.",
+    "support_unavailable": "Le chat d'assistance n'est pas disponible pour le moment. Utilisez le formulaire de contact du site.",
+    "support_none": "Vous n'avez aucune conversation ouverte. Envoyez /support pour en démarrer une.",
+    "support_op_unknown": "Je ne sais pas à quelle conversation cela appartient. Répondez directement à un message commençant par 🆘 ou #.",
+    "support_op_closed": "Conversation #{id} fermée.",
+    "support_op_failed": "Impossible de remettre votre réponse à la conversation #{id}. La personne a peut-être bloqué le bot."
   },
   "privacy": {
     "title": "Politique de confidentialité",
@@ -778,7 +799,7 @@
     "contact_none": "Les coordonnées figurent sur le site ou dans son dépôt de code source.",
     "data": {
       "title": "Ce qui est conservé",
-      "body": "Votre compte (nom d'utilisateur, une adresse e-mail si vous en ajoutez une, un mot de passe haché si vous en définissez un, nom affiché, bio, images de profil, langue et fuseau horaire) ; votre ID et pseudo Telegram si vous utilisez Telegram ; les clés publiques de vos passkeys ; les séries que vous suivez, ce que vous avez vu et noté ; vos commentaires, signalements et blocages ; vos réglages de notification, vos notifications et abonnements push. Après un changement de nom d'utilisateur, l'ancien est conservé 14 jours pour rediriger vers vous et pour que personne d'autre ne le prenne. Si vous utilisez le formulaire de contact, votre nom, votre adresse e-mail et votre message sont envoyés par e-mail à l'opérateur et ne sont pas conservés par ce site."
+      "body": "Votre compte (nom d'utilisateur, une adresse e-mail si vous en ajoutez une, un mot de passe haché si vous en définissez un, nom affiché, bio, images de profil, langue et fuseau horaire) ; votre ID et pseudo Telegram si vous utilisez Telegram ; les clés publiques de vos passkeys ; les séries que vous suivez, ce que vous avez vu et noté ; vos commentaires, signalements et blocages ; vos réglages de notification, vos notifications et abonnements push. Après un changement de nom d'utilisateur, l'ancien est conservé 14 jours pour rediriger vers vous et pour que personne d'autre ne le prenne. Si vous utilisez le formulaire de contact, votre nom, votre adresse e-mail et votre message sont envoyés par e-mail à l'opérateur et ne sont pas conservés par ce site. Si vous discutez avec le bot d'assistance sur Telegram, votre nom, votre identifiant et pseudo Telegram et la langue sont conservés avec la conversation jusqu'à 90 jours après sa clôture, et vos messages sont transmis à l'opérateur par le bot ; le texte des messages n'est pas stocké par ce site."
     },
     "signin": {
       "title": "Données de connexion et de sécurité",
