@@ -3,6 +3,7 @@ package handlers
 import (
 	"html/template"
 	"net/http"
+	"net/url"
 	"strings"
 	"unicode/utf8"
 
@@ -57,7 +58,7 @@ func (a *App) pageContact(w http.ResponseWriter, r *http.Request) {
 		bot = a.Bot.Username
 	}
 	formOK := email != "" && a.Mail != nil && a.Mail.Configured()
-	data := map[string]any{"Email": email, "Bot": bot, "FormAvailable": formOK, "PrivacyContact": a.Cfg.PrivacyContact}
+	data := map[string]any{"Email": email, "Bot": bot, "TelegramURL": template.URL("tg://resolve?domain=" + url.QueryEscape(bot) + "&start=support"), "FormAvailable": formOK, "PrivacyContact": a.Cfg.PrivacyContact}
 	if formOK {
 		ip := auth.ClientIP(r)
 		id, img, _, err := captcha.Generate(a.Auth.CSRFToken(w, r), ip)

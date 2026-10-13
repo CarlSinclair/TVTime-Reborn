@@ -251,6 +251,7 @@
     "refresh": "Nova imagem"
   },
   "landing": {
+    "star": "Dar estrela no GitHub",
     "f1_title": "Nunca perca o ponto onde parou",
     "f1_text": "Marque episódios como assistidos, veja exatamente o que assistir a seguir e guarde seu progresso em cada série.",
     "f2_title": "Horários exatos de exibição",
@@ -400,7 +401,6 @@
       "tmdb_key": "Chave da API do TMDB",
       "tvdb_key": "Chave da API do TheTVDB",
       "trakt_client_id": "ID de cliente do Trakt",
-      "disable_tvmaze": "Não usar o TVmaze",
       "telegram_bot": "Token do bot",
       "telegram_name": "Nome de usuário do bot",
       "app_name": "Nome do site",
@@ -859,6 +859,8 @@
   },
   "about": {
     "title": "Sobre",
+    "intro": "O TVT é um sucessor espiritual do TV Time. Somos gratos ao TV Time por abrir o caminho para este projeto.",
+    "source_link": "Código-fonte no GitHub",
     "license": "O TVT é software livre sob a GNU Affero General Public License v3.",
     "data_title": "Fontes de dados"
   },

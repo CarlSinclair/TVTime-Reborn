@@ -68,7 +68,7 @@ func (b *Bot) BotID() string {
 }
 
 func (b *Bot) DeepLink(startToken string) string {
-	return "https://t.me/" + url.PathEscape(b.Username) + "?start=" + url.QueryEscape(startToken)
+	return "tg://resolve?domain=" + url.QueryEscape(b.Username) + "&start=" + url.QueryEscape(startToken)
 }
 
 type LoginData struct {

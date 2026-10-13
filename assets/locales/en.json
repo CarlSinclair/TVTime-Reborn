@@ -251,6 +251,7 @@
     "refresh": "New image"
   },
   "landing": {
+    "star": "Star on GitHub",
     "f1_title": "Never lose your place",
     "f1_text": "Mark episodes as watched, see exactly what to watch next and keep your progress for every show.",
     "f2_title": "Exact air times",
@@ -400,7 +401,6 @@
       "tmdb_key": "TMDB API key",
       "tvdb_key": "TheTVDB API key",
       "trakt_client_id": "Trakt client ID",
-      "disable_tvmaze": "Do not use TVmaze",
       "telegram_bot": "Bot token",
       "telegram_name": "Bot username",
       "app_name": "Site name",
@@ -859,6 +859,8 @@
   },
   "about": {
     "title": "About",
+    "intro": "TVT is a spiritual successor to TV Time. We are grateful to TV Time for paving the way for this project.",
+    "source_link": "Source code on GitHub",
     "license": "TVT is free software under the GNU Affero General Public License v3.",
     "data_title": "Data sources"
   },

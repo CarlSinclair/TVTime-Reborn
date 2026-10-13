@@ -5,6 +5,7 @@
   <p class="hero-actions">
     {{if .User}}<a class="btn" href="/">{{.T "nav.home"}}</a>{{else}}<a class="btn" href="/register">{{.T "auth.register"}}</a> <a class="btn ghost" href="/login">{{.T "auth.login"}}</a>{{end}}
   </p>
+  {{if not .User}}<p class="hero-actions"><a class="btn ghost" href="{{.SourceURL}}" rel="noopener noreferrer" target="_blank"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-github"></use></svg> {{.T "landing.star"}} <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-star"></use></svg></a></p>{{end}}
 </section>
 <section class="features">
   <article><h2>{{.T "landing.f1_title"}}</h2><p>{{.T "landing.f1_text"}}</p></article>

@@ -68,9 +68,7 @@ func main() {
 	}
 	tm := tmdb.New(cfg.TMDBKey)
 	sy := syncer.New(st, tm)
-	if !cfg.DisableTVmaze {
-		sy.TVmaze = tvmaze.New()
-	}
+	sy.TVmaze = tvmaze.New()
 	if cfg.TVDBKey != "" {
 		sy.TVDB = tvdb.New(cfg.TVDBKey)
 	}

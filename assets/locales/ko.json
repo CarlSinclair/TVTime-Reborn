@@ -251,6 +251,7 @@
     "refresh": "다른 이미지"
   },
   "landing": {
+    "star": "GitHub에서 별 주기",
     "f1_title": "어디까지 봤는지 잊지 마세요",
     "f1_text": "시청한 에피소드를 표시하고, 다음에 볼 것을 정확히 확인하며, 모든 시리즈의 진행 상황을 보관하세요.",
     "f2_title": "정확한 방영 시간",
@@ -400,7 +401,6 @@
       "tmdb_key": "TMDB API 키",
       "tvdb_key": "TheTVDB API 키",
       "trakt_client_id": "Trakt 클라이언트 ID",
-      "disable_tvmaze": "TVmaze 사용 안 함",
       "telegram_bot": "봇 토큰",
       "telegram_name": "봇 사용자 이름",
       "app_name": "사이트 이름",
@@ -859,6 +859,8 @@
   },
   "about": {
     "title": "소개",
+    "intro": "TVT는 TV Time의 정신적 후속작입니다. 이 프로젝트의 길을 열어 준 TV Time에 감사드립니다.",
+    "source_link": "GitHub 소스 코드",
     "license": "TVT는 GNU Affero General Public License v3에 따른 자유 소프트웨어입니다.",
     "data_title": "데이터 출처"
   },

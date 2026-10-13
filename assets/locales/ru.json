@@ -251,6 +251,7 @@
     "refresh": "Другая картинка"
   },
   "landing": {
+    "star": "Поставить звезду на GitHub",
     "f1_title": "Не теряйте место",
     "f1_text": "Отмечайте просмотренные эпизоды, видьте, что смотреть дальше, и храните прогресс по каждому сериалу.",
     "f2_title": "Точное время выхода",
@@ -400,7 +401,6 @@
       "tmdb_key": "Ключ API TMDB",
       "tvdb_key": "Ключ API TheTVDB",
       "trakt_client_id": "Client ID Trakt",
-      "disable_tvmaze": "Не использовать TVmaze",
       "telegram_bot": "Токен бота",
       "telegram_name": "Имя пользователя бота",
       "app_name": "Название сайта",
@@ -859,6 +859,8 @@
   },
   "about": {
     "title": "О сервисе",
+    "intro": "TVT - духовный наследник TV Time. Мы благодарны TV Time за то, что он проложил путь этому проекту.",
+    "source_link": "Исходный код на GitHub",
     "license": "TVT - свободное программное обеспечение под лицензией GNU Affero General Public License v3.",
     "data_title": "Источники данных"
   },

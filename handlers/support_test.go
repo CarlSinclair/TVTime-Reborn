@@ -114,10 +114,10 @@ func TestConnectingTelegramTurnsOnNotificationsAndAnswersInTheUsersLanguage(t *t
 	}
 	_, out := alice.post("/api/account/telegram/link-token", nil)
 	link, _ := out["url"].(string)
-	if !strings.HasPrefix(link, "https://t.me/tvt_test_bot?start=") {
+	if !strings.HasPrefix(link, "tg://resolve?domain=tvt_test_bot&start=") {
 		t.Fatalf("the link opens the bot with the token: %q", link)
 	}
-	token := strings.TrimPrefix(link, "https://t.me/tvt_test_bot?start=")
+	token := strings.TrimPrefix(link, "tg://resolve?domain=tvt_test_bot&start=")
 	e.tgUpdate(t, 800, "/start "+token, 0)
 	got := e.sentTo("800")
 	if len(got) != 1 || !strings.HasPrefix(got[0], "✅ Conectado!") || !strings.Contains(got[0], "TVT") || !strings.Contains(got[0], "Boa diversão!") {
