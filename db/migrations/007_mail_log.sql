@@ -1,0 +1,8 @@
+CREATE TABLE mail_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  recipient TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  ok INTEGER NOT NULL,
+  error TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL
+);

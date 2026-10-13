@@ -16,6 +16,7 @@ import (
 	"time"
 	_ "time/tzdata"
 
+	"tvt/appconfig"
 	"tvt/assets"
 	"tvt/auth"
 	"tvt/config"
@@ -41,9 +42,6 @@ func main() {
 	if err != nil {
 		logger.Fatal("config: %v", err)
 	}
-	if cfg.OperatorName == "" || cfg.PrivacyContact == "" {
-		logger.Warn("TVT_OPERATOR_NAME and TVT_PRIVACY_CONTACT are not both set: the privacy page will not say who runs this site or how to reach them")
-	}
 	d, err := db.Open(cfg.DBPath)
 	if err != nil {
 		logger.Fatal("database: %v", err)
@@ -51,6 +49,13 @@ func main() {
 	defer d.Close()
 	auth.ClientIPHeader = cfg.ClientIPHeader
 	st := store.New(d)
+	settings := appconfig.New(st, cfg.JWTSecret, cfg)
+	if err := settings.Apply(cfg); err != nil {
+		logger.Error("settings saved in the admin UI were ignored, using the environment: %v", err)
+	}
+	if cfg.OperatorName == "" || cfg.PrivacyContact == "" {
+		logger.Warn("The operator name and privacy contact are not both set (TVT_OPERATOR_NAME, TVT_PRIVACY_CONTACT or Admin > Config): the privacy page will not say who runs this site or how to reach them")
+	}
 	if cfg.AdminEmail != "" {
 		if _, err := d.Exec(`UPDATE users SET is_admin = 1 WHERE email = ? AND email_verified = 1`, cfg.AdminEmail); err != nil {
 			logger.Error("admin promotion for %s: %v", cfg.AdminEmail, err)
@@ -97,6 +102,7 @@ func main() {
 		mediaStore = s3
 	}
 	logger.Info("media storage: %s", mediaStore.Kind())
+	restart := false
 	app, err := handlers.New(cfg, st, authSvc, sy, tm, ml, nt, bot, mediaStore)
 	if err != nil {
 		logger.Fatal("app: %v", err)
@@ -104,6 +110,11 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	app.Settings = settings
+	app.Restart = func() {
+		restart = true
+		stop()
+	}
 	if cfg.Federation {
 		fed, err := federation.New(st, nt, baseURL.Host, cfg.JWTSecret, cfg.FedInsecure, cfg.FedBlock, cfg.FedAllow)
 		if err != nil {
@@ -112,11 +123,6 @@ func main() {
 		app.Fed = fed
 		go fed.Run(ctx)
 		logger.Info("federation on as %s", baseURL.Host)
-	}
-	if n, err := st.CompleteFinished(0, 0); err != nil {
-		logger.Error("complete finished shows at start: %v", err)
-	} else if n > 0 {
-		logger.Info("marked %d finished shows completed", n)
 	}
 	go sy.Run(ctx)
 	nt.Start(ctx)
@@ -144,5 +150,10 @@ func main() {
 	defer cancel()
 	if err := srv.Shutdown(shutdown); err != nil {
 		logger.Error("shutdown: %v", err)
+	}
+	if restart {
+		logger.Info("restart requested from the admin UI; exiting non-zero so the service manager starts the new settings")
+		d.Close()
+		os.Exit(1)
 	}
 }

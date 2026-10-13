@@ -20,6 +20,8 @@ var ErrNotConfigured = errors.New("mail is not configured")
 
 type Mailer struct {
 	cfg *config.Config
+	// Record, when set, is told the outcome of every send attempt.
+	Record func(to, subject string, err error)
 }
 
 func New(cfg *config.Config) *Mailer { return &Mailer{cfg: cfg} }
@@ -48,6 +50,14 @@ func (m *Mailer) Send(to, subject, body string) error {
 // otherwise plain text. Subject and bodies are encoded so non-ASCII languages
 // survive any relay.
 func (m *Mailer) SendHTML(to, subject, textBody, htmlBody string) error {
+	err := m.deliver(to, subject, textBody, htmlBody)
+	if m.Record != nil {
+		m.Record(to, subject, err)
+	}
+	return err
+}
+
+func (m *Mailer) deliver(to, subject, textBody, htmlBody string) error {
 	if m.cfg.DevLogMail {
 		logger.Info("MAIL (dev) to=%s subject=%q body=%s", to, subject, textBody)
 		return nil

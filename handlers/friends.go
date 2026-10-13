@@ -95,7 +95,7 @@ func (a *App) findPerson(viewer *store.User, q string) (*store.User, bool, error
 			return nil, false, nil
 		}
 	}
-	if u.IsBanned {
+	if u.IsDeactivated {
 		return nil, false, nil
 	}
 	if viewer != nil && viewer.ID != u.ID {

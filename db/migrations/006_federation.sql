@@ -5,7 +5,8 @@ CREATE TABLE federation_peers (
   public_key TEXT NOT NULL,
   first_seen TEXT NOT NULL,
   last_seen TEXT NOT NULL,
-  blocked INTEGER NOT NULL DEFAULT 0
+  blocked INTEGER NOT NULL DEFAULT 0,
+  acked INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE fed_outbox (
@@ -38,3 +39,18 @@ CREATE TABLE remote_events (
 );
 CREATE INDEX idx_remote_events_user ON remote_events(user_id, at);
 CREATE INDEX idx_remote_events_exp ON remote_events(expires_at);
+
+CREATE TABLE fed_seen (
+  sig TEXT PRIMARY KEY,
+  seen_at TEXT NOT NULL
+);
+CREATE INDEX idx_fed_seen_at ON fed_seen(seen_at);
+
+CREATE TABLE username_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  old_name TEXT NOT NULL COLLATE NOCASE,
+  changed_at TEXT NOT NULL
+);
+CREATE INDEX idx_username_history_name ON username_history(old_name);
+CREATE INDEX idx_username_history_user ON username_history(user_id);

@@ -143,15 +143,15 @@ const personSelect = `SELECT u.id, u.username, u.display_name, u.avatar_path FRO
 
 func (s *Store) Friends(userID int64) ([]Person, error) {
 	return s.people(personSelect+`CASE WHEN f.requester_id = ? THEN f.addressee_id ELSE f.requester_id END
-	  WHERE f.status = 'accepted' AND (f.requester_id = ? OR f.addressee_id = ?) AND u.is_banned = 0 ORDER BY u.username COLLATE NOCASE`, userID, userID, userID)
+	  WHERE f.status = 'accepted' AND (f.requester_id = ? OR f.addressee_id = ?) AND u.is_deactivated = 0 ORDER BY u.username COLLATE NOCASE`, userID, userID, userID)
 }
 
 func (s *Store) IncomingFriendRequests(userID int64) ([]Person, error) {
-	return s.people(personSelect+`f.requester_id WHERE f.addressee_id = ? AND f.status = 'pending' AND u.is_banned = 0 ORDER BY f.created_at DESC`, userID)
+	return s.people(personSelect+`f.requester_id WHERE f.addressee_id = ? AND f.status = 'pending' AND u.is_deactivated = 0 ORDER BY f.created_at DESC`, userID)
 }
 
 func (s *Store) OutgoingFriendRequests(userID int64) ([]Person, error) {
-	return s.people(personSelect+`f.addressee_id WHERE f.requester_id = ? AND f.status = 'pending' AND u.is_banned = 0 ORDER BY f.created_at DESC`, userID)
+	return s.people(personSelect+`f.addressee_id WHERE f.requester_id = ? AND f.status = 'pending' AND u.is_deactivated = 0 ORDER BY f.created_at DESC`, userID)
 }
 
 func (s *Store) PendingFriendCount(userID int64) (int, error) {
@@ -194,7 +194,7 @@ func (e FeedEvent) Name() string {
 
 const feedGroupGap = 30 * time.Minute
 
-const spoilerFree = `c.deleted_at IS NULL AND c.author_spoiler = 0 AND NOT (c.spoiler_reports >= 1 AND c.not_spoiler_reports <= c.spoiler_reports)`
+const spoilerFree = `c.deleted_at IS NULL AND c.hidden_at IS NULL AND c.author_spoiler = 0 AND NOT (c.spoiler_reports >= 1 AND c.not_spoiler_reports <= c.spoiler_reports)`
 
 func (s *Store) notBlocked(col string) string {
 	return `NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id = ? AND b.blocked_id = ` + col + `) OR (b.blocker_id = ` + col + ` AND b.blocked_id = ?))`
@@ -227,7 +227,7 @@ func (s *Store) FriendFeed(viewerID int64, before string, limit int) ([]FeedEven
 	rows, err := s.DB.Query(`SELECT w.user_id, u.username, u.display_name, u.avatar_path, s.id, s.tmdb_id, s.name, s.poster_path, e.id, e.season_number, e.episode_number, w.watched_at,
 	    EXISTS (SELECT 1 FROM watched vw WHERE vw.user_id = ? AND vw.episode_id = e.id)
 	  FROM watched w JOIN users u ON u.id = w.user_id JOIN episodes e ON e.id = w.episode_id JOIN shows s ON s.id = w.show_id
-	  WHERE w.user_id IN (`+in+`) AND u.share_activity = 1 AND u.is_banned = 0 AND w.watched_at < ?
+	  WHERE w.user_id IN (`+in+`) AND u.share_activity = 1 AND u.is_deactivated = 0 AND w.watched_at < ?
 	  ORDER BY w.watched_at DESC LIMIT ?`, wargs...)
 	if err != nil {
 		return nil, fmt.Errorf("feed watches uid=%d: %w", viewerID, err)
@@ -254,7 +254,7 @@ func (s *Store) FriendFeed(viewerID int64, before string, limit int) ([]FeedEven
 	rrows, err := s.DB.Query(`SELECT r.user_id, u.username, u.display_name, u.avatar_path, s.id, s.tmdb_id, s.name, s.poster_path, e.id, e.season_number, e.episode_number, r.rating, r.updated_at,
 	    EXISTS (SELECT 1 FROM watched vw WHERE vw.user_id = ? AND vw.episode_id = e.id)
 	  FROM episode_ratings r JOIN users u ON u.id = r.user_id JOIN episodes e ON e.id = r.episode_id JOIN shows s ON s.id = e.show_id
-	  WHERE r.user_id IN (`+in+`) AND u.share_activity = 1 AND u.is_banned = 0 AND r.updated_at < ?
+	  WHERE r.user_id IN (`+in+`) AND u.share_activity = 1 AND u.is_deactivated = 0 AND r.updated_at < ?
 	  ORDER BY r.updated_at DESC LIMIT ?`, rargs...)
 	if err != nil {
 		return nil, fmt.Errorf("feed ratings uid=%d: %w", viewerID, err)
@@ -282,7 +282,7 @@ func (s *Store) FriendFeed(viewerID int64, before string, limit int) ([]FeedEven
 	    EXISTS (SELECT 1 FROM watched vw JOIN episodes e ON e.id = vw.episode_id JOIN shows s ON s.id = e.show_id
 	      WHERE vw.user_id = ? AND s.tmdb_id = re.show_tmdb AND e.season_number = re.season AND e.episode_number = re.episode)
 	  FROM remote_events re JOIN users u ON u.id = re.user_id
-	  WHERE re.user_id IN (`+in+`) AND re.expires_at > ? AND re.at < ? AND u.is_banned = 0
+	  WHERE re.user_id IN (`+in+`) AND re.expires_at > ? AND re.at < ? AND u.is_deactivated = 0
 	  ORDER BY re.at DESC LIMIT ?`, xargs...)
 	if err != nil {
 		return nil, fmt.Errorf("feed remote uid=%d: %w", viewerID, err)
@@ -307,7 +307,7 @@ func (s *Store) FriendFeed(viewerID int64, before string, limit int) ([]FeedEven
 	cargs = append(cargs, before, viewerID, viewerID, limit)
 	crows, err := s.DB.Query(`SELECT c.user_id, u.username, u.display_name, u.avatar_path, s.id, s.tmdb_id, s.name, s.poster_path, e.id, e.season_number, e.episode_number, c.body, c.created_at
 	  FROM comments c JOIN users u ON u.id = c.user_id JOIN episodes e ON e.id = c.episode_id JOIN shows s ON s.id = e.show_id
-	  WHERE c.user_id IN (`+in+`) AND `+spoilerFree+` AND u.share_activity = 1 AND u.is_banned = 0 AND c.created_at < ?
+	  WHERE c.user_id IN (`+in+`) AND `+spoilerFree+` AND u.share_activity = 1 AND u.is_deactivated = 0 AND c.created_at < ?
 	    AND `+s.notBlocked("c.user_id")+`
 	  ORDER BY c.created_at DESC LIMIT ?`, cargs...)
 	if err != nil {
@@ -332,7 +332,7 @@ func (s *Store) FriendFeed(viewerID int64, before string, limit int) ([]FeedEven
 	pargs = append(pargs, before, limit)
 	prows, err := s.DB.Query(`SELECT c.user_id, u.username, u.display_name, u.avatar_path, c.body, c.created_at
 	  FROM comments c JOIN users u ON u.id = c.user_id
-	  WHERE c.profile_id = c.user_id AND c.parent_id IS NULL AND c.user_id IN (`+in+`) AND `+spoilerFree+` AND u.share_activity = 1 AND u.is_banned = 0 AND c.created_at < ?
+	  WHERE c.profile_id = c.user_id AND c.parent_id IS NULL AND c.user_id IN (`+in+`) AND `+spoilerFree+` AND u.share_activity = 1 AND u.is_deactivated = 0 AND c.created_at < ?
 	  ORDER BY c.created_at DESC LIMIT ?`, pargs...)
 	if err != nil {
 		return nil, fmt.Errorf("feed posts uid=%d: %w", viewerID, err)
@@ -365,7 +365,7 @@ func (s *Store) RecentOpenComments(viewerID int64, limit int) ([]FeedEvent, erro
 	since := Ts(time.Now().Add(-14 * 24 * time.Hour))
 	rows, err := s.DB.Query(`SELECT c.user_id, u.username, u.display_name, u.avatar_path, s.id, s.tmdb_id, s.name, s.poster_path, e.id, e.season_number, e.episode_number, c.body, c.created_at
 	  FROM comments c JOIN users u ON u.id = c.user_id JOIN episodes e ON e.id = c.episode_id JOIN shows s ON s.id = e.show_id
-	  WHERE `+spoilerFree+` AND u.is_banned = 0 AND c.user_id <> ? AND c.created_at > ? AND `+s.notBlocked("c.user_id")+`
+	  WHERE `+spoilerFree+` AND u.is_deactivated = 0 AND c.user_id <> ? AND c.created_at > ? AND `+s.notBlocked("c.user_id")+`
 	  ORDER BY RANDOM() LIMIT ?`, viewerID, since, viewerID, viewerID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("open comments uid=%d: %w", viewerID, err)

@@ -105,21 +105,9 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("TVT_SMTP_PORT is not a number: %w", err)
 	}
 	c.SMTPPort = port
-	if c.MediaPublicURL != "" {
-		u, err := url.Parse(c.MediaPublicURL)
-		if err != nil || u.Scheme != "https" || u.Host == "" || u.RawQuery != "" || u.Fragment != "" {
-			return nil, fmt.Errorf("TVT_MEDIA_PUBLIC_URL must be an https URL with no query or fragment")
-		}
-		if !c.S3.Configured() {
-			return nil, fmt.Errorf("TVT_MEDIA_PUBLIC_URL needs S3 storage to be configured")
-		}
-		c.S3.PublicURL = c.MediaPublicURL
-	}
-	if c.S3.Configured() && c.MediaPublicURL == "" {
-		return nil, fmt.Errorf("S3 storage is configured but TVT_MEDIA_PUBLIC_URL is not: a bucket is served directly from its public domain, so set it, or remove the TVT_S3_* settings to keep files on local disk")
-	}
-	if c.S3.Partial() {
-		return nil, fmt.Errorf("S3 storage is partly configured: set TVT_S3_ENDPOINT, TVT_S3_BUCKET, TVT_S3_ACCESS_KEY_ID and TVT_S3_SECRET_ACCESS_KEY together, or none of them")
+	c.S3.PublicURL = c.MediaPublicURL
+	if err := c.ValidateStorage(); err != nil {
+		return nil, err
 	}
 	if c.DevLogMail && c.CookieSecure {
 		return nil, fmt.Errorf("TVT_DEV_LOG_MAIL logs login links and must not be enabled with an https base URL")
@@ -131,4 +119,26 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("TVT_JWT_SECRET is missing or too short (%d chars, need >= 32)", len(c.JWTSecret))
 	}
 	return c, nil
+}
+
+// ValidateStorage checks the object-storage settings as a set: either all of
+// them or none, with a public https domain for the bucket.
+func (c *Config) ValidateStorage() error {
+	c.S3.PublicURL = c.MediaPublicURL
+	if c.MediaPublicURL != "" {
+		u, err := url.Parse(c.MediaPublicURL)
+		if err != nil || u.Scheme != "https" || u.Host == "" || u.RawQuery != "" || u.Fragment != "" {
+			return fmt.Errorf("the public media URL must be an https URL with no query or fragment")
+		}
+		if !c.S3.Configured() {
+			return fmt.Errorf("the public media URL needs S3 storage to be configured")
+		}
+	}
+	if c.S3.Configured() && c.MediaPublicURL == "" {
+		return fmt.Errorf("S3 storage is configured but the public media URL is not: a bucket is served directly from its public domain, so set it, or remove the S3 settings to keep files on local disk")
+	}
+	if c.S3.Partial() {
+		return fmt.Errorf("S3 storage is partly configured: set the endpoint, bucket, access key id and secret together, or none of them")
+	}
+	return nil
 }

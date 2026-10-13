@@ -153,7 +153,7 @@ func (s *Service) UserInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	u, err := s.Store.UserByUsername(name)
-	if err != nil || u.IsBanned || u.IsRemote() {
+	if err != nil || u.IsDeactivated || u.IsRemote() {
 		http.NotFound(w, r)
 		return
 	}
@@ -355,6 +355,8 @@ type message struct {
 	To    string `json:"to,omitempty"`
 	Event *Event `json:"event,omitempty"`
 	Ref   string `json:"ref,omitempty"`
+	// NewName is the username a person changed to; From carries the old one.
+	NewName string `json:"new_name,omitempty"`
 }
 
 func newID() string {
@@ -385,6 +387,26 @@ func (s *Service) SendFriendRequest(from, to *store.User) {
 
 func (s *Service) SendFriendAccept(from, to *store.User) {
 	s.enqueue(to.RemoteHost, message{Type: "friend_accept", From: person(from), To: to.LocalPart()})
+}
+
+// SendRename tells the servers of a person's remote friends that their username
+// changed, so the friendship follows the new handle.
+func (s *Service) SendRename(u *store.User, oldName string) {
+	if u == nil || u.IsRemote() {
+		return
+	}
+	friends, err := s.Store.RemoteFriends(u.ID)
+	if err != nil {
+		logger.Error("FEDERATION rename notice uid=%d: %v", u.ID, err)
+		return
+	}
+	hosts := map[string]bool{}
+	for _, f := range friends {
+		hosts[f.Host] = true
+	}
+	for h := range hosts {
+		s.enqueue(h, message{Type: "rename", From: Person{Username: oldName, Name: u.Name()}, NewName: u.Username})
+	}
 }
 
 func (s *Service) SendFriendEnd(from, to *store.User) {

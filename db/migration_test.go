@@ -42,14 +42,14 @@ func TestProfilePostsMigrationKeepsCommentsAndReports(t *testing.T) {
 	}
 	var last string
 	for _, n := range names {
-		if strings.HasPrefix(n, "007_") {
+		if strings.HasPrefix(n, "005_") {
 			last = n
 			break
 		}
 		apply(n)
 	}
 	if last == "" {
-		t.Fatal("007 migration missing")
+		t.Fatal("005 migration missing")
 	}
 	mustExec := func(q string, args ...any) {
 		if _, err := d.Exec(q, args...); err != nil {

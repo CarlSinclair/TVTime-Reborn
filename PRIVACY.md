@@ -18,9 +18,11 @@ nothing here is legal advice.
 | TOTP secret and recovery codes (optional) | Two-step verification | Secret encrypted at rest; recovery codes stored as hashes |
 | Telegram ID, handle, chat ID (optional) | Telegram sign-in and notifications | |
 | Follows, watched episodes, ratings | The product | |
-| Comments, reports, blocks | Discussion and moderation | Deleted comments lose their text immediately |
+| Comments, reports, blocks | Discussion and moderation | Deleted comments lose their text immediately. Hidden comments keep their text but are not shown; hiding is undone when the account is restored |
 | Notifications, preferences, push subscriptions | Alerts | Notifications are deleted after 90 days |
 | Session tokens | Staying signed in | Stored as hashes |
+| Previous username | Redirecting to a renamed account and keeping the name from being taken | Kept for 14 days after a change, then removed |
+| Email delivery log | Letting an admin see whether mail works | Time, recipient with most of the address hidden (`j***@example.com`), subject (a notification's subject can name a show or episode) and success or error; never the body or sign-in links; only the latest 200 entries are kept |
 
 There are **no analytics, advertising or tracking scripts**, and no third-party
 fonts, CDNs or embeds. The only cookie is one essential session cookie (it also holds the CSRF token and short-lived security challenges).
@@ -65,6 +67,22 @@ never sent, and "Share my activity with friends" in the profile settings stops a
 it. Every message is signed by the sending server; the receiving server only accepts
 activity from people who are friends with someone on it.
 
+## Deactivating and deleting an account
+
+Whenever an account is deactivated, banned (made read-only) or deleted, by an admin or by
+the person, two mutually exclusive switches decide what happens to its comments: **hide**
+(kept but not shown, and restored if the account comes back), **delete** (the text is
+erased and the comment shows as "Deleted"), or neither (the comments stay as they are).
+Replies are never removed. Deleted comments keep their place in the thread.
+
+A person can deactivate their own account in Settings: the profile is hidden, they are
+signed out, and signing in again reactivates it and restores hidden comments. When an
+account is deleted, its comments are moved to an anonymous "deleted" account (hidden,
+erased or kept, as chosen), so other people's replies stay in place. The only things
+removed with the account itself are the posts on its own profile, since that profile no
+longer exists. Admins have the same switches when they ban, deactivate or delete an
+account.
+
 ## Imports
 
 An import reads the uploaded export in memory, keeps only the shows, watched episodes and
@@ -72,6 +90,16 @@ follow states it needs in a job record while it runs, and deletes that data when
 finishes. Everything else in the export (IP addresses, device data, comments, messages) is
 never read or stored. Only TVDB show and episode ids and show titles are sent to TMDB to
 find the matching shows.
+
+## What the admin tools show
+
+Admins (the verified `TVT_ADMIN_EMAIL` account) can list accounts with username, display
+name, email address and join date; change an account's display name or email; make it
+read-only (ban), deactivate or delete it; set a new password or send a reset link; and open
+or close sign-ups. They can see recent warnings and errors (kept in
+memory only, with addresses already reduced to a country code) and the email delivery log
+above. Operational settings such as SMTP, object storage, API keys and the Telegram bot can
+also be saved from the admin UI; secrets are stored encrypted and are never shown again.
 
 ## What the operator still sees
 

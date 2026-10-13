@@ -97,6 +97,10 @@
     <button class="btn ghost small" type="button" data-logout-everywhere>{{.T "settings.logout_everywhere"}}</button>
   </div>
   <div class="row">
+    <div class="row-main"><strong>{{.T "settings.deactivate"}}</strong><span class="muted">{{.T "settings.deactivate_warning"}}</span></div>
+    <button class="btn danger small" type="button" data-modal-open="m-deactivate">{{.T "settings.deactivate"}}</button>
+  </div>
+  <div class="row">
     <div class="row-main"><strong>{{.T "settings.delete"}}</strong><span class="muted">{{.T "settings.delete_warning"}}</span></div>
     <button class="btn danger small" type="button" data-modal-open="m-delete">{{.T "settings.delete"}}</button>
   </div>
@@ -184,8 +188,32 @@
     {{else}}
     <label>{{.T "settings.delete_type_username" .User.Username}}<input type="text" name="confirm" autocomplete="off" required></label>
     {{end}}
+    <div class="comment-toggles">
+      <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="del-hide" name="hide_comments" data-default="0" ><label for="del-hide" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="del-hide">{{.T "settings.hide_my_comments"}}</label></div>
+      <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="del-delete" name="delete_comments" data-default="1" checked><label for="del-delete" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="del-delete">{{.T "settings.delete_my_comments"}}</label></div>
+      <p class="muted">{{.T "settings.comments_hint_anon"}}</p>
+    </div>
     <p class="form-error" role="alert" hidden></p>
     <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn danger" type="submit">{{.T "settings.delete"}}</button></div>
+  </form>
+</dialog>
+
+<dialog class="modal" id="m-deactivate" aria-labelledby="m-deactivate-t">
+  <form class="stack" data-api="/api/account/deactivate" data-confirm="{{.T "settings.deactivate_confirm"}}">
+    <h2 id="m-deactivate-t">{{.T "settings.deactivate"}}</h2>
+    <p class="muted">{{.T "settings.deactivate_warning"}}</p>
+    {{if .User.HasPassword}}
+    <label>{{.T "auth.password"}}<input type="password" name="password" autocomplete="current-password" required></label>
+    {{else}}
+    <label>{{.T "settings.delete_type_username" .User.Username}}<input type="text" name="confirm" autocomplete="off" required></label>
+    {{end}}
+    <div class="comment-toggles">
+      <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="deact-hide" name="hide_comments" data-default="1" checked><label for="deact-hide" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="deact-hide">{{.T "settings.hide_my_comments"}}</label></div>
+      <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="deact-delete" name="delete_comments" data-default="0" ><label for="deact-delete" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="deact-delete">{{.T "settings.delete_my_comments"}}</label></div>
+      <p class="muted">{{.T "settings.comments_hint_keep"}}</p>
+    </div>
+    <p class="form-error" role="alert" hidden></p>
+    <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn danger" type="submit">{{.T "settings.deactivate"}}</button></div>
   </form>
 </dialog>
 
@@ -208,6 +236,12 @@
   <p class="muted">{{.T "profile.upload_hint"}}</p>
 </section>
 <section class="panel">
+  <form class="stack" data-api="/api/account/username" data-reload="1" data-success="{{.T "settings.username_changed"}}">
+    <label>{{.T "auth.username"}}<input type="text" name="username" value="{{.User.Username}}" minlength="3" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" required></label>
+    <p class="muted">{{.T "auth.username_hint"}}. {{.T "settings.username_rules"}}</p>
+    <p class="form-error" role="alert" hidden></p>
+    <div><button class="btn" type="submit">{{.T "settings.save"}}</button></div>
+  </form>
   <form class="stack" data-api="/api/profile" data-success="{{.T "settings.saved"}}">
     <label>{{.T "profile.display_name"}}<input type="text" name="display_name" maxlength="40" value="{{.User.Name}}"></label>
     <label>{{.T "profile.bio"}}<textarea name="bio" rows="4" maxlength="500">{{.User.Bio}}</textarea></label>

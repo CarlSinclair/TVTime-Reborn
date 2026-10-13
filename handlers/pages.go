@@ -69,7 +69,12 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/admin/users", a.apiAdminUserCreate)
 	mux.HandleFunc("POST /api/admin/users/{id}/update", a.apiAdminUserUpdate)
 	mux.HandleFunc("POST /api/admin/users/{id}/delete", a.apiAdminUserDelete)
+	mux.HandleFunc("POST /api/admin/users/{id}/deactivate", a.apiAdminDeactivate)
+	mux.HandleFunc("POST /api/admin/users/{id}/reset-password", a.apiAdminResetLink)
 	mux.HandleFunc("POST /api/admin/signups", a.apiAdminSignups)
+	mux.HandleFunc("POST /api/admin/config", a.apiAdminConfigSave)
+	mux.HandleFunc("POST /api/admin/config/test", a.apiAdminConfigTest)
+	mux.HandleFunc("POST /api/admin/restart", a.apiAdminRestart)
 	mux.HandleFunc("POST /api/admin/servers/block", a.apiAdminServer(false))
 	mux.HandleFunc("POST /api/admin/servers/forget", a.apiAdminServer(true))
 
@@ -124,6 +129,8 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/push/subscribe", a.apiPushSubscribe)
 	mux.HandleFunc("POST /api/push/unsubscribe", a.apiPushUnsubscribe)
 	mux.HandleFunc("POST /api/account/delete", a.apiDeleteAccount)
+	mux.HandleFunc("POST /api/account/deactivate", a.apiDeactivateAccount)
+	mux.HandleFunc("POST /api/account/username", a.apiChangeUsername)
 	mux.HandleFunc("GET /api/account/export", a.apiExport)
 
 	mux.HandleFunc("GET /api/search", a.apiSearch)
@@ -194,10 +201,14 @@ func (a *App) serviceWorker(w http.ResponseWriter, r *http.Request) {
 func (a *App) manifest(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/manifest+json")
 	m := map[string]any{
-		"name": a.Cfg.AppName, "short_name": a.Cfg.AppName, "start_url": "/", "display": "standalone",
+		"id": "/", "name": a.Cfg.AppName, "short_name": a.Cfg.AppName, "start_url": "/", "scope": "/", "display": "standalone",
+		"description": "Track the shows you watch, see what is next and talk about each episode.", "categories": []string{"entertainment"},
 		"background_color": "#0f1117", "theme_color": "#7c5cff",
 		"icons": []map[string]string{
-			{"src": "/static/img/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"},
+			{"src": "/static/img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+			{"src": "/static/img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+			{"src": "/static/img/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+			{"src": "/static/img/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"},
 		},
 	}
 	if err := json.NewEncoder(w).Encode(m); err != nil {
@@ -214,7 +225,7 @@ func (a *App) pageSimple(name, titleKey string) http.HandlerFunc {
 		data := map[string]any{}
 		if code := r.URL.Query().Get("error"); code != "" {
 			switch code {
-			case "telegram_failed", "telegram_unavailable", "banned", "rate_limited", "internal", "signups_closed":
+			case "telegram_failed", "telegram_unavailable", "deactivated", "rate_limited", "internal", "signups_closed":
 				data["ErrorKey"] = "err." + code
 			}
 		}
@@ -589,7 +600,7 @@ func (a *App) pageCalendar(w http.ResponseWriter, r *http.Request) {
 
 const privacyUpdated = "2026-10-13"
 
-var privacySections = []string{"data", "signin", "cookies", "third", "public", "use", "retention", "rights", "children", "changes", "contact"}
+var privacySections = []string{"data", "signin", "cookies", "third", "public", "admintools", "use", "retention", "rights", "children", "changes", "contact"}
 
 func (a *App) pagePrivacy(w http.ResponseWriter, r *http.Request) {
 	lang := a.langOf(w, r)

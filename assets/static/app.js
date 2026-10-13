@@ -1,6 +1,8 @@
 (() => {
   const csrfMeta = document.querySelector('meta[name="csrf"]');
-  const csrf = csrfMeta ? csrfMeta.content : "";
+  let csrf = csrfMeta ? csrfMeta.content : "";
+  const pageInits = [];
+  const prefetched = new Map();
   const lang = document.documentElement.lang || undefined;
   const loggedIn = document.body.dataset.user === "1";
   let strings = {};
@@ -40,6 +42,7 @@
 
   const api = async (path, body, method) => {
     let res;
+    if (method !== "GET") prefetched.clear();
     try {
       res = await fetch(path, {
         method: method || "POST",
@@ -301,6 +304,11 @@
     }, 2500);
   };
 
+  const commentToggleValues = (row) => ({
+    hide_comments: row.querySelector('[name="hide_comments"]').checked,
+    delete_comments: row.querySelector('[name="delete_comments"]').checked,
+  });
+
   document.addEventListener("click", async (event) => {
     const el = event.target.closest("button, a");
     if (!el) return;
@@ -410,29 +418,85 @@
       if (data) window.location.reload();
       return;
     }
+    if ("configTest" in d) {
+      const form = el.closest("form");
+      const body = formBody(form);
+      body.group = d.configTest;
+      const errBox = form.querySelector(".form-error");
+      errBox.hidden = true;
+      const data = await run(el, async () => {
+        try {
+          return await api("/api/admin/config/test", body);
+        } catch (err) {
+          errBox.textContent = err.message;
+          errBox.hidden = false;
+          throw err;
+        }
+      });
+      if (data) toast(t("config_test_ok") + " " + data.detail, "ok");
+      return;
+    }
+    if ("federation" in d) {
+      const data = await run(el, () => api("/api/admin/config", { group: "federation", federation: d.federation === "1" }));
+      if (data) window.location.reload();
+      return;
+    }
+    if ("restart" in d) {
+      if (!window.confirm(d.confirm)) return;
+      const data = await run(el, () => api("/api/admin/restart"));
+      if (data) {
+        toast(t("restarting"), "ok");
+        setTimeout(() => window.location.reload(), 4000);
+      }
+      return;
+    }
     if ("userEdit" in d) {
       const form = document.getElementById("user-edit-form");
       form.dataset.api = "/api/admin/users/" + d.userEdit + "/update";
-      form.elements.display.value = d.display;
-      form.elements.email.value = d.email;
-      form.elements.verified.checked = d.verified === "1";
+      form.dataset.userId = d.userEdit;
+      form.querySelector('[name="username"]').value = d.username;
+      form.querySelector('[name="display"]').value = d.display;
+      form.querySelector('[name="email"]').value = d.email;
+      form.querySelector('[name="verified"]').checked = d.verified === "1";
+      const pw = form.querySelector('[name="password"]');
+      pw.value = "";
+      pw.dispatchEvent(new Event("input"));
+      document.getElementById("user-edit-name").textContent = "@" + d.username;
+      form.querySelector("[data-user-reset]").hidden = !d.email;
+      const banBtn = form.querySelector("[data-user-ban]");
+      const deactBtn = form.querySelector("[data-user-deactivate]");
+      banBtn.dataset.state = d.banned;
+      banBtn.textContent = d.banned === "1" ? banBtn.dataset.off : banBtn.dataset.on;
+      deactBtn.dataset.state = d.deactivated;
+      deactBtn.textContent = d.deactivated === "1" ? deactBtn.dataset.off : deactBtn.dataset.on;
+      document.getElementById("user-edit-status").hidden = d.protected === "1";
+      form.querySelectorAll("[data-default]").forEach((box) => {
+        box.checked = box.dataset.default === "1";
+      });
       form.querySelector(".form-error").hidden = true;
       document.getElementById("m-user-edit").showModal();
       return;
     }
-    if ("userDelete" in d) {
+    if ("userReset" in d) {
+      const id = el.closest("form").dataset.userId;
+      const data = await run(el, () => api("/api/admin/users/" + id + "/reset-password"));
+      if (data) toast(t("admin_reset_sent"), "ok");
+      return;
+    }
+    if ("userBan" in d || "userDeactivate" in d) {
+      if (el.dataset.state !== "1" && !window.confirm(el.dataset.confirm)) return;
+      const id = el.closest("form").dataset.userId;
+      const on = el.dataset.state !== "1";
+      const toggles = commentToggleValues(el.closest(".danger-row"));
+      const call = "userBan" in d ? () => api("/api/admin/users/" + id + "/ban", Object.assign({ banned: on }, toggles)) : () => api("/api/admin/users/" + id + "/deactivate", Object.assign({ deactivated: on }, toggles));
+      const data = await run(el, call);
+      if (data) window.location.reload();
+      return;
+    }
+    if ("userDeleteModal" in d) {
       if (!window.confirm(d.confirm)) return;
-      const data = await run(el, () => api("/api/admin/users/" + d.userDelete + "/delete"));
-      if (data) window.location.reload();
-      return;
-    }
-    if ("adminUnban" in d) {
-      const data = await run(el, () => api("/api/admin/users/" + d.adminUnban + "/ban", { banned: false }));
-      if (data) window.location.reload();
-      return;
-    }
-    if ("signups" in d) {
-      const data = await run(el, () => api("/api/admin/signups", { closed: d.signups === "1" }));
+      const id = el.closest("form").dataset.userId;
+      const data = await run(el, () => api("/api/admin/users/" + id + "/delete", commentToggleValues(el.closest(".danger-row"))));
       if (data) window.location.reload();
       return;
     }
@@ -607,45 +671,47 @@
     }
   });
 
-  const timingBox = document.getElementById("timing-box");
-  if (timingBox) {
-    const preset = document.getElementById("timing-preset");
-    const custom = document.getElementById("timing-custom");
-    const value = document.getElementById("timing-value");
-    const unit = document.getElementById("timing-unit");
-    const sync = () => {
-      custom.hidden = preset.value !== "custom";
-    };
-    const minutes = parseInt(timingBox.dataset.offset, 10) || 0;
-    if (preset.value === "custom") {
-      const abs = Math.abs(minutes);
-      const u = abs % 1440 === 0 && abs !== 0 ? 1440 : abs % 60 === 0 && abs !== 0 ? 60 : 1;
-      unit.value = String(u);
-      value.value = String(minutes / u);
+  pageInits.push(() => {
+    const timingBox = document.getElementById("timing-box");
+    if (timingBox) {
+      const preset = document.getElementById("timing-preset");
+      const custom = document.getElementById("timing-custom");
+      const value = document.getElementById("timing-value");
+      const unit = document.getElementById("timing-unit");
+      const sync = () => {
+        custom.hidden = preset.value !== "custom";
+      };
+      const minutes = parseInt(timingBox.dataset.offset, 10) || 0;
+      if (preset.value === "custom") {
+        const abs = Math.abs(minutes);
+        const u = abs % 1440 === 0 && abs !== 0 ? 1440 : abs % 60 === 0 && abs !== 0 ? 60 : 1;
+        unit.value = String(u);
+        value.value = String(minutes / u);
+      }
+      preset.addEventListener("change", sync);
+      sync();
     }
-    preset.addEventListener("change", sync);
-    sync();
-  }
 
-  const twofaConfirm = document.getElementById("twofa-confirm");
-  if (twofaConfirm) {
-    twofaConfirm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const errBox = twofaConfirm.querySelector(".form-error");
-      errBox.hidden = true;
-      const submit = twofaConfirm.querySelector('[type="submit"]');
-      const data = await run(submit, async () => {
-        try {
-          return await api("/api/account/2fa/enable", formBody(twofaConfirm));
-        } catch (err) {
-          errBox.textContent = err.message;
-          errBox.hidden = false;
-          throw err;
-        }
+    const twofaConfirm = document.getElementById("twofa-confirm");
+    if (twofaConfirm) {
+      twofaConfirm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const errBox = twofaConfirm.querySelector(".form-error");
+        errBox.hidden = true;
+        const submit = twofaConfirm.querySelector('[type="submit"]');
+        const data = await run(submit, async () => {
+          try {
+            return await api("/api/account/2fa/enable", formBody(twofaConfirm));
+          } catch (err) {
+            errBox.textContent = err.message;
+            errBox.hidden = false;
+            throw err;
+          }
+        });
+        if (data) showRecovery(data.recovery_codes);
       });
-      if (data) showRecovery(data.recovery_codes);
-    });
-  }
+    }
+  });
 
   document.addEventListener("change", async (event) => {
     const el = event.target;
@@ -655,6 +721,15 @@
     } else if (el.id === "lang-select" || el.id === "settings-lang") {
       const data = await run(el, () => api("/api/account/locale", { locale: el.value }));
       if (data) window.location.reload();
+    } else if (el.matches('[name="hide_comments"], [name="delete_comments"]')) {
+      if (el.checked) {
+        const other = el.closest(".comment-toggles").querySelector(el.name === "hide_comments" ? '[name="delete_comments"]' : '[name="hide_comments"]');
+        other.checked = false;
+      }
+    } else if (el.id === "signups-switch") {
+      const data = await run(el, () => api("/api/admin/signups", { closed: !el.checked }));
+      if (data) toast(t("saved"), "ok");
+      else el.checked = !el.checked;
     } else if (el.id === "settings-tz") {
       const data = await run(el, () => api("/api/account/timezone", { timezone: el.value }));
       if (data) toast(t("saved"), "ok");
@@ -690,7 +765,7 @@
     }
   });
 
-  const importBox = document.getElementById("import-status");
+  let importBox = null;
   let importTimer = null;
 
   const renderImport = (job) => {
@@ -746,7 +821,11 @@
     if (renderImport(data.job)) importTimer = setTimeout(pollImport, 2000);
   };
 
-  if (importBox) pollImport();
+  pageInits.push(() => {
+    clearTimeout(importTimer);
+    importBox = document.getElementById("import-status");
+    if (importBox) pollImport();
+  });
 
   const dswitch = document.getElementById("dswitch");
   if (dswitch) {
@@ -861,7 +940,7 @@
     });
   };
 
-  document.querySelectorAll('input[type="password"]').forEach(setupPassword);
+  pageInits.push(() => document.querySelectorAll('input[type="password"]').forEach(setupPassword));
 
   const q = document.getElementById("q");
   const suggest = document.getElementById("suggest");
@@ -939,7 +1018,7 @@
       node.textContent = localTime(node.dataset.ts);
     });
   };
-  localizeTimes();
+  pageInits.push(() => localizeTimes());
 
   const iconButton = (iconId, cls, label, attr, value) => {
     const b = document.createElement("button");
@@ -1062,55 +1141,59 @@
     });
   }
 
-  if (new URLSearchParams(window.location.search).get("friends") === "1") openFriends();
+  pageInits.push(() => {
+    if (new URLSearchParams(window.location.search).get("friends") === "1") openFriends();
+  });
 
-  const homeTabs = document.querySelectorAll("[data-home-tab]");
-  if (homeTabs.length) {
-    const upcoming = document.getElementById("home-upcoming");
-    const feed = document.getElementById("home-feed");
-    const list = document.getElementById("feed-list");
-    const note = document.getElementById("feed-note");
-    const more = document.getElementById("feed-more");
-    let feedLoaded = false;
-    let cursor = "";
-    const loadFeed = async (before) => {
-      const data = await run(null, () => api("/api/feed" + (before ? "?before=" + encodeURIComponent(before) : ""), null, "GET"));
-      if (!data) return;
-      list.insertAdjacentHTML("beforeend", data.html);
-      localizeTimes(list);
-      if (!before) {
-        note.hidden = data.mode === "friends";
-        note.textContent = t(data.mode === "suggested" ? "feed_no_friends" : "feed_none");
+  pageInits.push(() => {
+    const homeTabs = document.querySelectorAll("[data-home-tab]");
+    if (homeTabs.length) {
+      const upcoming = document.getElementById("home-upcoming");
+      const feed = document.getElementById("home-feed");
+      const list = document.getElementById("feed-list");
+      const note = document.getElementById("feed-note");
+      const more = document.getElementById("feed-more");
+      let feedLoaded = false;
+      let cursor = "";
+      const loadFeed = async (before) => {
+        const data = await run(null, () => api("/api/feed" + (before ? "?before=" + encodeURIComponent(before) : ""), null, "GET"));
+        if (!data) return;
+        list.insertAdjacentHTML("beforeend", data.html);
+        localizeTimes(list);
+        if (!before) {
+          note.hidden = data.mode === "friends";
+          note.textContent = t(data.mode === "suggested" ? "feed_no_friends" : "feed_none");
+        }
+        cursor = data.next || "";
+        more.hidden = !cursor;
+      };
+      const show = (name) => {
+        homeTabs.forEach((b) => b.classList.toggle("active", b.dataset.homeTab === name));
+        upcoming.hidden = name !== "upcoming";
+        feed.hidden = name !== "feed";
+        if (name === "feed" && !feedLoaded) {
+          feedLoaded = true;
+          loadFeed("");
+        }
+        try {
+          localStorage.setItem("tt-home-tab", name);
+        } catch (err) {
+          console.warn("home tab not stored", err);
+        }
+      };
+      homeTabs.forEach((b) => b.addEventListener("click", () => show(b.dataset.homeTab)));
+      more.addEventListener("click", () => loadFeed(cursor));
+      let start = new URLSearchParams(window.location.search).get("tab");
+      if (!start) {
+        try {
+          start = localStorage.getItem("tt-home-tab");
+        } catch (err) {
+          start = null;
+        }
       }
-      cursor = data.next || "";
-      more.hidden = !cursor;
-    };
-    const show = (name) => {
-      homeTabs.forEach((b) => b.classList.toggle("active", b.dataset.homeTab === name));
-      upcoming.hidden = name !== "upcoming";
-      feed.hidden = name !== "feed";
-      if (name === "feed" && !feedLoaded) {
-        feedLoaded = true;
-        loadFeed("");
-      }
-      try {
-        localStorage.setItem("tt-home-tab", name);
-      } catch (err) {
-        console.warn("home tab not stored", err);
-      }
-    };
-    homeTabs.forEach((b) => b.addEventListener("click", () => show(b.dataset.homeTab)));
-    more.addEventListener("click", () => loadFeed(cursor));
-    let start = new URLSearchParams(window.location.search).get("tab");
-    if (!start) {
-      try {
-        start = localStorage.getItem("tt-home-tab");
-      } catch (err) {
-        start = null;
-      }
+      if (start === "feed") show("feed");
     }
-    if (start === "feed") show("feed");
-  }
+  });
 
   const bell = document.getElementById("bell");
   if (bell) {
@@ -1330,12 +1413,13 @@
 
     const renderComment = (c) => {
       const li = document.createElement("li");
-      li.className = "comment" + (c.parent_id ? " reply" : "") + (c.deleted ? " deleted" : "");
+      const gone = c.deleted || c.hidden;
+      li.className = "comment" + (c.parent_id ? " reply" : "") + (gone ? " deleted" : "");
       const head = document.createElement("div");
       head.className = "comment-head";
-      if (c.deleted) {
+      if (gone || c.user === "deleted") {
         const who = document.createElement("strong");
-        who.textContent = t("deleted_comment");
+        who.textContent = c.hidden ? t("hidden_comment") : gone ? t("deleted_comment") : t("anonymous");
         head.appendChild(who);
       } else {
         const who = document.createElement("a");
@@ -1349,14 +1433,14 @@
       time.dateTime = when.toISOString();
       time.textContent = when.toLocaleString(lang);
       head.appendChild(time);
-      if (c.edited && !c.deleted) {
+      if (c.edited && !gone) {
         const tag = document.createElement("span");
         tag.className = "tag";
         tag.textContent = t("edited");
         head.appendChild(tag);
       }
       li.appendChild(head);
-      if (c.deleted) return li;
+      if (gone) return li;
 
       const body = document.createElement("div");
       body.className = "comment-body";
@@ -1492,39 +1576,41 @@
     return telegramScript;
   };
 
-  document.querySelectorAll("[data-telegram-btn]").forEach((btn) => {
-    const label = btn.textContent;
-    btn.addEventListener("click", async () => {
-      btn.disabled = true;
-      try {
-        await loadTelegram();
-      } catch (err) {
-        btn.disabled = false;
-        toast(err.message, "error");
-        return;
-      }
-      btn.disabled = false;
-      let opened = false;
-      const mark = () => {
-        opened = true;
-      };
-      window.addEventListener("blur", mark, { once: true });
-      document.addEventListener("visibilitychange", mark, { once: true });
-      window.Telegram.Login.auth({ bot_id: btn.dataset.botId, request_access: "write" }, (data) => {
-        if (!data || !data.hash) {
-          btn.textContent = label;
-          toast(t("telegram_failed"), "error");
+  pageInits.push(() => {
+    document.querySelectorAll("[data-telegram-btn]").forEach((btn) => {
+      const label = btn.textContent;
+      btn.addEventListener("click", async () => {
+        btn.disabled = true;
+        try {
+          await loadTelegram();
+        } catch (err) {
+          btn.disabled = false;
+          toast(err.message, "error");
           return;
         }
-        const q = new URLSearchParams(data);
-        if (btn.dataset.action === "link") q.set("action", "link");
-        window.location.href = "/auth/telegram?" + q.toString();
+        btn.disabled = false;
+        let opened = false;
+        const mark = () => {
+          opened = true;
+        };
+        window.addEventListener("blur", mark, { once: true });
+        document.addEventListener("visibilitychange", mark, { once: true });
+        window.Telegram.Login.auth({ bot_id: btn.dataset.botId, request_access: "write" }, (data) => {
+          if (!data || !data.hash) {
+            btn.textContent = label;
+            toast(t("telegram_failed"), "error");
+            return;
+          }
+          const q = new URLSearchParams(data);
+          if (btn.dataset.action === "link") q.set("action", "link");
+          window.location.href = "/auth/telegram?" + q.toString();
+        });
+        setTimeout(() => {
+          window.removeEventListener("blur", mark);
+          document.removeEventListener("visibilitychange", mark);
+          if (!opened) btn.textContent = t("telegram_open");
+        }, 1500);
       });
-      setTimeout(() => {
-        window.removeEventListener("blur", mark);
-        document.removeEventListener("visibilitychange", mark);
-        if (!opened) btn.textContent = t("telegram_open");
-      }, 1500);
     });
   });
 
@@ -1533,70 +1619,231 @@
 
   const passkeyError = (err) => (err && err.name === "NotAllowedError" ? t("passkey_cancelled") : err.message);
 
-  const passkeyLogin = document.getElementById("passkey-login");
-  if (passkeyLogin) {
-    if (!passkeysSupported()) {
-      passkeyLogin.disabled = true;
-      passkeyLogin.textContent = t("passkey_unsupported");
-    }
-    passkeyLogin.addEventListener("click", async () => {
-      passkeyLogin.disabled = true;
-      try {
-        const begin = await api("/api/auth/passkey/begin");
-        const cred = await navigator.credentials.get({ publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(begin.options.publicKey) });
-        const done = await api("/api/auth/passkey/finish", cred.toJSON());
-        go(done);
-      } catch (err) {
-        passkeyLogin.disabled = false;
-        toast(passkeyError(err), "error");
+  pageInits.push(() => {
+    const passkeyLogin = document.getElementById("passkey-login");
+    if (passkeyLogin) {
+      if (!passkeysSupported()) {
+        passkeyLogin.disabled = true;
+        passkeyLogin.textContent = t("passkey_unsupported");
       }
-    });
-  }
-
-  const passkeyAdd = document.getElementById("passkey-add");
-  if (passkeyAdd) {
-    if (!passkeysSupported()) {
-      passkeyAdd.disabled = true;
-      passkeyAdd.textContent = t("passkey_unsupported");
-    }
-    passkeyAdd.addEventListener("click", async () => {
-      passkeyAdd.disabled = true;
-      const name = (document.getElementById("passkey-name") || {}).value || "";
-      try {
-        const begin = await api("/api/account/passkey/begin");
-        const cred = await navigator.credentials.create({ publicKey: PublicKeyCredential.parseCreationOptionsFromJSON(begin.options.publicKey) });
-        await api("/api/account/passkey/finish?name=" + encodeURIComponent(name.trim()), cred.toJSON());
-        toast(t("passkey_added"), "ok");
-        setTimeout(() => window.location.reload(), 700);
-      } catch (err) {
-        passkeyAdd.disabled = false;
-        toast(passkeyError(err), "error");
-      }
-    });
-  }
-
-  const commentsRoot = document.getElementById("comments");
-  if (commentsRoot) initComments(commentsRoot);
-
-  const pushBox = document.getElementById("channels-box");
-  if (pushBox && pushSupported()) {
-    navigator.serviceWorker.ready
-      .then((reg) => reg.pushManager.getSubscription())
-      .then((sub) => {
-        const on = document.getElementById("push-enable");
-        const off = document.getElementById("push-disable");
-        if (sub) {
-          on.hidden = true;
-          off.hidden = false;
+      passkeyLogin.addEventListener("click", async () => {
+        passkeyLogin.disabled = true;
+        try {
+          const begin = await api("/api/auth/passkey/begin");
+          const cred = await navigator.credentials.get({ publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(begin.options.publicKey) });
+          const done = await api("/api/auth/passkey/finish", cred.toJSON());
+          go(done);
+        } catch (err) {
+          passkeyLogin.disabled = false;
+          toast(passkeyError(err), "error");
         }
-      })
-      .catch((err) => console.warn("push state check failed", err));
-  } else if (pushBox) {
-    const on = document.getElementById("push-enable");
-    if (on) on.disabled = true;
-    const sub = document.getElementById("push-count");
-    if (sub) sub.textContent = t("push_unsupported");
-  }
+      });
+    }
+
+    const passkeyAdd = document.getElementById("passkey-add");
+    if (passkeyAdd) {
+      if (!passkeysSupported()) {
+        passkeyAdd.disabled = true;
+        passkeyAdd.textContent = t("passkey_unsupported");
+      }
+      passkeyAdd.addEventListener("click", async () => {
+        passkeyAdd.disabled = true;
+        const name = (document.getElementById("passkey-name") || {}).value || "";
+        try {
+          const begin = await api("/api/account/passkey/begin");
+          const cred = await navigator.credentials.create({ publicKey: PublicKeyCredential.parseCreationOptionsFromJSON(begin.options.publicKey) });
+          await api("/api/account/passkey/finish?name=" + encodeURIComponent(name.trim()), cred.toJSON());
+          toast(t("passkey_added"), "ok");
+          setTimeout(() => window.location.reload(), 700);
+        } catch (err) {
+          passkeyAdd.disabled = false;
+          toast(passkeyError(err), "error");
+        }
+      });
+    }
+
+    const commentsRoot = document.getElementById("comments");
+    if (commentsRoot) initComments(commentsRoot);
+
+    const pushBox = document.getElementById("channels-box");
+    if (pushBox && pushSupported()) {
+      navigator.serviceWorker.ready
+        .then((reg) => reg.pushManager.getSubscription())
+        .then((sub) => {
+          const on = document.getElementById("push-enable");
+          const off = document.getElementById("push-disable");
+          if (sub) {
+            on.hidden = true;
+            off.hidden = false;
+          }
+        })
+        .catch((err) => console.warn("push state check failed", err));
+    } else if (pushBox) {
+      const on = document.getElementById("push-enable");
+      if (on) on.disabled = true;
+      const sub = document.getElementById("push-count");
+      if (sub) sub.textContent = t("push_unsupported");
+    }
+  });
+
+  const runPageInits = () => pageInits.forEach((fn) => fn());
+
+  const plainPaths = ["/api/", "/static/", "/media/", "/img/", "/tvdbimg/", "/auth/", "/login", "/register", "/forgot", "/t/", "/federation", "/.well-known", "/sw.js", "/manifest", "/healthz"];
+  const softPath = (path) => !plainPaths.some((p) => path === p || path.startsWith(p.endsWith("/") ? p : p + "/") || (p === "/login" && path.startsWith("/login")));
+
+  const softLink = (a, event) => {
+    if (event && (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return false;
+    if (!a || !a.href || (a.target && a.target !== "_self") || a.hasAttribute("download") || "noAjax" in a.dataset) return false;
+    const url = new URL(a.href, window.location.href);
+    if (url.origin !== window.location.origin || !softPath(url.pathname)) return false;
+    if (url.pathname === window.location.pathname && url.search === window.location.search && url.hash) return false;
+    return true;
+  };
+
+  let navProgress = null;
+  const progress = (on) => {
+    if (!navProgress) {
+      navProgress = document.createElement("div");
+      navProgress.className = "nav-progress";
+      navProgress.setAttribute("aria-hidden", "true");
+      document.body.appendChild(navProgress);
+    }
+    navProgress.classList.toggle("on", on);
+  };
+
+  const fetchPage = (url, signal) =>
+    fetch(url, { credentials: "same-origin", headers: { "X-Requested-With": "tvt-nav" }, signal }).then(async (res) => ({
+      url: res.url,
+      type: res.headers.get("Content-Type") || "",
+      html: await res.text(),
+    }));
+
+  const prefetch = (url) => {
+    const hit = prefetched.get(url);
+    if (hit && Date.now() - hit.at < 8000) return;
+    if (prefetched.size > 20) prefetched.clear();
+    const entry = { at: Date.now(), page: fetchPage(url) };
+    entry.page.catch(() => prefetched.delete(url));
+    prefetched.set(url, entry);
+  };
+
+  let navCtl = null;
+  let here = window.location.pathname + window.location.search;
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+
+  const syncChrome = (doc) => {
+    const fresh = doc.querySelector('meta[name="csrf"]');
+    if (fresh && fresh.content) {
+      csrf = fresh.content;
+      if (csrfMeta) csrfMeta.content = fresh.content;
+    }
+    ["nav.nav", "nav.bottomnav"].forEach((sel) => {
+      const next = doc.querySelector(sel);
+      const now = document.querySelector(sel);
+      if (!next || !now) return;
+      now.querySelectorAll("a").forEach((a) => {
+        const match = Array.from(next.querySelectorAll("a")).find((b) => b.getAttribute("href") === a.getAttribute("href"));
+        if (match && match.hasAttribute("aria-current")) a.setAttribute("aria-current", "page");
+        else a.removeAttribute("aria-current");
+      });
+    });
+    const field = document.getElementById("q");
+    const nextField = doc.getElementById("q");
+    if (field && nextField) field.value = nextField.value;
+  };
+
+  const navigate = async (url, opts) => {
+    const push = !opts || opts.push !== false;
+    if (navCtl) navCtl.abort();
+    navCtl = new AbortController();
+    const ctl = navCtl;
+    progress(true);
+    let page;
+    try {
+      const hit = prefetched.get(url);
+      page = hit && Date.now() - hit.at < 8000 ? await hit.page : await fetchPage(url, ctl.signal);
+      if (ctl.signal.aborted) return;
+    } catch (err) {
+      if (err.name === "AbortError") return;
+      console.warn("soft navigation failed, loading normally", url, err);
+      window.location.href = url;
+      return;
+    }
+    const final = new URL(page.url, window.location.href);
+    const doc = page.type.includes("text/html") ? new DOMParser().parseFromString(page.html, "text/html") : null;
+    const incoming = doc && doc.querySelector("main.container");
+    const currentVersion = document.querySelector('meta[name="app-version"]');
+    const nextVersion = doc && doc.querySelector('meta[name="app-version"]');
+    const stale = currentVersion && nextVersion && currentVersion.content !== nextVersion.content;
+    if (!incoming || stale || !softPath(final.pathname)) {
+      window.location.href = url;
+      return;
+    }
+    try {
+      history.replaceState(Object.assign({}, history.state, { y: window.scrollY }), "");
+    } catch (err) {
+      console.warn("scroll position not saved", err);
+    }
+    if (push) history.pushState({}, "", final.pathname + final.search + final.hash);
+    here = final.pathname + final.search;
+    document.querySelectorAll("dialog[open]").forEach((dlg) => dlg.close());
+    clearInterval(tgPoll);
+    document.title = doc.title;
+    const main = document.querySelector("main.container");
+    main.replaceChildren(...Array.from(incoming.childNodes).map((n) => document.adoptNode(n)));
+    syncChrome(doc);
+    runPageInits();
+    progress(false);
+    const y = opts && typeof opts.y === "number" ? opts.y : 0;
+    if (final.hash && document.getElementById(decodeURIComponent(final.hash.slice(1)))) {
+      document.getElementById(decodeURIComponent(final.hash.slice(1))).scrollIntoView();
+    } else {
+      window.scrollTo(0, y);
+    }
+    main.setAttribute("tabindex", "-1");
+    main.focus({ preventScroll: true });
+  };
+
+  document.addEventListener("click", (event) => {
+    const a = event.target.closest("a[href]");
+    if (!softLink(a, event)) return;
+    event.preventDefault();
+    navigate(a.href).catch((err) => {
+      console.error("navigation", err);
+      window.location.href = a.href;
+    });
+  });
+
+  let hoverTimer = null;
+  const warm = (event) => {
+    const a = event.target.closest && event.target.closest("a[href]");
+    if (!softLink(a, null)) return;
+    clearTimeout(hoverTimer);
+    hoverTimer = setTimeout(() => prefetch(a.href), event.type === "touchstart" ? 0 : 80);
+  };
+  document.addEventListener("mouseover", warm);
+  document.addEventListener("touchstart", warm, { passive: true });
+
+  document.addEventListener("submit", (event) => {
+    const form = event.target;
+    if (event.defaultPrevented || !(form instanceof HTMLFormElement) || form.hasAttribute("data-api") || (form.method || "get").toLowerCase() !== "get" || "noAjax" in form.dataset) return;
+    const url = new URL(form.getAttribute("action") || window.location.pathname, window.location.href);
+    if (url.origin !== window.location.origin || !softPath(url.pathname)) return;
+    const params = new URLSearchParams(new FormData(form));
+    url.search = params.toString();
+    event.preventDefault();
+    navigate(url.toString()).catch(() => {
+      window.location.href = url.toString();
+    });
+  });
+
+  window.addEventListener("popstate", (event) => {
+    const now = window.location.pathname + window.location.search;
+    if (now === here) return;
+    navigate(window.location.href, { push: false, y: event.state && event.state.y }).catch(() => window.location.reload());
+  });
+
+  runPageInits();
 
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js").catch((err) => console.warn("service worker registration failed", err));

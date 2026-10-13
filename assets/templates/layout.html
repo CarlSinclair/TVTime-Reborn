@@ -5,10 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{if .Title}}{{.Title}} - {{end}}{{.AppName}}</title>
 <meta name="csrf" content="{{.CSRF}}">
+<meta name="app-version" content="{{assetV}}">
 <meta name="theme-color" content="#7c5cff">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/static/img/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/static/img/icon.svg">
+<link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
 <script src="/static/theme.js?v={{assetV}}"></script>
 <link rel="stylesheet" href="/static/app.css?v={{assetV}}">
 </head>

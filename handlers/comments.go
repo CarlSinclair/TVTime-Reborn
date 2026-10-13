@@ -36,6 +36,7 @@ type commentJSON struct {
 	CreatedAt string          `json:"created_at"`
 	Edited    bool            `json:"edited"`
 	Deleted   bool            `json:"deleted"`
+	Hidden    bool            `json:"hidden"`
 	Mine      bool            `json:"mine"`
 	Reported  map[string]bool `json:"reported"`
 }
@@ -71,7 +72,7 @@ func (a *App) canSeeProfileThread(viewer *store.User, ownerID int64) (*store.Use
 	if err != nil {
 		return nil, errNotFound
 	}
-	if owner.IsBanned && (viewer == nil || !viewer.IsAdmin) {
+	if owner.IsDeactivated && (viewer == nil || !viewer.IsAdmin) {
 		return nil, errNotFound
 	}
 	if viewer != nil && viewer.ID == owner.ID {
@@ -168,7 +169,7 @@ func (a *App) apiListComments() http.HandlerFunc {
 			}
 			out = append(out, commentJSON{
 				ID: c.ID, User: c.Username, Name: name, Body: c.Body, Spoiler: c.IsSpoiler(), ParentID: c.ParentID,
-				CreatedAt: c.CreatedAt, Edited: c.EditedAt != "", Deleted: c.Deleted, Mine: uid != 0 && c.UserID == uid, Reported: c.MyReports,
+				CreatedAt: c.CreatedAt, Edited: c.EditedAt != "", Deleted: c.Deleted, Hidden: c.Hidden, Mine: uid != 0 && c.UserID == uid, Reported: c.MyReports,
 			})
 		}
 		a.okJSON(w, map[string]any{"comments": out, "total": total, "viewer_watched": watched, "more": more, "next_offset": offset + commentPage})

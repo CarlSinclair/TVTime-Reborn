@@ -13,6 +13,7 @@ CREATE TABLE comments_new (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   edited_at TEXT,
   deleted_at TEXT,
+  hidden_at TEXT,
   CHECK ((episode_id IS NULL) <> (profile_id IS NULL))
 );
 INSERT INTO comments_new (id, episode_id, user_id, parent_id, body, author_spoiler, spoiler_reports, not_spoiler_reports, created_at, edited_at, deleted_at)

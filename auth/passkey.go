@@ -161,8 +161,8 @@ func (s *Service) FinishPasskeyLogin(r *http.Request) (*store.User, error) {
 		logger.Error("PASSKEY clone warning uid=%d from=%s", found.u.ID, ClientCountry(r))
 		return nil, ErrPasskeyFailed
 	}
-	if found.u.IsBanned {
-		return nil, ErrBanned
+	if found.u.IsDeactivated && !found.u.SelfDeactivated {
+		return nil, ErrDeactivated
 	}
 	raw, err := json.Marshal(cred)
 	if err != nil {

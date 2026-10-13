@@ -14,6 +14,7 @@ import (
 	"sync"
 	"testing"
 
+	"tvt/appconfig"
 	"tvt/assets"
 	"tvt/auth"
 	"tvt/config"
@@ -244,6 +245,7 @@ func newEnv(t *testing.T) *env {
 	if err != nil {
 		t.Fatalf("app: %v", err)
 	}
+	app.Settings = appconfig.New(st, cfg.JWTSecret, cfg)
 	fed, err := federation.New(st, nt, srv.Listener.Addr().String(), cfg.JWTSecret, true, nil, nil)
 	if err != nil {
 		t.Fatalf("federation: %v", err)

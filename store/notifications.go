@@ -232,7 +232,7 @@ func (s *Store) PendingEpisodeAlerts(from, to string) ([]EpisodeAlert, error) {
 	  FROM follows f
 	  JOIN shows sh ON sh.id = f.show_id
 	  JOIN episodes e ON e.show_id = sh.id
-	  JOIN users u ON u.id = f.user_id AND u.is_banned = 0
+	  JOIN users u ON u.id = f.user_id AND u.is_deactivated = 0
 	  WHERE f.status = 'watching' AND e.season_number > 0 AND e.air_date >= ? AND e.air_date <= ?
 	    AND NOT EXISTS (SELECT 1 FROM episode_notified n WHERE n.user_id = f.user_id AND n.episode_id = e.id)
 	    AND NOT EXISTS (SELECT 1 FROM watched w WHERE w.user_id = f.user_id AND w.episode_id = e.id)
@@ -262,3 +262,10 @@ func (s *Store) MarkEpisodeNotified(userID, episodeID int64) error {
 func (s *Store) KVGet(key string) string { return s.SyncStateGet(key) }
 
 func (s *Store) KVSet(key, value string) error { return s.SyncStateSet(key, value) }
+
+func (s *Store) KVDelete(key string) error {
+	if _, err := s.DB.Exec(`DELETE FROM sync_state WHERE key = ?`, key); err != nil {
+		return fmt.Errorf("delete sync_state %s: %w", key, err)
+	}
+	return nil
+}

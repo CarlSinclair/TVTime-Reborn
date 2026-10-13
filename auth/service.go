@@ -34,7 +34,7 @@ const (
 
 var (
 	ErrBadCredentials = errors.New("invalid credentials")
-	ErrBanned         = errors.New("account banned")
+	ErrDeactivated    = errors.New("account deactivated")
 	ErrBadToken       = errors.New("invalid or expired token")
 	ErrPasswordRules  = errors.New("password does not meet requirements")
 )
@@ -116,8 +116,8 @@ func (s *Service) Login(email, password string) (*store.User, error) {
 	if u.PasswordHash == "" || bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)) != nil {
 		return nil, ErrBadCredentials
 	}
-	if u.IsBanned {
-		return nil, ErrBanned
+	if u.IsDeactivated && !u.SelfDeactivated {
+		return nil, ErrDeactivated
 	}
 	return u, nil
 }
@@ -206,6 +206,17 @@ func (s *Service) sessionAlive(uid int64, sid string) bool {
 }
 
 func (s *Service) StartSession(w http.ResponseWriter, userID int64) error {
+	if u, err := s.Store.UserByID(userID); err != nil {
+		return fmt.Errorf("session user uid=%d: %w", userID, err)
+	} else if u.IsDeactivated {
+		if !u.SelfDeactivated {
+			return ErrDeactivated
+		}
+		if err := s.Store.Reactivate(userID); err != nil {
+			return fmt.Errorf("reactivate uid=%d: %w", userID, err)
+		}
+		logger.Info("AUTH account reactivated by signing in uid=%d", userID)
+	}
 	sid, err := randomToken()
 	if err != nil {
 		return fmt.Errorf("session id uid=%d: %w", userID, err)
@@ -339,8 +350,8 @@ func (s *Service) loadUser(uid int64) (*store.User, error) {
 		}
 		return nil, fmt.Errorf("load user uid=%d: %w", uid, err)
 	}
-	if u.IsBanned {
-		return nil, ErrBanned
+	if u.IsDeactivated {
+		return nil, ErrDeactivated
 	}
 	return u, nil
 }

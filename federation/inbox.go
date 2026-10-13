@@ -113,6 +113,8 @@ func (s *Service) dispatch(host string, m message) error {
 		return s.onActivity(host, m)
 	case "retract":
 		return s.onRetract(host, m)
+	case "rename":
+		return s.onRename(host, m)
 	}
 	return errBadMessage
 }
@@ -128,7 +130,7 @@ func (s *Service) localTarget(name string) (*store.User, error) {
 		}
 		return nil, err
 	}
-	if u.IsRemote() || u.IsBanned {
+	if u.IsRemote() || u.IsDeactivated {
 		return nil, nil
 	}
 	return u, nil
@@ -143,7 +145,7 @@ func (s *Service) onFriend(host string, m message) error {
 	if err != nil {
 		return err
 	}
-	if shadow.IsBanned {
+	if shadow.IsDeactivated {
 		return nil
 	}
 	if blocked, err := s.Store.BlockedEither(shadow.ID, target.ID); err != nil || blocked {
@@ -205,7 +207,7 @@ func (s *Service) onActivity(host string, m message) error {
 		}
 		return err
 	}
-	if !shadow.IsRemote() || shadow.IsBanned {
+	if !shadow.IsRemote() || shadow.IsDeactivated {
 		return nil
 	}
 	if ok, err := s.Store.HasLocalFriendOf(shadow.ID); err != nil || !ok {
@@ -221,6 +223,31 @@ func (s *Service) onActivity(host string, m message) error {
 		Stars: clampInt(m.Event.Stars, 0, 5), Excerpt: clip(m.Event.Excerpt, 400), At: at,
 	}
 	return s.Store.SaveRemoteEvent(shadow.ID, ev)
+}
+
+// onRename follows a person on another server who changed their username.
+func (s *Service) onRename(host string, m message) error {
+	if !nameRe.MatchString(m.NewName) {
+		return errBadMessage
+	}
+	shadow, err := s.Store.UserByUsername(store.RemoteHandle(m.From.Username, host))
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return nil
+		}
+		return err
+	}
+	if !shadow.IsRemote() {
+		return errBadMessage
+	}
+	if err := s.Store.RenameRemoteUser(shadow.ID, store.RemoteHandle(m.NewName, host)); err != nil {
+		if errors.Is(err, store.ErrUsernameTaken) {
+			logger.Warn("FEDERATION %s renamed %s to %s but that handle is already known here", host, m.From.Username, m.NewName)
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *Service) onRetract(host string, m message) error {

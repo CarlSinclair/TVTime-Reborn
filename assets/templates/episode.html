@@ -33,6 +33,8 @@
         <button class="btn" type="submit">{{$.T "comments.post"}}</button>
       </div>
     </form>
+    {{else if $.User.IsBanned}}
+    <p class="notice">{{$.T "err.read_only"}}</p>
     {{else}}
     <p class="notice">{{$.T "comments.verify_needed"}}</p>
     {{end}}

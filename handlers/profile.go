@@ -26,6 +26,12 @@ func (a *App) pageProfile(w http.ResponseWriter, r *http.Request) {
 	p, err := a.Store.UserByUsername(r.PathValue("username"))
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
+			if cur, ok, rerr := a.Store.UsernameRedirect(r.PathValue("username")); rerr != nil {
+				logger.Error("PAGE profile redirect username=%q: %v", r.PathValue("username"), rerr)
+			} else if ok {
+				http.Redirect(w, r, "/u/"+cur, http.StatusMovedPermanently)
+				return
+			}
 			a.errorPage(w, r, http.StatusNotFound, "err.not_found")
 		} else {
 			logger.Error("PAGE profile username=%q: %v", r.PathValue("username"), err)
@@ -33,7 +39,7 @@ func (a *App) pageProfile(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	if p.IsBanned && (viewer == nil || !viewer.IsAdmin) {
+	if p.IsDeactivated && (viewer == nil || !viewer.IsAdmin) {
 		a.errorPage(w, r, http.StatusNotFound, "err.not_found")
 		return
 	}

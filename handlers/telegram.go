@@ -90,8 +90,8 @@ func (a *App) pageTelegramLogin(w http.ResponseWriter, r *http.Request) {
 		fail("internal")
 		return
 	}
-	if u.IsBanned {
-		fail("banned")
+	if u.IsDeactivated && !u.SelfDeactivated {
+		fail("deactivated")
 		return
 	}
 	if data.Username != u.TelegramUsername {

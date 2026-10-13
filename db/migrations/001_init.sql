@@ -8,10 +8,12 @@ CREATE TABLE users (
   banner_path TEXT NOT NULL DEFAULT '',
   password_hash TEXT NOT NULL DEFAULT '',
   email_verified INTEGER NOT NULL DEFAULT 0,
+  pending_email TEXT NOT NULL DEFAULT '',
   locale TEXT NOT NULL DEFAULT 'en',
   timezone TEXT NOT NULL DEFAULT 'UTC',
   profile_public INTEGER NOT NULL DEFAULT 1,
   is_admin INTEGER NOT NULL DEFAULT 0,
+  is_deactivated INTEGER NOT NULL DEFAULT 0,
   is_banned INTEGER NOT NULL DEFAULT 0,
   totp_secret_enc TEXT NOT NULL DEFAULT '',
   totp_enabled INTEGER NOT NULL DEFAULT 0,
@@ -101,12 +103,14 @@ CREATE TABLE refresh_tokens (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   token_hash TEXT NOT NULL UNIQUE,
+  sid TEXT NOT NULL DEFAULT '',
   expires_at TEXT NOT NULL,
   superseded_at TEXT,
   superseded_by TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX idx_refresh_user ON refresh_tokens(user_id);
+CREATE INDEX idx_refresh_sid ON refresh_tokens(sid);
 
 CREATE TABLE email_tokens (
   token_hash TEXT PRIMARY KEY,

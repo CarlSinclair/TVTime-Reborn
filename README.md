@@ -14,7 +14,8 @@ Licensed under the [GNU AGPL v3](LICENSE); see [NOTICE](NOTICE) for attribution,
 - Import from TV Time: upload the GDPR export zip in Settings. Shows are matched through TMDB's TVDB lookup, watched episodes keep their original dates, followed, favorite and saved-for-later shows come across, and nothing you already track is changed. Movies are not imported. The zip is read in memory and not kept.
 - Friends: add people by exact username (no fuzzy search), a private friends list, and a home feed of what friends watch, rate and comment on. Spoiler comments never appear, and an episode is only named to a friend who has seen it. Blocked people see nothing. Friendships are addressed by handle so they can later span servers. People can post updates on their own profile; replies are ordinary comments, with the same spoiler flags, reports and moderation.
 - Federation: add friends on other TVT servers by handle (`name@server`). Servers know each other by a signing key learned from `/.well-known/tvt` on first contact and pinned afterwards; every message is signed. Friend requests and the activity you share with friends travel to that friend's server and are kept for 14 days; spoiler comments never leave. Turn it off with `TVT_FEDERATION=0`, block servers with `TVT_FEDERATION_BLOCK`.
-- Admin dashboard: overview (counts, system status, recent errors), user management (search, add, edit, ban, delete, open or close sign-ups), servers (add, block, forget) and the report queue, with badges for what is waiting.
+- Admin dashboard: overview (counts, system status, recent emails and whether they sent, recent errors), config (mail, storage, API keys, Telegram, site identity, with test buttons), user management (search, add, edit, ban, delete, open or close sign-ups), servers (add, block, forget) and the report queue, with badges for what is waiting.
+- Usernames can be changed (once every 30 days); the old name redirects and stays reserved for 14 days, and friends on other servers are told. People can deactivate their own account, and whenever an account is banned, deactivated or deleted, its comments can be hidden, deleted or kept, with replies never lost.
 - Tracking: follow, status, favorites, mark episode / season / everything-up-to-here, ratings, up-next, calendar.
 - Episode comments with a spoiler model built around one-click reports, plus abuse reports, blocking and an admin queue.
 - Accounts: first factor by password, passkey, magic link or Telegram; optional TOTP two-step verification (with recovery codes) as a second factor on top of any of them.
@@ -46,7 +47,7 @@ Passkeys need a real domain (or `localhost`) because browsers bind them to it; s
 
 ## Configuration
 
-All configuration is environment variables; see `tvt.env.example`. Nothing secret is stored in the repository.
+Configuration starts as environment variables; see `tvt.env.example`. Nothing secret is stored in the repository. An admin can override mail (SMTP), object storage (R2/S3), metadata keys, the Telegram bot, site identity and the federation switch from Admin > Config and Admin > Servers, with test buttons for mail, storage and Telegram. Saved values win over the environment, secrets are stored encrypted, and changes apply on the next restart (the page offers a restart button; the service manager must start the process again, as the sample systemd unit does with `Restart=on-failure`). `TVT_JWT_SECRET`, the database path, data directory, listen address, base URL, client-IP header and admin email stay environment-only.
 
 ## Spoiler rules
 

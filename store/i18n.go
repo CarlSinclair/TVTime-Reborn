@@ -160,7 +160,7 @@ func (s *Store) LocalizationsDue(staleBefore string, limit int) ([]LangDue, erro
 	  JOIN users u ON u.id = f.user_id
 	  JOIN shows sh ON sh.id = f.show_id
 	  LEFT JOIN show_i18n i ON i.show_id = sh.id AND i.lang = u.locale
-	  WHERE u.locale <> 'en' AND sh.tmdb_id > 0 AND u.is_banned = 0 AND (i.synced_at IS NULL OR i.synced_at < ?)
+	  WHERE u.locale <> 'en' AND sh.tmdb_id > 0 AND u.is_deactivated = 0 AND (i.synced_at IS NULL OR i.synced_at < ?)
 	  ORDER BY sh.id LIMIT ?`, staleBefore, limit)
 	if err != nil {
 		return nil, fmt.Errorf("list localizations due: %w", err)

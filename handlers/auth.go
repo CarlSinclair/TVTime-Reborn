@@ -124,8 +124,8 @@ func (a *App) apiLogin(w http.ResponseWriter, r *http.Request) {
 		logger.Warn("AUTH login failed from=%s", auth.ClientCountry(r))
 		a.fail(w, r, apiErr{http.StatusUnauthorized, "err.bad_credentials"})
 		return
-	case errors.Is(err, auth.ErrBanned):
-		a.fail(w, r, apiErr{http.StatusForbidden, "err.banned"})
+	case errors.Is(err, auth.ErrDeactivated):
+		a.fail(w, r, apiErr{http.StatusForbidden, "err.deactivated"})
 		return
 	case err != nil:
 		a.fail(w, r, err)
@@ -182,7 +182,7 @@ func (a *App) emailLinkRequest(w http.ResponseWriter, r *http.Request, purpose s
 		a.okJSON(w, nil)
 		return
 	}
-	if u.IsBanned {
+	if u.IsDeactivated && !u.SelfDeactivated {
 		a.okJSON(w, nil)
 		return
 	}
@@ -265,8 +265,8 @@ func (a *App) apiMagicConsume(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	if u.IsBanned {
-		a.fail(w, r, apiErr{http.StatusForbidden, "err.banned"})
+	if u.IsDeactivated && !u.SelfDeactivated {
+		a.fail(w, r, apiErr{http.StatusForbidden, "err.deactivated"})
 		return
 	}
 	if !u.EmailVerified {
@@ -454,8 +454,16 @@ func (a *App) apiDeleteAccount(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	var in struct{ Password, Confirm string }
+	var in struct {
+		Password, Confirm string
+		commentToggles
+	}
 	if err := decode(r, &in); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	mode, err := in.mode()
+	if err != nil {
 		a.fail(w, r, err)
 		return
 	}
@@ -468,7 +476,7 @@ func (a *App) apiDeleteAccount(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, apiErr{http.StatusBadRequest, "err.confirm_username"})
 		return
 	}
-	if err := a.deleteAccount(r.Context(), u); err != nil {
+	if err := a.deleteAccount(r.Context(), u, mode); err != nil {
 		a.fail(w, r, err)
 		return
 	}
@@ -476,10 +484,59 @@ func (a *App) apiDeleteAccount(w http.ResponseWriter, r *http.Request) {
 	a.okJSON(w, map[string]any{"redirect": "/"})
 }
 
-// deleteAccount removes an account and everything it owns. Remote friends are
+// apiDeactivateAccount lets people step away: their profile and comments are
+// hidden (or the comments deleted, as they choose) and they are signed out.
+// Signing in again reactivates the account.
+func (a *App) apiDeactivateAccount(w http.ResponseWriter, r *http.Request) {
+	u, err := a.needUser(r)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	var in struct {
+		Password, Confirm string
+		commentToggles
+	}
+	if err := decode(r, &in); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	mode, err := in.mode()
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	if u.HasPassword() {
+		if !a.Auth.CheckPassword(u, in.Password) {
+			a.fail(w, r, apiErr{http.StatusUnauthorized, "err.bad_credentials"})
+			return
+		}
+	} else if !strings.EqualFold(strings.TrimSpace(in.Confirm), u.Username) {
+		a.fail(w, r, apiErr{http.StatusBadRequest, "err.confirm_username"})
+		return
+	}
+	if err := a.applyCommentMode(u.ID, mode); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	if err := a.Store.DeactivateSelf(u.ID); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	a.Auth.ClearCookies(w)
+	logger.Info("ACCOUNT deactivated by its owner uid=%d comments=%s", u.ID, mode)
+	a.okJSON(w, map[string]any{"redirect": "/"})
+}
+
+// deleteAccount removes an account and everything it owns. Its comments are
+// first hidden, erased or kept as the mode says and then moved to the anonymous
+// deleted account, so nobody's replies are ever lost with it. Remote friends are
 // told the friendship ended; a failure to remove uploaded images is logged but
 // does not undo the deletion.
-func (a *App) deleteAccount(ctx context.Context, u *store.User) error {
+func (a *App) deleteAccount(ctx context.Context, u *store.User, mode string) error {
+	if err := a.Store.TransferUserComments(u.ID, mode); err != nil {
+		return err
+	}
 	if a.Fed != nil {
 		if friends, err := a.Store.RemoteFriends(u.ID); err != nil {
 			logger.Error("ACCOUNT delete: remote friends uid=%d: %v", u.ID, err)
@@ -538,4 +595,54 @@ func (a *App) promoteIfAdmin(uid int64) {
 		return
 	}
 	logger.Info("AUTH admin granted uid=%d", uid)
+}
+
+var errUsernameCooldown = apiErr{http.StatusTooManyRequests, "err.username_cooldown"}
+
+// changeUsername validates and applies a new username for someone, telling
+// their remote friends' servers. enforceGap is the self-service rate limit.
+func (a *App) changeUsername(u *store.User, name string, enforceGap bool) error {
+	name = strings.TrimSpace(name)
+	if !store.ValidUsername(name) {
+		return apiErr{http.StatusBadRequest, "err.invalid_username"}
+	}
+	if store.ReservedUsername(name) && !strings.EqualFold(name, u.Username) {
+		return apiErr{http.StatusConflict, "err.username_taken"}
+	}
+	old, err := a.Store.RenameUser(u.ID, name, enforceGap)
+	switch {
+	case errors.Is(err, store.ErrUsernameTaken):
+		return apiErr{http.StatusConflict, "err.username_taken"}
+	case errors.Is(err, store.ErrUsernameCooldown):
+		return errUsernameCooldown
+	case err != nil:
+		return err
+	}
+	if old != name {
+		logger.Info("ACCOUNT username changed uid=%d from=%s to=%s", u.ID, old, name)
+		if a.Fed != nil {
+			renamed := *u
+			renamed.Username = name
+			a.Fed.SendRename(&renamed, old)
+		}
+	}
+	return nil
+}
+
+func (a *App) apiChangeUsername(w http.ResponseWriter, r *http.Request) {
+	u, err := a.needUser(r)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	var in struct{ Username string }
+	if err := decode(r, &in); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	if err := a.changeUsername(u, in.Username, true); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	a.okJSON(w, map[string]any{"username": strings.TrimSpace(in.Username)})
 }

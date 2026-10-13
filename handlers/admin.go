@@ -58,44 +58,118 @@ func (a *App) apiAdminResolve(w http.ResponseWriter, r *http.Request) {
 	a.okJSON(w, nil)
 }
 
+// apiAdminBan makes an account read-only (or lifts that): it can still sign in
+// and read but cannot comment or post.
 func (a *App) apiAdminBan(w http.ResponseWriter, r *http.Request) {
-	admin, err := a.needAdmin(r)
-	if err != nil {
-		a.fail(w, r, err)
+	admin, target, ok := a.adminTarget(w, r)
+	if !ok {
 		return
 	}
-	uid, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil {
-		a.fail(w, r, errNotFound)
-		return
+	var in struct {
+		Banned bool
+		commentToggles
 	}
-	var in struct{ Banned bool }
 	if err := decode(r, &in); err != nil {
 		a.fail(w, r, err)
 		return
 	}
-	if uid == admin.ID {
-		a.fail(w, r, errBadRequest)
+	mode, err := in.mode()
+	if err != nil {
+		a.fail(w, r, err)
 		return
 	}
-	if _, err := a.Store.UserByID(uid); err != nil {
-		if errors.Is(err, store.ErrNotFound) {
-			a.fail(w, r, errNotFound)
-		} else {
-			a.fail(w, r, err)
-		}
+	if target.ID == admin.ID {
+		a.fail(w, r, errAdminSelf)
 		return
 	}
-	if err := a.Store.SetBanned(uid, in.Banned); err != nil {
+	if target.IsAdmin {
+		a.fail(w, r, errAdminTarget)
+		return
+	}
+	set := a.Store.SetBanned
+	if target.IsRemote() {
+		// a person on another server has no account here to make read-only, so
+		// the only way to stop their content is to hide them.
+		set = a.Store.SetDeactivated
+	}
+	if err := set(target.ID, in.Banned); err != nil {
 		a.fail(w, r, err)
 		return
 	}
 	if in.Banned {
-		if err := a.Store.ResolveUserReports(uid); err != nil {
-			logger.Error("ADMIN resolve user reports after ban target=%d: %v", uid, err)
+		if err := a.Store.ResolveUserReports(target.ID); err != nil {
+			logger.Error("ADMIN resolve user reports after ban target=%d: %v", target.ID, err)
+		}
+		if err := a.applyCommentMode(target.ID, mode); err != nil {
+			a.fail(w, r, err)
+			return
 		}
 	}
-	logger.Info("ADMIN uid=%d set banned=%v target=%d", admin.ID, in.Banned, uid)
+	logger.Info("ADMIN uid=%d set banned=%v comments=%s target=%d", admin.ID, in.Banned, mode, target.ID)
+	a.okJSON(w, nil)
+}
+
+// apiAdminDeactivate suspends an account (it cannot sign in and disappears
+// from everyone else's view) or reactivates it.
+func (a *App) apiAdminDeactivate(w http.ResponseWriter, r *http.Request) {
+	admin, target, ok := a.adminLocal(w, r)
+	if !ok {
+		return
+	}
+	var in struct {
+		Deactivated bool
+		commentToggles
+	}
+	if err := decode(r, &in); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	mode, err := in.mode()
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	if target.ID == admin.ID {
+		a.fail(w, r, errAdminSelf)
+		return
+	}
+	if target.IsAdmin {
+		a.fail(w, r, errAdminTarget)
+		return
+	}
+	if err := a.Store.SetDeactivated(target.ID, in.Deactivated); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	if in.Deactivated {
+		if err := a.applyCommentMode(target.ID, mode); err != nil {
+			a.fail(w, r, err)
+			return
+		}
+	}
+	logger.Info("ADMIN uid=%d set deactivated=%v comments=%s target=%d", admin.ID, in.Deactivated, mode, target.ID)
+	a.okJSON(w, nil)
+}
+
+// apiAdminResetLink emails the person a password reset link.
+func (a *App) apiAdminResetLink(w http.ResponseWriter, r *http.Request) {
+	admin, target, ok := a.adminLocal(w, r)
+	if !ok {
+		return
+	}
+	if target.Email == "" {
+		a.fail(w, r, apiErr{http.StatusBadRequest, "err.no_email"})
+		return
+	}
+	if err := a.allow(a.mailLimit, "admin-reset:"+itoa(target.ID)); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	if err := a.sendLink(target, auth.PurposeReset); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	logger.Info("ADMIN uid=%d sent a password reset link to uid=%d", admin.ID, target.ID)
 	a.okJSON(w, nil)
 }
 
@@ -163,6 +237,39 @@ const (
 	adminPer       = 25
 	signupsFlagKey = "signups_closed"
 )
+
+// commentToggles are the two switches offered whenever an account is banned,
+// deactivated or deleted, by an admin or by the person. They exclude each other;
+// with neither on, the comments are kept.
+type commentToggles struct {
+	HideComments   bool `json:"hide_comments"`
+	DeleteComments bool `json:"delete_comments"`
+}
+
+// mode is "hide", "delete" or "keep".
+func (c commentToggles) mode() (string, error) {
+	switch {
+	case c.HideComments && c.DeleteComments:
+		return "", errBadRequest
+	case c.HideComments:
+		return "hide", nil
+	case c.DeleteComments:
+		return "delete", nil
+	}
+	return "keep", nil
+}
+
+// applyCommentMode hides or erases a person's comments in place, for an account
+// that stays (banned or deactivated).
+func (a *App) applyCommentMode(uid int64, mode string) error {
+	switch mode {
+	case "hide":
+		return a.Store.HideUserComments(uid)
+	case "delete":
+		return a.Store.EraseUserComments(uid)
+	}
+	return nil
+}
 
 var errAdminSelf = apiErr{http.StatusBadRequest, "err.admin_self"}
 var errAdminTarget = apiErr{http.StatusBadRequest, "err.admin_target"}
@@ -236,6 +343,27 @@ func (a *App) pageAdmin(w http.ResponseWriter, r *http.Request) {
 			logger.Error("PAGE admin servers: could not clear the new-server badge: %v", err)
 		}
 		data["Peers"], data["FederationOn"] = peers, a.Fed != nil
+		if a.Settings != nil {
+			want, err := a.Settings.Overlay(nil)
+			if err != nil {
+				fail("servers settings", err)
+				return
+			}
+			data["FedWant"], data["HasSettings"] = want.Federation, true
+			if err := a.pendingData(data); err != nil {
+				fail("servers settings", err)
+				return
+			}
+		}
+	case "config":
+		if a.Settings == nil {
+			a.errorPage(w, r, http.StatusNotFound, "err.not_found")
+			return
+		}
+		if err := a.configPageData(data); err != nil {
+			fail("config", err)
+			return
+		}
 	case "reports":
 		reports, err := a.Store.OpenAbuseReports(100)
 		if err != nil {
@@ -262,7 +390,12 @@ func (a *App) pageAdmin(w http.ResponseWriter, r *http.Request) {
 			}
 			errs = append(errs, adminError{At: e.At.UTC().Format(time.RFC3339), Level: e.Level, Msg: e.Msg})
 		}
-		data["Stats"], data["Errors"] = st, errs
+		mails, err := a.Store.RecentMail(25)
+		if err != nil {
+			fail("mail log", err)
+			return
+		}
+		data["Stats"], data["Errors"], data["Mails"] = st, errs, mails
 		data["Version"] = logger.Version
 		data["MailOn"], data["TMDBOn"], data["FederationOn"] = a.Mail != nil && a.Mail.Configured(), a.TMDB != nil && a.TMDB.Configured(), a.Fed != nil
 	}
@@ -333,11 +466,18 @@ func (a *App) adminTarget(w http.ResponseWriter, r *http.Request) (admin, target
 		}
 		return nil, nil, false
 	}
-	if target.IsRemote() {
+	return admin, target, true
+}
+
+// adminLocal is adminTarget for the account screens, which only cover people
+// who have an account on this server.
+func (a *App) adminLocal(w http.ResponseWriter, r *http.Request) (admin, target *store.User, ok bool) {
+	admin, target, ok = a.adminTarget(w, r)
+	if ok && target.IsRemote() {
 		a.fail(w, r, errNotFound)
 		return nil, nil, false
 	}
-	return admin, target, true
+	return admin, target, ok
 }
 
 func cleanDisplayName(s string) (string, bool) {
@@ -414,17 +554,30 @@ func (a *App) apiAdminUserCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) apiAdminUserUpdate(w http.ResponseWriter, r *http.Request) {
-	admin, target, ok := a.adminTarget(w, r)
+	admin, target, ok := a.adminLocal(w, r)
 	if !ok {
 		return
 	}
 	var in struct {
-		Email, Display string
-		Verified       bool
+		Email, Display, Password, Username string
+		Verified                           bool
 	}
 	if err := decode(r, &in); err != nil {
 		a.fail(w, r, err)
 		return
+	}
+	var newHash string
+	if in.Password != "" {
+		h, err := auth.HashPassword(in.Password)
+		if err != nil {
+			if errors.Is(err, auth.ErrPasswordRules) {
+				a.fail(w, r, apiErr{http.StatusBadRequest, "err.weak_password"})
+			} else {
+				a.fail(w, r, err)
+			}
+			return
+		}
+		newHash = h
 	}
 	email := ""
 	if strings.TrimSpace(in.Email) != "" {
@@ -440,6 +593,12 @@ func (a *App) apiAdminUserUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	verified := in.Verified && email != ""
+	if in.Username != "" && in.Username != target.Username {
+		if err := a.changeUsername(target, in.Username, false); err != nil {
+			a.fail(w, r, err)
+			return
+		}
+	}
 	if err := a.Store.AdminUpdateUser(target.ID, display, email, verified); err != nil {
 		if errors.Is(err, store.ErrEmailTaken) {
 			a.fail(w, r, apiErr{http.StatusConflict, "err.email_taken"})
@@ -448,12 +607,24 @@ func (a *App) apiAdminUserUpdate(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	if newHash != "" {
+		if err := a.Store.SetPassword(target.ID, newHash); err != nil {
+			a.fail(w, r, err)
+			return
+		}
+		if err := a.Auth.RevokeAll(target.ID); err != nil {
+			logger.Error("ADMIN uid=%d set a password for uid=%d but could not end its sessions: %v", admin.ID, target.ID, err)
+			a.fail(w, r, err)
+			return
+		}
+		logger.Info("ADMIN uid=%d replaced the password of uid=%d and ended its sessions", admin.ID, target.ID)
+	}
 	logger.Info("ADMIN uid=%d updated user uid=%d email_changed=%v verified=%v", admin.ID, target.ID, !strings.EqualFold(target.Email, email), verified)
 	a.okJSON(w, nil)
 }
 
 func (a *App) apiAdminUserDelete(w http.ResponseWriter, r *http.Request) {
-	admin, target, ok := a.adminTarget(w, r)
+	admin, target, ok := a.adminLocal(w, r)
 	if !ok {
 		return
 	}
@@ -465,11 +636,21 @@ func (a *App) apiAdminUserDelete(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, errAdminTarget)
 		return
 	}
-	if err := a.deleteAccount(r.Context(), target); err != nil {
+	var in commentToggles
+	if err := decode(r, &in); err != nil {
 		a.fail(w, r, err)
 		return
 	}
-	logger.Info("ADMIN uid=%d deleted user uid=%d username=%s", admin.ID, target.ID, target.Username)
+	mode, err := in.mode()
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	if err := a.deleteAccount(r.Context(), target, mode); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	logger.Info("ADMIN uid=%d deleted user uid=%d username=%s comments=%s", admin.ID, target.ID, target.Username, mode)
 	a.okJSON(w, nil)
 }
 

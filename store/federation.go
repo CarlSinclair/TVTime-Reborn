@@ -65,7 +65,7 @@ type RemoteFriend struct {
 func (s *Store) RemoteFriends(userID int64) ([]RemoteFriend, error) {
 	rows, err := s.DB.Query(`SELECT u.id, u.username, u.remote_host FROM friend_requests f
 	  JOIN users u ON u.id = CASE WHEN f.requester_id = ? THEN f.addressee_id ELSE f.requester_id END
-	  WHERE f.status = 'accepted' AND (f.requester_id = ? OR f.addressee_id = ?) AND u.remote_host <> '' AND u.is_banned = 0`, userID, userID, userID)
+	  WHERE f.status = 'accepted' AND (f.requester_id = ? OR f.addressee_id = ?) AND u.remote_host <> '' AND u.is_deactivated = 0`, userID, userID, userID)
 	if err != nil {
 		return nil, fmt.Errorf("remote friends uid=%d: %w", userID, err)
 	}

@@ -52,6 +52,7 @@ type Comment struct {
 	CreatedAt         string
 	EditedAt          string
 	Deleted           bool
+	Hidden            bool
 	MyReports         map[string]bool
 }
 
@@ -70,7 +71,7 @@ func (s *Store) AddComment(userID int64, t Target, parentID int64, body string, 
 	if parentID != 0 {
 		var pt int64
 		var pp sql.NullInt64
-		err := s.DB.QueryRow(`SELECT COALESCE(`+t.col()+`,0), parent_id FROM comments WHERE id = ? AND deleted_at IS NULL`, parentID).Scan(&pt, &pp)
+		err := s.DB.QueryRow(`SELECT COALESCE(`+t.col()+`,0), parent_id FROM comments WHERE id = ? AND deleted_at IS NULL AND hidden_at IS NULL`, parentID).Scan(&pt, &pp)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return 0, ErrNotFound
@@ -105,15 +106,15 @@ func (s *Store) AddComment(userID int64, t Target, parentID int64, body string, 
 }
 
 const commentSelect = `SELECT c.id, COALESCE(c.episode_id,0), COALESCE(c.profile_id,0), c.user_id, u.username, u.display_name, COALESCE(c.parent_id,0), c.body,
-	    c.author_spoiler, c.spoiler_reports, c.not_spoiler_reports, c.created_at, COALESCE(c.edited_at,''), c.deleted_at IS NOT NULL
+	    c.author_spoiler, c.spoiler_reports, c.not_spoiler_reports, c.created_at, COALESCE(c.edited_at,''), c.deleted_at IS NOT NULL, c.hidden_at IS NOT NULL
 	  FROM comments c JOIN users u ON u.id = c.user_id `
 
 func scanComment(row interface{ Scan(...any) error }) (Comment, error) {
 	var c Comment
 	var ep, prof int64
-	var as, del int
+	var as, del, hid int
 	if err := row.Scan(&c.ID, &ep, &prof, &c.UserID, &c.Username, &c.DisplayName, &c.ParentID, &c.Body, &as, &c.SpoilerReports, &c.NotSpoilerReports,
-		&c.CreatedAt, &c.EditedAt, &del); err != nil {
+		&c.CreatedAt, &c.EditedAt, &del, &hid); err != nil {
 		return c, err
 	}
 	if prof != 0 {
@@ -123,7 +124,8 @@ func scanComment(row interface{ Scan(...any) error }) (Comment, error) {
 	}
 	c.AuthorSpoiler = as == 1
 	c.Deleted = del == 1
-	if c.Deleted {
+	c.Hidden = hid == 1 && !c.Deleted
+	if c.Deleted || c.Hidden {
 		c.Body = ""
 	}
 	return c, nil
@@ -135,7 +137,7 @@ const notBlocked = `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id =
 // each thread's replies. More reports whether another page exists.
 func (s *Store) Comments(t Target, viewerID int64, limit, offset int) (list []Comment, more bool, err error) {
 	rows, err := s.DB.Query(commentSelect+`WHERE c.`+t.col()+` = ? AND c.parent_id IS NULL `+notBlocked+`
-	    AND (c.deleted_at IS NULL OR EXISTS (SELECT 1 FROM comments r WHERE r.parent_id = c.id AND r.deleted_at IS NULL))
+	    AND ((c.deleted_at IS NULL AND c.hidden_at IS NULL) OR EXISTS (SELECT 1 FROM comments r WHERE r.parent_id = c.id AND r.deleted_at IS NULL AND r.hidden_at IS NULL))
 	  ORDER BY c.created_at DESC, c.id DESC LIMIT ? OFFSET ?`, t.ID, viewerID, viewerID, limit+1, offset)
 	if err != nil {
 		return nil, false, fmt.Errorf("list comments %s=%d: %w", t.Kind, t.ID, err)
@@ -167,7 +169,7 @@ func (s *Store) Comments(t Target, viewerID int64, limit, offset int) (list []Co
 		marks = append(marks, "?")
 	}
 	args := append(ids, viewerID, viewerID)
-	rrows, err := s.DB.Query(commentSelect+`WHERE c.parent_id IN (`+strings.Join(marks, ",")+`) AND c.deleted_at IS NULL `+notBlocked+` ORDER BY c.created_at ASC, c.id ASC`, args...)
+	rrows, err := s.DB.Query(commentSelect+`WHERE c.parent_id IN (`+strings.Join(marks, ",")+`) AND c.deleted_at IS NULL AND c.hidden_at IS NULL `+notBlocked+` ORDER BY c.created_at ASC, c.id ASC`, args...)
 	if err != nil {
 		return nil, false, fmt.Errorf("list replies %s=%d: %w", t.Kind, t.ID, err)
 	}
@@ -219,7 +221,7 @@ func (s *Store) Comments(t Target, viewerID int64, limit, offset int) (list []Co
 
 func (s *Store) CountComments(t Target) (int, error) {
 	var n int
-	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM comments WHERE `+t.col()+` = ? AND deleted_at IS NULL`, t.ID).Scan(&n); err != nil {
+	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM comments WHERE `+t.col()+` = ? AND deleted_at IS NULL AND hidden_at IS NULL`, t.ID).Scan(&n); err != nil {
 		return 0, fmt.Errorf("count comments %s=%d: %w", t.Kind, t.ID, err)
 	}
 	return n, nil
@@ -241,7 +243,7 @@ func (s *Store) EditComment(userID, id int64, body string, spoiler bool) error {
 	if spoiler {
 		sp = 1
 	}
-	res, err := s.DB.Exec(`UPDATE comments SET body = ?, author_spoiler = ?, edited_at = ? WHERE id = ? AND user_id = ? AND deleted_at IS NULL`, body, sp, Now(), id, userID)
+	res, err := s.DB.Exec(`UPDATE comments SET body = ?, author_spoiler = ?, edited_at = ? WHERE id = ? AND user_id = ? AND deleted_at IS NULL AND hidden_at IS NULL`, body, sp, Now(), id, userID)
 	if err != nil {
 		return fmt.Errorf("edit comment id=%d uid=%d: %w", id, userID, err)
 	}
@@ -395,7 +397,7 @@ type AbuseReport struct {
 func (s *Store) OpenAbuseReports(limit int) ([]AbuseReport, error) {
 	rows, err := s.DB.Query(`SELECT c.id, COALESCE(c.episode_id,0), COALESCE(c.profile_id,0), COALESCE((SELECT username FROM users WHERE id = c.profile_id),''), c.body, u.username, u.id, COUNT(*), COALESCE(GROUP_CONCAT(NULLIF(r.reason,''), ' | '),''), MAX(r.created_at)
 	  FROM comment_reports r JOIN comments c ON c.id = r.comment_id JOIN users u ON u.id = c.user_id
-	  WHERE r.kind = 'abuse' AND r.resolved_at IS NULL AND c.deleted_at IS NULL
+	  WHERE r.kind = 'abuse' AND r.resolved_at IS NULL AND c.deleted_at IS NULL AND c.hidden_at IS NULL
 	  GROUP BY c.id ORDER BY COUNT(*) DESC, MAX(r.created_at) DESC LIMIT ?`, limit)
 	if err != nil {
 		return nil, fmt.Errorf("open abuse reports: %w", err)
@@ -432,4 +434,75 @@ func (s *Store) BlockedEither(a, b int64) (bool, error) {
 		return false, fmt.Errorf("blocked-either check a=%d b=%d: %w", a, b, err)
 	}
 	return n > 0, nil
+}
+
+// HideUserComments hides everything a person has written without losing it:
+// the comments show as removed until RestoreComments brings them back.
+func (s *Store) HideUserComments(userID int64) error {
+	if _, err := s.DB.Exec(`UPDATE comments SET hidden_at = ? WHERE user_id = ? AND deleted_at IS NULL AND hidden_at IS NULL`, Now(), userID); err != nil {
+		return fmt.Errorf("hide comments uid=%d: %w", userID, err)
+	}
+	return nil
+}
+
+// RestoreComments undoes HideUserComments once the person is neither banned nor
+// deactivated any more.
+func (s *Store) RestoreComments(userID int64) error {
+	if _, err := s.DB.Exec(`UPDATE comments SET hidden_at = NULL WHERE user_id = ? AND hidden_at IS NOT NULL
+	  AND EXISTS (SELECT 1 FROM users WHERE id = ? AND is_banned = 0 AND is_deactivated = 0)`, userID, userID); err != nil {
+		return fmt.Errorf("restore comments uid=%d: %w", userID, err)
+	}
+	return nil
+}
+
+// EraseUserComments deletes the text of everything a person has written. The
+// comments stay as "Deleted comment" so replies under them keep their place.
+func (s *Store) EraseUserComments(userID int64) error {
+	if _, err := s.DB.Exec(`UPDATE comments SET deleted_at = ?, body = '' WHERE user_id = ? AND deleted_at IS NULL`, Now(), userID); err != nil {
+		return fmt.Errorf("erase comments uid=%d: %w", userID, err)
+	}
+	return nil
+}
+
+// tombstoneUser is the account that deleted people's erased comments are moved
+// to, so they can outlive the account without naming anyone.
+func (s *Store) tombstoneUser() (int64, error) {
+	var id int64
+	err := s.DB.QueryRow(`SELECT id FROM users WHERE username = 'deleted' AND remote_host = ''`).Scan(&id)
+	if err == nil {
+		return id, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return 0, fmt.Errorf("find tombstone user: %w", err)
+	}
+	res, err := s.DB.Exec(`INSERT INTO users (username, display_name, is_deactivated, created_at) VALUES ('deleted', 'Anonymous', 1, ?)`, Now())
+	if err != nil {
+		return 0, fmt.Errorf("create tombstone user: %w", err)
+	}
+	return res.LastInsertId()
+}
+
+// TransferUserComments moves everything a person has written to the tombstone
+// account, ready for their own account to be deleted without taking anyone's
+// replies with it. mode says what happens to the comments themselves first:
+// "delete" erases the text, "hide" hides them, anything else keeps them.
+func (s *Store) TransferUserComments(userID int64, mode string) error {
+	switch mode {
+	case "delete":
+		if err := s.EraseUserComments(userID); err != nil {
+			return err
+		}
+	case "hide":
+		if err := s.HideUserComments(userID); err != nil {
+			return err
+		}
+	}
+	tomb, err := s.tombstoneUser()
+	if err != nil {
+		return err
+	}
+	if _, err := s.DB.Exec(`UPDATE comments SET user_id = ? WHERE user_id = ? AND profile_id IS NOT ?`, tomb, userID, userID); err != nil {
+		return fmt.Errorf("move comments of uid=%d to the deleted account: %w", userID, err)
+	}
+	return nil
 }

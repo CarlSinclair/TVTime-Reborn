@@ -75,8 +75,8 @@ func (a *App) apiMFAVerify(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	if u.IsBanned {
-		a.fail(w, r, apiErr{http.StatusForbidden, "err.banned"})
+	if u.IsDeactivated && !u.SelfDeactivated {
+		a.fail(w, r, apiErr{http.StatusForbidden, "err.deactivated"})
 		return
 	}
 	if err := a.Auth.VerifySecondFactor(u, in.Code); err != nil {

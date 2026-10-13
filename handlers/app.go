@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"tvt/appconfig"
 	"tvt/assets"
 	"tvt/auth"
 	"tvt/config"
@@ -45,6 +46,10 @@ type App struct {
 
 	Importer *importer.Runner
 	Fed      *federation.Service
+	// Settings holds the options an admin may change from the web UI; Restart,
+	// when set, stops the process cleanly with a non-zero status.
+	Settings *appconfig.Manager
+	Restart  func()
 
 	tmpl     map[string]*template.Template
 	mfaLimit *auth.Limiter
@@ -64,6 +69,11 @@ func New(cfg *config.Config, st *store.Store, a *auth.Service, sy *syncer.Syncer
 	bundle, err := i18n.Load(assets.FS, "locales", cfg.DefaultLang)
 	if err != nil {
 		return nil, err
+	}
+	ml.Record = func(to, subject string, err error) {
+		if lerr := st.LogMail(to, subject, err); lerr != nil {
+			logger.Error("MAIL log subject=%q: %v", subject, lerr)
+		}
 	}
 	app := &App{
 		Cfg: cfg, Store: st, Auth: a, Sync: sy, TMDB: tm, Mail: ml, I18n: bundle, Notif: nt, Bot: bot, Media: md,
@@ -311,6 +321,7 @@ var (
 	errInternal      = apiErr{http.StatusInternalServerError, "err.internal"}
 	errTMDBMissing   = apiErr{http.StatusServiceUnavailable, "err.metadata_not_configured"}
 	errSignupsClosed = apiErr{http.StatusForbidden, "err.signups_closed"}
+	errReadOnly      = apiErr{http.StatusForbidden, "err.read_only"}
 )
 
 // fail logs the real cause server-side and returns only an i18n message to the
@@ -416,8 +427,8 @@ func (a *App) middleware(next http.Handler) http.Handler {
 			switch {
 			case err == nil:
 				ctx = auth.WithUser(ctx, u)
-			case errors.Is(err, auth.ErrBadToken), errors.Is(err, auth.ErrBanned):
-				if errors.Is(err, auth.ErrBanned) {
+			case errors.Is(err, auth.ErrBadToken), errors.Is(err, auth.ErrDeactivated):
+				if errors.Is(err, auth.ErrDeactivated) {
 					a.Auth.ClearCookies(sw)
 				}
 			default:
@@ -478,6 +489,9 @@ func (a *App) needVerified(r *http.Request) (*store.User, error) {
 	u, err := a.needUser(r)
 	if err != nil {
 		return nil, err
+	}
+	if u.IsBanned {
+		return nil, errReadOnly
 	}
 	if !u.CanComment() {
 		return nil, errNeedVerify

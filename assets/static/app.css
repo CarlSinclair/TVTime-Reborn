@@ -380,3 +380,14 @@ code { background: var(--panel-2); padding: 2px 6px; border-radius: 4px; word-br
 .log-list code { overflow-wrap: anywhere; white-space: pre-wrap; }
 .log-list time { color: var(--muted); }
 .tab .badge.inline { vertical-align: middle; }
+.data-table.wide { max-width: none; font-size: .85rem; }
+.data-table td.start { text-align: start; color: var(--text); white-space: normal; overflow-wrap: anywhere; }
+.nav-progress { position: fixed; inset: 0 0 auto 0; height: 3px; background: var(--accent); transform: scaleX(0); transform-origin: left; opacity: 0; z-index: 100; pointer-events: none; transition: opacity .2s ease; }
+.nav-progress.on { opacity: 1; transform: scaleX(.85); transition: transform 8s cubic-bezier(.1, .6, .2, 1), opacity .1s ease; }
+main.container:focus { outline: none; }
+.danger-zone { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px; }
+.danger-zone h3 { margin: 0 0 6px; font-size: .95rem; }
+.danger-zone p { margin: 0 0 8px; }
+a.icon-btn:hover { text-decoration: none; border-color: var(--accent); }
+.comment-toggles { display: flex; flex-direction: column; gap: 8px; margin: 4px 0; }
+.comment-toggles p { margin: 0; }

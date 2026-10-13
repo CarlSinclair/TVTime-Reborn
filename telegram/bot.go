@@ -306,3 +306,35 @@ func ParseCommand(text string) (cmd, arg string) {
 	}
 	return strings.ToLower(cmd), arg
 }
+
+// Check asks Telegram who the token belongs to, so an admin can test the
+// settings before relying on them. It returns the bot's username.
+func (b *Bot) Check(ctx context.Context) (string, error) {
+	if b == nil || b.Token == "" {
+		return "", ErrNotConfigured
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, b.API+"/bot"+b.Token+"/getMe", nil)
+	if err != nil {
+		return "", fmt.Errorf("telegram getMe request: %w", err)
+	}
+	resp, err := b.http.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("telegram getMe: %w", scrub(err, b.Token))
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	var out struct {
+		OK          bool   `json:"ok"`
+		Description string `json:"description"`
+		Result      struct {
+			Username string `json:"username"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return "", fmt.Errorf("telegram getMe: bad response status %d", resp.StatusCode)
+	}
+	if !out.OK {
+		return "", fmt.Errorf("telegram getMe: %s", out.Description)
+	}
+	return out.Result.Username, nil
+}
