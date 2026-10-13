@@ -421,3 +421,10 @@ details.fold > summary .count { font-size: .8rem; font-weight: 700; color: var(-
 .topbar .actions { margin-block: 0; }
 .chip:has(.count) { justify-content: space-between; }
 .topbar { padding-top: 6px; }
+@media (max-width: 720px) {
+  body[data-user="1"] .brand { display: none; }
+  body[data-user="1"] .topbar { flex-wrap: nowrap; gap: 0 8px; padding-bottom: 4px; }
+  body[data-user="1"] .search { order: 0; flex: 1 1 0; min-width: 0; max-width: none; }
+  body[data-user="1"] .actions { gap: 4px; margin-inline-start: 0; flex-shrink: 0; }
+  .search input::placeholder { font-size: .85rem; }
+}
