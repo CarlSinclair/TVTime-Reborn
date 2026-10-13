@@ -420,3 +420,4 @@ details.fold > summary .count { font-size: .8rem; font-weight: 700; color: var(-
 .chip .count { margin-inline-start: 4px; min-width: 1.9em; line-height: 1.7; }
 .topbar .actions { margin-block: 0; }
 .chip:has(.count) { justify-content: space-between; }
+.topbar { padding-top: 6px; }
