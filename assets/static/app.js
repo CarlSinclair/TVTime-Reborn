@@ -149,6 +149,7 @@
         throw err;
       }
     });
+    document.dispatchEvent(new CustomEvent("tvt:form-done", { detail: form }));
     if (!data) return;
     const parentDialog = form.closest("dialog");
     if (parentDialog) parentDialog.close();
@@ -1039,6 +1040,9 @@
     });
   };
   pageInits.push(() => localizeTimes());
+  pageInits.push(() => {
+    if (window.tvtCaptcha) window.tvtCaptcha.bindAll();
+  });
 
   const iconButton = (iconId, cls, label, attr, value) => {
     const b = document.createElement("button");

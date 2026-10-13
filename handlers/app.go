@@ -52,6 +52,7 @@ type App struct {
 	logo         logoState
 	pageCache    pageCache
 	contactLimit *auth.Limiter
+	supportLimit *auth.Limiter
 	Restart      func()
 
 	tmpl     map[string]*template.Template
@@ -90,6 +91,7 @@ func New(cfg *config.Config, st *store.Store, a *auth.Service, sy *syncer.Syncer
 		pageLimit:    auth.NewLimiter(600, time.Minute),
 		writeLimit:   auth.NewLimiter(120, time.Minute),
 		contactLimit: auth.NewLimiter(3, time.Hour),
+		supportLimit: auth.NewLimiter(60, time.Hour),
 	}
 	app.logo.set(st.KVGet(logoKV))
 	app.reloadPages()
@@ -375,7 +377,7 @@ var publicPages = map[string]bool{
 // recovery pages, the legal pages, static files and the machine endpoints.
 // Everything else needs an account.
 func (a *App) publicRoute(p string) bool {
-	return isStatic(p) || publicPages[p] || p == "/" || p == "/welcome" || p == "/api/contact" || a.isContactSlug(p) || a.isPageSlug(p) || strings.HasPrefix(p, "/t/") || strings.HasPrefix(p, "/api/auth/") || p == "/api/telegram/webhook" ||
+	return isStatic(p) || publicPages[p] || p == "/" || p == "/welcome" || p == "/api/contact" || strings.HasPrefix(p, "/api/captcha/") || a.isContactSlug(p) || a.isPageSlug(p) || strings.HasPrefix(p, "/t/") || strings.HasPrefix(p, "/api/auth/") || p == "/api/telegram/webhook" ||
 		p == "/.well-known/tvt" || strings.HasPrefix(p, "/federation/")
 }
 

@@ -231,6 +231,9 @@
   "contact": {
     "title": "Contatti",
     "slug": "contatti",
+    "email_us": "Scrivici via email",
+    "telegram_us": "Chatta su Telegram",
+    "or": "oppure",
     "intro": "Invia un messaggio a chi gestisce questo sito.",
     "name": "Il tuo nome",
     "email": "La tua email",
@@ -239,16 +242,24 @@
     "sent": "Messaggio inviato. Grazie.",
     "unavailable": "Il modulo di contatto non è disponibile al momento."
   },
+  "captcha": {
+    "instructions": "Ruota l'immagine finché non è dritta.",
+    "expired": "Scaduto. Aggiornamento...",
+    "securing": "Protezione della connessione...",
+    "secured": "Protetto.",
+    "complete_first": "Risolvi prima il captcha.",
+    "refresh": "Nuova immagine"
+  },
   "landing": {
     "f1_title": "Non perdere mai il segno",
     "f1_text": "Segna gli episodi come visti, scopri esattamente cosa guardare dopo e conserva i tuoi progressi per ogni serie.",
     "f2_title": "Orari di messa in onda esatti",
     "f2_text": "Ricevi una notifica via email, push o Telegram quando un nuovo episodio va davvero in onda, nel tuo fuso orario.",
-    "f3_title": "Parla senza spoiler",
-    "f3_text": "Discuti ogni episodio; gli spoiler restano nascosti finché non l'hai visto.",
-    "f4_title": "Amici, anche su altri server",
-    "f4_text": "Guarda cosa guardano e valutano gli amici e partecipa alla conversazione con persone di altri server TVT.",
-    "f5_title": "Tuo, per sempre",
+    "f3_title": "Valuta e parla senza spoiler",
+    "f3_text": "Valuta ogni episodio e discutine; gli spoiler restano nascosti finché non l'hai visto.",
+    "f4_title": "Self-hosting e federato",
+    "f4_text": "Esegui TVT sul tuo server e possiedi i tuoi dati: nessuna azienda deve custodire la tua cronologia. I server federati condividono attività e commenti tra loro, così puoi seguire gli amici e partecipare ovunque.",
+    "f5_title": "Privato, gratuito e open source",
     "f5_text": "Importa da TV Time ed esporta i tuoi dati quando vuoi. Niente pubblicità né tracker, e il codice è open source."
   },
   "admin": {
@@ -418,6 +429,7 @@
     "page_slug_taken": "Quell'indirizzo è già usato da un'altra pagina.",
     "page_slug_bad": "Usa solo minuscole, cifre e trattini, iniziando con lettera o cifra.",
     "contact_unavailable": "Il modulo di contatto non è disponibile al momento.",
+    "captcha_failed": "Il captcha non è stato risolto o è scaduto. Riprova.",
     "no_email": "Questo account non ha un indirizzo email.",
     "config_invalid": "Queste impostazioni non sono valide",
     "test_failed": "Il test non è riuscito",
@@ -762,13 +774,22 @@
   },
   "tg": {
     "error": "Qualcosa è andato storto. Riprova.",
-    "help": "Comandi: /start per vedere lo stato del collegamento, /stop per disattivare le notifiche.",
+    "help": "Comandi: /start per vedere lo stato del collegamento, /stop per disattivare le notifiche, /support per parlare con il team.",
     "link_invalid": "Quel link non è valido o è scaduto. Creane uno nuovo nelle impostazioni dell'app.",
-    "linked": "Collegato. Riceverai qui le notifiche.",
+    "linked": "Connesso! Ora puoi:\n1. Accedere a {app} con Telegram con un clic.\n2. Ricevere le notifiche di {app} su Telegram!\n\nPuoi tornare su {app} per configurare le preferenze di notifica, se vuoi. Oppure continuare a navigare normalmente.\n\nBuona visione!",
     "private_only": "Scrivimi in una chat privata, per favore.",
     "status_linked": "Questa chat è collegata al tuo account.",
     "status_unlinked": "Questa chat non è ancora collegata. Apri le impostazioni dell'app, Notifiche, e premi Collega Telegram.",
-    "stopped": "Notifiche disattivate per questa chat."
+    "stopped": "Notifiche disattivate per questa chat.",
+    "support_hello": "Ciao! Sono il bot di assistenza di {app}. Come ti chiami?",
+    "support_ask_issue": "Piacere, {name}! Di cosa hai bisogno? Descrivi il problema e lo passerò al team.",
+    "support_received": "Grazie, {name}. Il tuo messaggio è stato inviato al team di {app}. Risponderanno proprio qui. Puoi continuare a scrivere per aggiungere dettagli e inviare /close quando hai finito.",
+    "support_closed": "Questa conversazione è chiusa. Invia /support se hai di nuovo bisogno di aiuto.",
+    "support_unavailable": "La chat di assistenza non è disponibile al momento. Usa il modulo di contatto del sito.",
+    "support_none": "Non hai una conversazione aperta. Invia /support per iniziarne una.",
+    "support_op_unknown": "Non so a quale conversazione appartenga. Rispondi direttamente a un messaggio che inizia con 🆘 o #.",
+    "support_op_closed": "Conversazione #{id} chiusa.",
+    "support_op_failed": "Impossibile consegnare la risposta alla conversazione #{id}. La persona potrebbe aver bloccato il bot."
   },
   "privacy": {
     "title": "Informativa sulla privacy",
@@ -778,7 +799,7 @@
     "contact_none": "I recapiti sono sul sito o nel suo repository del codice sorgente.",
     "data": {
       "title": "Cosa viene conservato",
-      "body": "Il tuo account (nome utente, un indirizzo e-mail se lo aggiungi, una password con hash se la imposti, nome visualizzato, bio, immagini del profilo, lingua e fuso orario); il tuo ID e username Telegram se usi Telegram; le chiavi pubbliche delle tue passkey; le serie che segui, ciò che hai visto e valutato; i tuoi commenti, segnalazioni e blocchi; le tue impostazioni di notifica, le notifiche e le sottoscrizioni push. Dopo aver cambiato nome utente, quello vecchio viene conservato per 14 giorni per reindirizzare a te e perché nessun altro possa prenderlo. Se usi il modulo di contatto, il tuo nome, indirizzo email e messaggio vengono inviati via email all'operatore e non sono conservati da questo sito."
+      "body": "Il tuo account (nome utente, un indirizzo e-mail se lo aggiungi, una password con hash se la imposti, nome visualizzato, bio, immagini del profilo, lingua e fuso orario); il tuo ID e username Telegram se usi Telegram; le chiavi pubbliche delle tue passkey; le serie che segui, ciò che hai visto e valutato; i tuoi commenti, segnalazioni e blocchi; le tue impostazioni di notifica, le notifiche e le sottoscrizioni push. Dopo aver cambiato nome utente, quello vecchio viene conservato per 14 giorni per reindirizzare a te e perché nessun altro possa prenderlo. Se usi il modulo di contatto, il tuo nome, indirizzo email e messaggio vengono inviati via email all'operatore e non sono conservati da questo sito. Se chatti con il bot di assistenza su Telegram, il tuo nome, ID e username Telegram e la lingua vengono conservati con la conversazione fino a 90 giorni dopo la chiusura, e i tuoi messaggi vengono inoltrati all'operatore tramite il bot; il testo dei messaggi non è conservato da questo sito."
     },
     "signin": {
       "title": "Dati di accesso e sicurezza",

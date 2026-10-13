@@ -22,6 +22,7 @@ nothing here is legal advice.
 | Notifications, preferences, push subscriptions | Alerts | Notifications are deleted after 90 days |
 | Session tokens | Staying signed in | Stored as hashes |
 | Contact form message | Reaching the operator | Sent by email to the operator's contact address; not stored by TVT (it appears in the email log only as masked recipient and subject) |
+| Support conversation (Telegram bot) | Answering a visitor through the bot | Name, Telegram chat ID, language and state, kept up to 90 days after the conversation closes; the message text is relayed to the operator and not stored |
 | Previous username | Redirecting to a renamed account and keeping the name from being taken | Kept for 14 days after a change, then removed |
 | Email delivery log | Letting an admin see whether mail works | Time, recipient with most of the address hidden (`j***@example.com`), subject (a notification's subject can name a show or episode) and success or error; never the body or sign-in links; only the latest 200 entries are kept |
 

@@ -68,7 +68,7 @@ func (b *Bot) BotID() string {
 }
 
 func (b *Bot) DeepLink(startToken string) string {
-	return "tg://resolve?domain=" + url.QueryEscape(b.Username) + "&start=" + url.QueryEscape(startToken)
+	return "https://t.me/" + url.PathEscape(b.Username) + "?start=" + url.QueryEscape(startToken)
 }
 
 type LoginData struct {
@@ -151,9 +151,10 @@ func (b *Bot) VerifyWebhook(r *http.Request) bool {
 }
 
 type apiResponse struct {
-	OK          bool   `json:"ok"`
-	ErrorCode   int    `json:"error_code"`
-	Description string `json:"description"`
+	OK          bool            `json:"ok"`
+	Result      json.RawMessage `json:"result"`
+	ErrorCode   int             `json:"error_code"`
+	Description string          `json:"description"`
 	Parameters  struct {
 		RetryAfter int `json:"retry_after"`
 	} `json:"parameters"`
@@ -166,38 +167,44 @@ func (e rateLimitedError) Error() string {
 }
 
 func (b *Bot) call(ctx context.Context, method string, payload any) error {
+	_, err := b.callResult(ctx, method, payload)
+	return err
+}
+
+// callResult makes one Bot API call and returns the raw "result" on success.
+func (b *Bot) callResult(ctx context.Context, method string, payload any) (json.RawMessage, error) {
 	if !b.Configured() {
-		return ErrNotConfigured
+		return nil, ErrNotConfigured
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("telegram %s marshal: %w", method, err)
+		return nil, fmt.Errorf("telegram %s marshal: %w", method, err)
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, b.API+"/bot"+b.Token+"/"+method, bytes.NewReader(body))
 	if err != nil {
-		return fmt.Errorf("telegram %s request: %w", method, err)
+		return nil, fmt.Errorf("telegram %s request: %w", method, err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := b.http.Do(req)
 	if err != nil {
-		return fmt.Errorf("telegram %s: %w", method, scrub(err, b.Token))
+		return nil, fmt.Errorf("telegram %s: %w", method, scrub(err, b.Token))
 	}
 	defer resp.Body.Close()
 	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	var out apiResponse
 	if err := json.Unmarshal(raw, &out); err != nil {
-		return fmt.Errorf("telegram %s: bad response status %d", method, resp.StatusCode)
+		return nil, fmt.Errorf("telegram %s: bad response status %d", method, resp.StatusCode)
 	}
 	if !out.OK {
 		if out.ErrorCode == http.StatusForbidden || (out.ErrorCode == http.StatusBadRequest && strings.Contains(out.Description, "chat not found")) {
-			return fmt.Errorf("%w: %s", ErrBotBlocked, out.Description)
+			return nil, fmt.Errorf("%w: %s", ErrBotBlocked, out.Description)
 		}
 		if out.ErrorCode == http.StatusTooManyRequests {
-			return rateLimitedError{wait: time.Duration(out.Parameters.RetryAfter) * time.Second}
+			return nil, rateLimitedError{wait: time.Duration(out.Parameters.RetryAfter) * time.Second}
 		}
-		return fmt.Errorf("telegram %s: %d %s", method, out.ErrorCode, out.Description)
+		return nil, fmt.Errorf("telegram %s: %d %s", method, out.ErrorCode, out.Description)
 	}
-	return nil
+	return out.Result, nil
 }
 
 // pace blocks until a message to chat may be sent: at most two messages a
@@ -241,25 +248,41 @@ func scrub(err error, token string) error {
 }
 
 func (b *Bot) SendMessage(ctx context.Context, chatID, text string) error {
+	_, err := b.SendMessageID(ctx, chatID, text)
+	return err
+}
+
+// SendMessageID sends a message and returns its id in that chat, so a reply to
+// it can be recognised later.
+func (b *Bot) SendMessageID(ctx context.Context, chatID, text string) (int64, error) {
 	if len(text) > 4000 {
 		text = text[:4000]
 	}
 	payload := map[string]any{"chat_id": chatID, "text": text, "disable_web_page_preview": true}
 	if err := b.pace(ctx, chatID); err != nil {
-		return err
+		return 0, err
 	}
-	err := b.call(ctx, "sendMessage", payload)
+	res, err := b.callResult(ctx, "sendMessage", payload)
 	var rl rateLimitedError
 	if errors.As(err, &rl) && rl.wait > 0 && rl.wait <= maxRetryAfter {
 		logger.Warn("TELEGRAM rate limited chat=%s, retrying in %s", chatID, rl.wait)
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return 0, ctx.Err()
 		case <-time.After(rl.wait):
 		}
-		return b.call(ctx, "sendMessage", payload)
+		res, err = b.callResult(ctx, "sendMessage", payload)
 	}
-	return err
+	if err != nil {
+		return 0, err
+	}
+	var sent struct {
+		MessageID int64 `json:"message_id"`
+	}
+	if jerr := json.Unmarshal(res, &sent); jerr != nil {
+		return 0, nil
+	}
+	return sent.MessageID, nil
 }
 
 func (b *Bot) SetWebhook(ctx context.Context, webhookURL string) error {
@@ -274,10 +297,11 @@ type Update struct {
 }
 
 type Message struct {
-	MessageID int64  `json:"message_id"`
-	Text      string `json:"text"`
-	Chat      Chat   `json:"chat"`
-	From      *User  `json:"from"`
+	MessageID      int64    `json:"message_id"`
+	Text           string   `json:"text"`
+	Chat           Chat     `json:"chat"`
+	From           *User    `json:"from"`
+	ReplyToMessage *Message `json:"reply_to_message"`
 }
 
 type Chat struct {
@@ -288,6 +312,7 @@ type Chat struct {
 type User struct {
 	ID           int64  `json:"id"`
 	Username     string `json:"username"`
+	FirstName    string `json:"first_name"`
 	LanguageCode string `json:"language_code"`
 }
 

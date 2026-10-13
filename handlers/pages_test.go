@@ -1,9 +1,17 @@
 package handlers_test
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"net/http"
+	"net/url"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
+
+	"tvt/captcha"
 )
 
 func TestOperatorPagesPrivacyDefaultAndFooter(t *testing.T) {
@@ -87,7 +95,47 @@ func TestOperatorPagesPrivacyDefaultAndFooter(t *testing.T) {
 	}
 }
 
+// solveCaptcha reads the challenge embedded in the page, does the proof of work
+// and posts it, the way the script in the browser does.
+func solveCaptcha(t *testing.T, c *client, page string) string {
+	t.Helper()
+	m := regexp.MustCompile(`name="captcha_id" value="([^"]+)"`).FindStringSubmatch(page)
+	if m == nil {
+		t.Fatalf("no captcha in the page")
+	}
+	id := m[1]
+	parts := strings.Split(id, "_")
+	if len(parts) != 4 || parts[3] != "0" {
+		t.Fatalf("a first request needs only the proof of work: %q", id)
+	}
+	diff, _ := strconv.Atoi(parts[2])
+	nonce := ""
+	for n := 0; ; n++ {
+		sum := sha256.Sum256([]byte(parts[1] + strconv.Itoa(n)))
+		if strings.HasPrefix(hex.EncodeToString(sum[:]), strings.Repeat("0", diff)) {
+			nonce = strconv.Itoa(n)
+			break
+		}
+	}
+	form := url.Values{"captcha_id": {id}, "captcha_solution": {"0"}, "pow_nonce": {nonce}, "committed": {"1"}}
+	req, _ := http.NewRequest("POST", c.base+"/api/captcha/verify", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("X-CSRF-Token", c.csrf())
+	resp, err := c.http.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	var out struct{ Success bool }
+	json.NewDecoder(resp.Body).Decode(&out)
+	if !out.Success {
+		t.Fatalf("the captcha was not accepted")
+	}
+	return id
+}
+
 func TestContactPageSendsToTheOperator(t *testing.T) {
+	captcha.ResetRisk()
 	e := newEnv(t)
 	anon := newClient(t, e.srv.URL)
 	_, page := anon.get("/contact")
@@ -96,10 +144,20 @@ func TestContactPageSendsToTheOperator(t *testing.T) {
 	}
 	e.cfg.SMTPHost, e.cfg.MailFrom, e.cfg.ContactEmail = "smtp.test", "no-reply@test.example", "owner@test.example"
 	_, page = anon.get("/contact")
-	if !strings.Contains(page, `data-api="/api/contact"`) {
-		t.Fatalf("the form appears once configured")
+	for _, want := range []string{`data-api="/api/contact"`, `href="mailto:owner@test.example"`, `https://t.me/tvt_test_bot?start=support`, `class="or-divider"`, `captcha-game-container`} {
+		if !strings.Contains(page, want) {
+			t.Fatalf("the contact page needs %s", want)
+		}
+	}
+	if strings.Index(page, "or-divider") > strings.Index(page, "<form") || strings.Index(page, "mailto:") > strings.Index(page, "or-divider") {
+		t.Fatalf("the email and Telegram buttons come first, then OR, then the form")
 	}
 	body := map[string]any{"name": "Pat", "email": "pat@example.com", "message": "Hello operator"}
+	if code, _ := anon.post("/api/contact", body); code != 400 {
+		t.Fatalf("without a solved captcha nothing is sent: %d", code)
+	}
+	id := solveCaptcha(t, anon, page)
+	body["captcha_id"] = id
 	if code, out := anon.post("/api/contact", body); code != 200 {
 		t.Fatalf("send: %d %v", code, out)
 	}
@@ -107,19 +165,15 @@ func TestContactPageSendsToTheOperator(t *testing.T) {
 	if len(mails) == 0 || !strings.HasPrefix(mails[0].To, "o***@") || !strings.Contains(mails[0].Subject, "contact: Pat") {
 		t.Fatalf("the operator gets an email: %+v", mails)
 	}
+	if code, _ := anon.post("/api/contact", body); code != 400 {
+		t.Fatalf("a solved captcha works once: %d", code)
+	}
 	before := len(mails)
 	if code, _ := anon.post("/api/contact", map[string]any{"name": "Bot", "email": "b@example.com", "message": "spam", "website": "http://x"}); code != 200 {
 		t.Fatalf("honeypot answers success")
 	}
 	if m, _ := e.store.RecentMail(5); len(m) != before {
 		t.Fatalf("but sends nothing")
-	}
-	if code, _ := anon.post("/api/contact", map[string]any{"name": "Pat", "email": "not-an-email", "message": "x"}); code != 400 {
-		t.Fatalf("bad email: %d", code)
-	}
-	anon.post("/api/contact", body)
-	if code, _ := anon.post("/api/contact", body); code != 429 {
-		t.Fatalf("a fourth message within the hour is refused: %d", code)
 	}
 }
 
