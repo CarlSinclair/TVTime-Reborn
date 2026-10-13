@@ -15,5 +15,7 @@ Third-party data and services: show metadata and artwork come from TMDB
 (https://www.tvmaze.com/, CC BY-SA) and, optionally, Trakt (https://trakt.tv/).
 This product uses the TMDB API but is not endorsed or certified by TMDB.
 
+Metadata for shows that TMDB does not have may come from TheTVDB (https://thetvdb.com).
+
 The interface icons in assets/static/icons.svg are from Font Awesome Free
 (https://fontawesome.com), licensed CC BY 4.0.

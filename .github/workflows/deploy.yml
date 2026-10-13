@@ -46,7 +46,7 @@ jobs:
         env:
           CGO_ENABLED: "0"
         run: |
-          go build -trimpath -ldflags "-s -w -X tvt/logger.Version=v0.1.${GITHUB_RUN_NUMBER}" -o tvt .
+          go build -trimpath -ldflags "-s -w -X tvt/logger.Version=$(cat VERSION)" -o tvt .
           file tvt
 
       - name: deploy over ssh
@@ -86,13 +86,13 @@ jobs:
       - name: build for every platform
         env:
           CGO_ENABLED: "0"
-          VERSION: v0.1.${{ github.run_number }}
         run: |
           set -euo pipefail
+          VERSION="$(tr -d '[:space:]' < VERSION)"
           mkdir dist
           for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; do
             os=${target%/*}; arch=${target#*/}
-            name=tvt-${VERSION}-${os}-${arch}
+            name=tvt-v${VERSION}-${os}-${arch}
             ext=""; [ "$os" = windows ] && ext=".exe"
             mkdir "dist/$name"
             GOOS=$os GOARCH=$arch go build -trimpath -ldflags "-s -w -X tvt/logger.Version=${VERSION}" -o "dist/$name/tvt$ext" .
@@ -109,5 +109,15 @@ jobs:
       - name: publish release
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: v0.1.${{ github.run_number }}
-        run: gh release create "$VERSION" dist/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "$VERSION" --generate-notes --latest
+        run: |
+          set -euo pipefail
+          TAG="v$(tr -d '[:space:]' < VERSION)"
+          git tag -f "$TAG" "$GITHUB_SHA"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "refs/tags/$TAG"
+          NOTE="Build ${GITHUB_RUN_NUMBER} from ${GITHUB_SHA::7}. Verify downloads against SHA256SUMS."
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"
+            gh release edit "$TAG" --notes "$NOTE" --latest --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --title "$TAG" --notes "$NOTE" --latest
+          fi

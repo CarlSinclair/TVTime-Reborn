@@ -193,7 +193,8 @@
     "privacy": "Confidentialité",
     "source": "Code source (AGPL-3.0)",
     "made_with": "Fait avec",
-    "by": "par"
+    "by": "par",
+    "tvdb": "Métadonnées fournies par TheTVDB. Pensez à ajouter les informations manquantes ou à vous abonner."
   },
   "admin": {
     "reports": "Signalements",

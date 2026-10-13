@@ -27,7 +27,44 @@ import (
 	"tvt/syncer"
 	"tvt/telegram"
 	"tvt/tmdb"
+	"tvt/tvdb"
 )
+
+
+func fakeTVDB(t *testing.T) *httptest.Server {
+	t.Helper()
+	mux := http.NewServeMux()
+	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]any{"token": "tok"}})
+	})
+	mux.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) {
+		out := []map[string]any{}
+		if strings.Contains(strings.ToLower(r.URL.Query().Get("query")), "tube") {
+			out = append(out, map[string]any{"tvdb_id": "9001", "name": "Tube Channel", "first_air_time": "2010-01-01", "image_url": "https://artworks.thetvdb.com/banners/posters/abc.jpg", "type": "series"})
+		}
+		json.NewEncoder(w).Encode(map[string]any{"data": out})
+	})
+	mux.HandleFunc("/series/9001/extended", func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{
+			"id": 9001, "name": "Tube Channel", "overview": "A channel.", "image": "https://artworks.thetvdb.com/banners/posters/abc.jpg",
+			"firstAired": "2010-01-01", "lastAired": "2020-02-01", "status": map[string]any{"name": "Continuing"},
+			"originalNetwork": map[string]any{"name": "YouTube"}, "genres": []map[string]any{{"name": "Web"}}, "averageRuntime": 10,
+			"remoteIds": []map[string]any{{"id": "tt9001", "sourceName": "IMDB"}},
+		}})
+	})
+	mux.HandleFunc("/series/9001/episodes/default", func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"episodes": []map[string]any{
+			{"id": 71, "name": "First video", "aired": "2020-01-01", "number": 1, "seasonNumber": 2020, "runtime": 8},
+			{"id": 72, "name": "Second video", "aired": "2020-02-01", "number": 2, "seasonNumber": 2020, "runtime": 9},
+		}}, "links": map[string]any{"next": nil}})
+	})
+	mux.HandleFunc("/banners/posters/abc.jpg", func(w http.ResponseWriter, r *http.Request) {
+		w.Write(pngBytes(1, 1))
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	return srv
+}
 
 func fakeTMDB(t *testing.T) *httptest.Server {
 	t.Helper()
@@ -197,6 +234,10 @@ func newEnv(t *testing.T) *env {
 		t.Fatalf("webauthn: %v", err)
 	}
 	sy := syncer.New(st, tm)
+	tvdbSrv := fakeTVDB(t)
+	sy.TVDB = tvdb.New("tvdbkey")
+	sy.TVDB.Base = tvdbSrv.URL
+	cfg.TVDBImageBase = tvdbSrv.URL
 	app, err := handlers.New(cfg, st, a, sy, tm, ml, nt, bot, &media.Disk{Dir: filepath.Join(cfg.DataDir, "media")})
 	if err != nil {
 		t.Fatalf("app: %v", err)

@@ -12,6 +12,7 @@
       {{if gt .Runtime 0}}<span>{{$.T "show.runtime" .Runtime}}</span>{{end}}
     </p>
     <p>{{if .Overview}}{{.Overview}}{{else}}<span class="muted">{{$.T "show.no_overview"}}</span>{{end}}</p>
+    {{if lt .TMDBID 0}}<p class="muted">{{$.T "footer.tvdb"}} <a href="https://thetvdb.com/dereferrer/series/{{.TVDBID}}" rel="noopener noreferrer" target="_blank">TheTVDB</a></p>{{end}}
     <div class="actions" data-tmdb="{{.TMDBID}}">
       {{if $.User}}
         {{if $.Data.Follow}}

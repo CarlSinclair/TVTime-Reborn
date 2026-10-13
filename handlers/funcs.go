@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"strings"
@@ -10,6 +11,9 @@ import (
 func imgURL(size, path string) string {
 	if path == "" {
 		return "/static/img/placeholder.svg"
+	}
+	if strings.HasPrefix(path, "tvdb:") {
+		return "/tvdbimg/" + base64.RawURLEncoding.EncodeToString([]byte(strings.TrimPrefix(path, "tvdb:")))
 	}
 	return "/img/" + size + path
 }

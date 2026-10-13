@@ -5,6 +5,7 @@
   <h2>{{.T "about.data_title"}}</h2>
   <p>{{.T "footer.tmdb"}} <a href="https://www.themoviedb.org/" rel="noopener noreferrer" target="_blank">TMDB</a>.</p>
   <p>{{.T "footer.tvmaze"}} <a href="https://www.tvmaze.com/" rel="noopener noreferrer" target="_blank">TVmaze</a>{{if .TraktEnabled}}, <a href="https://trakt.tv/" rel="noopener noreferrer" target="_blank">Trakt</a>{{end}}.</p>
+  {{if .TVDBEnabled}}<p>{{.T "footer.tvdb"}} <a href="https://thetvdb.com/" rel="noopener noreferrer" target="_blank">TheTVDB</a></p>{{end}}
   <p class="muted">{{.T "footer.unofficial" .AppName}}</p>
   <p><a href="/privacy">{{.T "footer.privacy"}}</a></p>
 </section>

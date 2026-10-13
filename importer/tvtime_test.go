@@ -105,3 +105,14 @@ func TestStatusMapping(t *testing.T) {
 		}
 	}
 }
+
+func TestCoverage(t *testing.T) {
+	idx := map[[2]int]int64{{1, 1}: 1, {1, 2}: 2}
+	ws := []Watch{{Season: 1, Episode: 1}, {Season: 1, Episode: 2}, {Season: 2022, Episode: 5}, {Season: 2022, Episode: 6}}
+	if c := coverage(idx, ws); c != 0.5 {
+		t.Fatalf("coverage = %v, want 0.5", c)
+	}
+	if c := coverage(idx, nil); c != 1 {
+		t.Fatalf("no watches means nothing to improve: %v", c)
+	}
+}

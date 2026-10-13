@@ -137,6 +137,8 @@ func (v *View) TN(key string, kv ...string) string {
 
 func (v *View) TraktEnabled() bool { return v.App.Sync.Trakt != nil }
 
+func (v *View) TVDBEnabled() bool { return v.App.Sync.TVDBConfigured() }
+
 func (v *View) TelegramBot() string {
 	if v.App.Bot.Configured() {
 		return v.App.Bot.Username

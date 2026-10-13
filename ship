@@ -53,7 +53,7 @@ if ! git diff --cached --quiet; then
     git reset -q
     exit 1
   fi
-  git commit -q -m "$(tag_subject "$msg")"$'\n\n'"Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
+  git commit -q -m "$(tag_subject "$msg")"
 elif [ -n "$(git log "origin/$BRANCH..HEAD" --oneline)" ]; then
   if ! git log "origin/$BRANCH..HEAD" --format='%B' | grep -q '\[deploy\]'; then
     git commit -q --allow-empty -m "$(tag_subject "${msg:-chore: deploy}")"

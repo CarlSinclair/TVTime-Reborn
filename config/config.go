@@ -33,6 +33,8 @@ type Config struct {
 	ImageBase      string
 	S3             media.S3Config
 	TraktClientID  string
+	TVDBKey        string
+	TVDBImageBase  string
 	SourceURL      string
 	MediaPublicURL string
 	OperatorName   string
@@ -77,6 +79,8 @@ func Load() (*Config, error) {
 		DisableTVmaze:  env("TVT_DISABLE_TVMAZE", "") == "1",
 		ImageBase:      strings.TrimRight(env("TVT_IMAGE_BASE", "https://image.tmdb.org/t/p"), "/"),
 		TraktClientID:  env("TVT_TRAKT_CLIENT_ID", ""),
+		TVDBKey:        env("TVT_TVDB_KEY", ""),
+		TVDBImageBase:  strings.TrimRight(env("TVT_TVDB_IMAGE_BASE", "https://artworks.thetvdb.com"), "/"),
 		MediaPublicURL: strings.TrimRight(env("TVT_MEDIA_PUBLIC_URL", ""), "/"),
 		SourceURL:      env("TVT_SOURCE_URL", "https://github.com/CarlSinclair/tvt"),
 		OperatorName:   env("TVT_OPERATOR_NAME", ""),

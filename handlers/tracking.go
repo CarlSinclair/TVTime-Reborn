@@ -8,11 +8,12 @@ import (
 
 	"tvt/store"
 	"tvt/tmdb"
+	"tvt/tvdb"
 )
 
 func (a *App) showForAPI(w http.ResponseWriter, r *http.Request) (*store.Show, bool) {
 	tid, err := strconv.ParseInt(r.PathValue("tmdb"), 10, 64)
-	if err != nil || tid <= 0 {
+	if err != nil || tid == 0 {
 		a.fail(w, r, errNotFound)
 		return nil, false
 	}
@@ -22,9 +23,9 @@ func (a *App) showForAPI(w http.ResponseWriter, r *http.Request) (*store.Show, b
 	switch {
 	case err == nil:
 		return sh, true
-	case errors.Is(err, tmdb.ErrNotFound):
+	case errors.Is(err, tmdb.ErrNotFound), errors.Is(err, tvdb.ErrNotFound):
 		a.fail(w, r, errNotFound)
-	case errors.Is(err, tmdb.ErrNoKey):
+	case errors.Is(err, tmdb.ErrNoKey), errors.Is(err, tvdb.ErrNoKey):
 		a.fail(w, r, errTMDBMissing)
 	default:
 		a.fail(w, r, errTMDBDown)

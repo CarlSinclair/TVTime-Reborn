@@ -78,6 +78,9 @@ func (r *Runner) resolve(ctx context.Context, s Show) (int64, string) {
 			logger.Warn("IMPORT lookup tvdb=%d name=%q: %v", s.TVDBID, s.Name, err)
 			return 0, "error"
 		}
+		if r.Sync != nil && r.Sync.TVDBConfigured() {
+			return -s.TVDBID, ""
+		}
 	}
 	if strings.TrimSpace(s.Name) == "" {
 		return 0, "not_found"
@@ -101,6 +104,21 @@ func (r *Runner) resolve(ctx context.Context, s Show) (int64, string) {
 		return 0, "not_found"
 	}
 	return hit, ""
+}
+
+const minWatchesToSwitch = 10
+
+func coverage(index map[[2]int]int64, watches []Watch) float64 {
+	if len(watches) == 0 {
+		return 1
+	}
+	hit := 0
+	for _, w := range watches {
+		if _, ok := index[[2]int{w.Season, w.Episode}]; ok {
+			hit++
+		}
+	}
+	return float64(hit) / float64(len(watches))
 }
 
 const (
@@ -236,12 +254,22 @@ func (r *Runner) importShow(ctx context.Context, job *jobState, s Show, sh *stor
 	if err != nil {
 		return err
 	}
+	if sh.TMDBID > 0 && s.TVDBID > 0 && len(watches) >= minWatchesToSwitch && r.Sync != nil && r.Sync.TVDBConfigured() && coverage(index, watches) < 0.5 {
+		if alt, err := r.Sync.EnsureShow(ctx, -s.TVDBID); err != nil {
+			logger.Warn("IMPORT tvdb alternative for %q tvdb=%d: %v", s.Name, s.TVDBID, err)
+		} else if altIndex, err := r.Store.EpisodeIndex(alt.ID); err != nil {
+			logger.Warn("IMPORT tvdb alternative index for %q: %v", s.Name, err)
+		} else if coverage(altIndex, watches) > coverage(index, watches) {
+			logger.Info("IMPORT %q numbers better on TheTVDB (%.0f%% vs %.0f%%), using it", s.Name, coverage(altIndex, watches)*100, coverage(index, watches)*100)
+			sh, index = alt, altIndex
+		}
+	}
 	var eps []store.ImportedEpisode
 	skipped := 0
 	lookups := 0
 	for _, w := range watches {
 		id, ok := index[[2]int{w.Season, w.Episode}]
-		if !ok && w.EpTVDB > 0 && lookups < maxEpisodeLookupsPerShow && job.lookups < maxEpisodeLookupsPerJob {
+		if !ok && w.EpTVDB > 0 && sh.TMDBID > 0 && lookups < maxEpisodeLookupsPerShow && job.lookups < maxEpisodeLookupsPerJob {
 			lookups++
 			job.lookups++
 			id, ok = r.byEpisodeID(ctx, w.EpTVDB, sh, index)

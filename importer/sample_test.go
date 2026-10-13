@@ -6,6 +6,7 @@ import (
 	"sort"
 	"testing"
 	"tvt/tmdb"
+	"tvt/tvdb"
 )
 
 func TestParseSampleExport(t *testing.T) {
@@ -119,4 +120,48 @@ func TestResolveSampleExport(t *testing.T) {
 	}
 	t.Logf("resolved: %v", counts)
 	t.Logf("sample misses: %v", misses)
+}
+
+func TestTVDBCoverageSampleExport(t *testing.T) {
+	path, key, tkey := os.Getenv("TVT_TVDB_SAMPLE"), os.Getenv("TVT_TMDB_KEY"), os.Getenv("TVT_TVDB_KEY")
+	if path == "" || key == "" || tkey == "" {
+		t.Skip("set TVT_TVDB_SAMPLE, TVT_TMDB_KEY and TVT_TVDB_KEY to measure TheTVDB coverage of a real export")
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	st, _ := f.Stat()
+	d, err := ParseTVTime(f, st.Size())
+	if err != nil {
+		t.Fatal(err)
+	}
+	byShow := map[int64][]Watch{}
+	for _, w := range d.Watches {
+		byShow[w.TVDBID] = append(byShow[w.TVDBID], w)
+	}
+	r := &Runner{TMDB: tmdb.New(key)}
+	tv := tvdb.New(tkey)
+	for _, s := range d.Shows {
+		if id, _ := r.resolve(context.Background(), s); id != 0 {
+			continue
+		}
+		eps, err := tv.Episodes(context.Background(), s.TVDBID)
+		if err != nil {
+			t.Logf("%-34.34s tvdb error: %v", s.Name, err)
+			continue
+		}
+		have := map[[2]int]bool{}
+		for _, e := range eps {
+			have[[2]int{e.SeasonNumber, e.Number}] = true
+		}
+		hit := 0
+		for _, w := range byShow[s.TVDBID] {
+			if have[[2]int{w.Season, w.Episode}] {
+				hit++
+			}
+		}
+		t.Logf("%-34.34s %5d of %5d watched episodes match", s.Name, hit, len(byShow[s.TVDBID]))
+	}
 }

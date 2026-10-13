@@ -656,7 +656,7 @@ func TestNoThirdPartyContactOnPageLoad(t *testing.T) {
 	signed := e.signup(t, "wynn", true)
 	anon := newClient(t, e.srv.URL)
 	ext := regexp.MustCompile(`(?i)(src|href)="https?://[^"]*"`)
-	allowedLinks := []string{"themoviedb.org", "tvmaze.com", "trakt.tv", "github.com/CarlSinclair/tvt", "carl-sinclair.com"}
+	allowedLinks := []string{"themoviedb.org", "tvmaze.com", "trakt.tv", "github.com/CarlSinclair/tvt", "carl-sinclair.com", "thetvdb.com"}
 	pages := map[string]*client{
 		"/": signed, "/login": anon, "/register": anon, "/forgot": anon, "/privacy": anon, "/about": anon,
 		"/settings?tab=account": signed, "/settings?tab=notifications": signed, "/search?q=fake": signed, "/show/555": signed,

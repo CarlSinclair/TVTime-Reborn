@@ -23,12 +23,11 @@ nothing here is legal advice.
 | Session tokens | Staying signed in | Stored as hashes |
 
 There are **no analytics, advertising or tracking scripts**, and no third-party
-fonts, CDNs or embeds. The only cookies are essential ones (session, CSRF,
-language, short-lived security challenges).
+fonts, CDNs or embeds. The only cookie is one essential session cookie (it also holds the CSRF token and short-lived security challenges).
 
 ## What leaves the server
 
-- **TMDB, TVmaze, Trakt:** the server asks them about *shows*. No user data is
+- **TMDB, TVmaze, Trakt, TheTVDB:** the server asks them about *shows*. No user data is
   sent. Artwork is fetched by the server once and then served by TVT itself, so a
   visitor's browser never contacts these services and they never see visitor IPs.
 - **Telegram:** only if the user chooses it. The Telegram script is loaded on

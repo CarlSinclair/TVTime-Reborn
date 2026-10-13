@@ -31,6 +31,7 @@ import (
 	"tvt/telegram"
 	"tvt/tmdb"
 	"tvt/trakt"
+	"tvt/tvdb"
 	"tvt/tvmaze"
 )
 
@@ -58,6 +59,9 @@ func main() {
 	sy := syncer.New(st, tm)
 	if !cfg.DisableTVmaze {
 		sy.TVmaze = tvmaze.New()
+	}
+	if cfg.TVDBKey != "" {
+		sy.TVDB = tvdb.New(cfg.TVDBKey)
 	}
 	if cfg.TraktClientID != "" {
 		sy.Trakt = trakt.New(cfg.TraktClientID)

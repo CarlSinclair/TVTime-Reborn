@@ -193,7 +193,8 @@
     "privacy": "隐私",
     "source": "源代码（AGPL-3.0）",
     "made_with": "用",
-    "by": "制作，作者"
+    "by": "制作，作者",
+    "tvdb": "元数据由 TheTVDB 提供。欢迎补充缺失的信息或订阅支持。"
   },
   "admin": {
     "reports": "举报",

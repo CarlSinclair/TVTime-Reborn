@@ -15,6 +15,7 @@ import (
 	"tvt/logger"
 	"tvt/store"
 	"tvt/tmdb"
+	"tvt/tvdb"
 )
 
 var assetVersion = strconv.FormatInt(time.Now().Unix(), 10)
@@ -51,6 +52,7 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /profile", a.pageOwnProfile)
 	mux.HandleFunc("GET /media/{kind}/{file}", a.serveMedia)
 	mux.HandleFunc("GET /img/{size}/{file}", a.serveImage)
+	mux.HandleFunc("GET /tvdbimg/{file}", a.serveTVDBImage)
 	mux.HandleFunc("GET /auth/telegram", a.pageTelegramLogin)
 	mux.HandleFunc("GET /login/2fa", a.pageMFA)
 	mux.HandleFunc("GET /login", a.pageSimple("login", "auth.login"))
@@ -297,7 +299,7 @@ func (a *App) apiSearch(w http.ResponseWriter, r *http.Request) {
 func (a *App) loadShow(w http.ResponseWriter, r *http.Request) (*store.Show, string, bool) {
 	lang := a.langOf(w, r)
 	tid, err := strconv.ParseInt(r.PathValue("tmdb"), 10, 64)
-	if err != nil || tid <= 0 {
+	if err != nil || tid == 0 {
 		a.errorPage(w, r, http.StatusNotFound, "err.not_found")
 		return nil, lang, false
 	}
@@ -311,9 +313,9 @@ func (a *App) loadShow(w http.ResponseWriter, r *http.Request) (*store.Show, str
 			logger.Error("PAGE localize show=%d lang=%s: %v", sh.ID, lang, lerr)
 		}
 		return sh, lang, true
-	case errors.Is(err, tmdb.ErrNotFound):
+	case errors.Is(err, tmdb.ErrNotFound), errors.Is(err, tvdb.ErrNotFound):
 		a.errorPage(w, r, http.StatusNotFound, "err.not_found")
-	case errors.Is(err, tmdb.ErrNoKey):
+	case errors.Is(err, tmdb.ErrNoKey), errors.Is(err, tvdb.ErrNoKey):
 		a.errorPage(w, r, http.StatusServiceUnavailable, "err.metadata_not_configured")
 	default:
 		logger.Error("PAGE load show tmdb=%d: %v", tid, err)

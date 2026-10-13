@@ -193,7 +193,8 @@
     "privacy": "Privacy",
     "source": "Source code (AGPL-3.0)",
     "made_with": "Made with",
-    "by": "by"
+    "by": "by",
+    "tvdb": "Metadata provided by TheTVDB. Please consider adding missing information or subscribing."
   },
   "admin": {
     "reports": "Reports",
