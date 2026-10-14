@@ -40,6 +40,7 @@ func (s *Store) Follow(userID, showID int64, status string) error {
 	  ON CONFLICT(user_id, show_id) DO UPDATE SET status = excluded.status`, userID, showID, status, Now()); err != nil {
 		return fmt.Errorf("follow uid=%d show=%d: %w", userID, showID, err)
 	}
+	s.upNextChanged(userID)
 	return nil
 }
 
@@ -47,6 +48,7 @@ func (s *Store) Unfollow(userID, showID int64) error {
 	if _, err := s.DB.Exec(`DELETE FROM follows WHERE user_id = ? AND show_id = ?`, userID, showID); err != nil {
 		return fmt.Errorf("unfollow uid=%d show=%d: %w", userID, showID, err)
 	}
+	s.upNextChanged(userID)
 	return nil
 }
 
@@ -75,6 +77,7 @@ func (s *Store) MarkWatched(userID, episodeID int64, at string) error {
 	if err != nil {
 		return fmt.Errorf("mark watched uid=%d ep=%d: %w", userID, episodeID, err)
 	}
+	s.upNextChanged(userID)
 	if n, _ := res.RowsAffected(); n == 0 {
 		var one int
 		if err := s.DB.QueryRow(`SELECT 1 FROM episodes WHERE id = ?`, episodeID).Scan(&one); err != nil {
@@ -91,6 +94,7 @@ func (s *Store) Unwatch(userID, episodeID int64) error {
 	if _, err := s.DB.Exec(`DELETE FROM watched WHERE user_id = ? AND episode_id = ?`, userID, episodeID); err != nil {
 		return fmt.Errorf("unwatch uid=%d ep=%d: %w", userID, episodeID, err)
 	}
+	s.upNextChanged(userID)
 	return nil
 }
 
@@ -105,6 +109,7 @@ func (s *Store) MarkUpTo(userID, showID int64, season, episode int) (int, error)
 	if err != nil {
 		return 0, fmt.Errorf("mark up to uid=%d show=%d s%de%d: %w", userID, showID, season, episode, err)
 	}
+	s.upNextChanged(userID)
 	n, _ := res.RowsAffected()
 	return int(n), nil
 }
@@ -134,6 +139,7 @@ func (s *Store) MarkSeason(userID, showID int64, season int, watched bool) (int,
 		if err != nil {
 			return 0, fmt.Errorf("unmark season uid=%d show=%d season=%d: %w", userID, showID, season, err)
 		}
+		s.upNextChanged(userID)
 		n, _ := res.RowsAffected()
 		return int(n), nil
 	}
@@ -144,6 +150,7 @@ func (s *Store) MarkSeason(userID, showID int64, season int, watched bool) (int,
 	if err != nil {
 		return 0, fmt.Errorf("mark season uid=%d show=%d season=%d: %w", userID, showID, season, err)
 	}
+	s.upNextChanged(userID)
 	n, _ := res.RowsAffected()
 	return int(n), nil
 }
@@ -198,6 +205,7 @@ func (s *Store) CompleteFinished(userID, showID int64) (int64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("complete finished uid=%d show=%d: %w", userID, showID, err)
 	}
+	s.upNextChanged(userID)
 	n, _ := res.RowsAffected()
 	return n, nil
 }
@@ -337,7 +345,15 @@ type UpNextItem struct {
 }
 
 func (s *Store) UpNext(userID int64, limit int) ([]UpNextItem, error) {
-	return s.upNext(userID, 0, limit)
+	if items, ok := s.up.get(userID, limit); ok {
+		return items, nil
+	}
+	items, err := s.upNext(userID, 0, limit)
+	if err != nil {
+		return nil, err
+	}
+	s.up.put(userID, limit, items)
+	return items, nil
 }
 
 // UpNextFor is the card for one show: its first unwatched aired episode, or nil

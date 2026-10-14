@@ -1,7 +1,7 @@
 {{define "content"}}
 {{with .Data.Show}}
-<section class="show-head">
-  <img class="poster" src="{{img "w342" .PosterPath}}" alt="">
+<section class="show-head {{if or .BackdropPath .PosterPath}}cover-hero{{end}}">
+  {{if .BackdropPath}}<img class="hero-bg" src="{{img "w1280" .BackdropPath}}" alt="">{{else if .PosterPath}}<img class="hero-bg poster-bg" src="{{img "w780" .PosterPath}}" alt="">{{end}}
   <div class="show-info">
     <h1>{{.Name}} {{if year .FirstAirDate}}<small>({{year .FirstAirDate}})</small>{{end}}</h1>
     {{if and .OriginalName (ne .OriginalName .Name)}}<p class="original-name muted" lang="{{.OriginalLanguage}}">{{.OriginalName}}</p>{{end}}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"tvt/db"
 )
@@ -158,5 +159,30 @@ func TestTrackingAndUpNext(t *testing.T) {
 	}
 	if err := s.MarkWatched(u.ID, 99999, ""); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("unknown episode: got %v want ErrNotFound", err)
+	}
+}
+
+func TestUpNextCacheKeepsItsOwnCopyAndRebuilds(t *testing.T) {
+	s := newTestStore(t)
+	showID, eps := seedEpisode(t, s)
+	u := mkUser(t, s, "erin")
+	if err := s.Follow(u.ID, showID, "watching"); err != nil {
+		t.Fatal(err)
+	}
+	first, _ := s.UpNext(u.ID, 10)
+	first[0].Show.Name = "changed by a caller"
+	second, _ := s.UpNext(u.ID, 10)
+	if second[0].Show.Name == "changed by a caller" {
+		t.Fatalf("a caller editing its list must not change what others get")
+	}
+	if err := s.MarkWatched(u.ID, eps[0], ""); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(900 * time.Millisecond)
+	s.up.mu.Lock()
+	entry, warm := s.up.m[u.ID]
+	s.up.mu.Unlock()
+	if !warm || len(entry.items) != 1 || entry.items[0].Episode.ID != eps[1] {
+		t.Fatalf("the list is rebuilt in the background after a change: %+v", entry)
 	}
 }

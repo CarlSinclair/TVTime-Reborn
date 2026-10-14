@@ -293,14 +293,14 @@ func (a *App) apiPicFromStill(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in struct {
-		Episode int64
+		Episode flexID
 		File    string
 	}
 	if err := decode(r, &in); err != nil {
 		a.fail(w, r, err)
 		return
 	}
-	ep, err := a.Store.Episode(in.Episode, 0)
+	ep, err := a.Store.Episode(int64(in.Episode), 0)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
 			a.fail(w, r, errNotFound)
@@ -601,4 +601,18 @@ func (a *App) apiStillBytes(w http.ResponseWriter, r *http.Request) {
 	if _, err := w.Write(raw); err != nil {
 		logger.Warn("PICS still bytes write: %v", err)
 	}
+}
+
+// flexID reads an id that a client may send as a JSON number or as a string,
+// the way ids come out of data attributes in a page.
+type flexID int64
+
+func (f *flexID) UnmarshalJSON(b []byte) error {
+	raw := strings.Trim(strings.TrimSpace(string(b)), `"`)
+	n, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil {
+		return err
+	}
+	*f = flexID(n)
+	return nil
 }
