@@ -332,7 +332,7 @@
   {{range .Data.Reports}}
   <li class="panel">
     <p><strong>{{.Author}}</strong> <small class="muted">{{$.T "admin.reporters" .Reporters}}</small></p>
-    <blockquote>{{.Body}}</blockquote>
+    <blockquote>{{.Body}}{{if .Image}}<a href="/media/pics/{{.Image}}" target="_blank" rel="noopener"><img class="comment-img" loading="lazy" alt="" src="/media/pics/{{.Image}}"></a>{{end}}</blockquote>
     {{if .Reasons}}<p class="muted">{{.Reasons}}</p>{{end}}
     <p class="actions">
       <a class="btn ghost small" href="{{if eq .Target.Kind "profile"}}/u/{{.ProfileName}}{{else}}/episode/{{.Target.ID}}{{end}}">{{$.T "admin.view"}}</a>

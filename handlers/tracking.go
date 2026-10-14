@@ -135,7 +135,7 @@ func (a *App) apiWatch(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, errNotFound)
 		return
 	}
-	var in struct{ Watched, UpTo, Card bool }
+	var in struct{ Watched, UpTo, Card, Single bool }
 	if err := decode(r, &in); err != nil {
 		a.fail(w, r, err)
 		return
@@ -148,6 +148,17 @@ func (a *App) apiWatch(w http.ResponseWriter, r *http.Request) {
 			a.fail(w, r, err)
 		}
 		return
+	}
+	if in.Watched && !in.UpTo && !in.Single {
+		missing, err := a.Store.UnwatchedBefore(u.ID, ep.ShowID, ep.SeasonNumber, ep.EpisodeNumber)
+		if err != nil {
+			a.fail(w, r, err)
+			return
+		}
+		if missing > 0 {
+			a.okJSON(w, map[string]any{"needs_confirm": true, "missing": missing})
+			return
+		}
 	}
 	marked := 0
 	switch {

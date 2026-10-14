@@ -181,6 +181,11 @@ func (a *App) serveMedia(w http.ResponseWriter, r *http.Request) {
 			http.NotFound(w, r)
 			return
 		}
+	} else if kind == "pics" {
+		if !picFileRe.MatchString(file) {
+			http.NotFound(w, r)
+			return
+		}
 	} else if _, ok := mediaSpecs[kind]; !ok || !mediaFileRe.MatchString(file) {
 		http.NotFound(w, r)
 		return

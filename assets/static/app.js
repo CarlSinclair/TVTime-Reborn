@@ -170,6 +170,121 @@
     }
   });
 
+  const plainButton = (label, className, onClick) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = className;
+    b.textContent = label;
+    b.addEventListener("click", () => onClick(b));
+    return b;
+  };
+
+  const askUpto = (missing) =>
+    new Promise((resolve) => {
+      const dlg = document.createElement("dialog");
+      dlg.className = "confirm-dialog";
+      const title = document.createElement("h2");
+      title.textContent = t("upto_title");
+      const text = document.createElement("p");
+      text.textContent = fmt("upto_text", missing);
+      const row = document.createElement("div");
+      row.className = "modal-actions";
+      let answer = null;
+      const choose = (value) => () => {
+        answer = value;
+        dlg.close();
+      };
+      row.append(plainButton(t("upto_no"), "btn ghost", choose(false)), plainButton(t("upto_yes"), "btn", choose(true)));
+      dlg.append(title, text, row);
+      dlg.addEventListener("close", () => {
+        dlg.remove();
+        resolve(answer);
+      });
+      document.body.appendChild(dlg);
+      dlg.showModal();
+    });
+
+  const openStills = async (episodeId, pick, trigger) => {
+    const data = await run(trigger, () => api("/api/episode/" + episodeId + "/stills", null, "GET"));
+    if (!data) return;
+    const dlg = document.createElement("dialog");
+    dlg.className = "stills-dialog";
+    const title = document.createElement("h2");
+    title.textContent = t("pic_stills_title");
+    dlg.appendChild(title);
+    if (data.stills.length === 0) {
+      const none = document.createElement("p");
+      none.className = "muted";
+      none.textContent = t("pic_stills_none");
+      dlg.appendChild(none);
+    } else {
+      const grid = document.createElement("div");
+      grid.className = "stills-grid";
+      data.stills.forEach((file) => {
+        const choice = document.createElement("button");
+        choice.type = "button";
+        choice.className = "still-choice";
+        const im = document.createElement("img");
+        im.loading = "lazy";
+        im.alt = "";
+        im.src = "/img/w300" + file;
+        choice.appendChild(im);
+        choice.addEventListener("click", async () => {
+          const picked = await run(choice, () => api("/api/pics/still", { episode: episodeId, file }));
+          if (picked) {
+            pick(picked);
+            dlg.close();
+          }
+        });
+        grid.appendChild(choice);
+      });
+      dlg.appendChild(grid);
+    }
+    const row = document.createElement("div");
+    row.className = "modal-actions";
+    row.appendChild(plainButton(t("close"), "btn ghost", () => dlg.close()));
+    dlg.appendChild(row);
+    dlg.addEventListener("close", () => dlg.remove());
+    document.body.appendChild(dlg);
+    dlg.showModal();
+  };
+
+  const picPicker = (textarea, episodeId) => {
+    let name = "";
+    const wrap = document.createElement("div");
+    wrap.className = "pic-picker";
+    const preview = document.createElement("div");
+    preview.className = "pic-preview";
+    preview.hidden = true;
+    const img = document.createElement("img");
+    img.alt = "";
+    const bar = document.createElement("div");
+    bar.className = "pic-bar";
+    const file = document.createElement("input");
+    file.type = "file";
+    file.accept = "image/jpeg,image/png,image/gif,image/webp";
+    file.hidden = true;
+    const set = (data) => {
+      name = data ? data.name : "";
+      img.src = data ? data.url : "";
+      preview.hidden = !data;
+      bar.hidden = !!data;
+      textarea.required = !data;
+    };
+    preview.append(img, plainButton(t("pic_remove"), "btn small ghost", () => set(null)));
+    bar.appendChild(plainButton(t("pic_add"), "btn small ghost", () => file.click()));
+    if (episodeId) bar.appendChild(plainButton(t("pic_stills"), "btn small ghost", (b) => openStills(episodeId, set, b)));
+    file.addEventListener("change", async () => {
+      const chosen = file.files[0];
+      file.value = "";
+      if (!chosen) return;
+      const data = await run(bar.firstChild, () => upload("/api/pics", chosen));
+      if (data) set(data);
+    });
+    wrap.append(preview, bar, file);
+    return { el: wrap, value: () => name, reset: () => set(null) };
+  };
+
   const setWatchedState = (el, watched) => {
     el.dataset.state = watched ? "1" : "0";
     if (el.classList.contains("watch-btn")) {
@@ -360,14 +475,29 @@
     if ("watch" in d) {
       const watched = d.state !== "1";
       const card = el.closest(".upnext-item");
-      const data = await run(el, () => api("/api/episode/" + d.watch + "/watch", { watched, card: !!card }));
+      const url = "/api/episode/" + d.watch + "/watch";
+      let data = await run(el, () => api(url, { watched, card: !!card }));
       if (!data) return;
+      if (data.needs_confirm) {
+        const all = await askUpto(data.missing);
+        if (all === null) return;
+        data = await run(el, () => api(url, all ? { upTo: true, card: !!card } : { watched: true, single: true, card: !!card }));
+        if (!data) return;
+        if (all && !card) {
+          toast(fmt("marked_many", data.marked), "ok");
+          window.location.reload();
+          return;
+        }
+      }
       if (card) {
         swapCard(card, data.next_html);
         toast(markedMessage(), "ok");
         return;
       }
       setWatchedState(el, watched);
+      document.querySelectorAll("[data-watch-upto]").forEach((btn) => {
+        if (btn.dataset.watchUpto === d.watch && watched) btn.remove();
+      });
       return;
     }
     if ("friendAdd" in d || "friendAccept" in d || "friendDecline" in d || "friendRemove" in d) {
@@ -1459,10 +1589,11 @@
       submit.type = "submit";
       submit.className = "btn small";
       submit.textContent = t("post_reply");
-      form.append(ta, submit);
+      const pic = picPicker(ta, kind === "episode" ? target : 0);
+      form.append(ta, pic.el, submit);
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
-        const data = await run(submit, () => api(base, { body: ta.value, parent_id: c.id }));
+        const data = await run(submit, () => api(base, { body: ta.value, parent_id: c.id, image: pic.value() }));
         if (data) reload();
       });
       li.appendChild(form);
@@ -1503,6 +1634,19 @@
       const body = document.createElement("div");
       body.className = "comment-body";
       body.textContent = c.body;
+      if (c.image) {
+        const link = document.createElement("a");
+        link.href = c.image;
+        link.target = "_blank";
+        link.rel = "noopener";
+        const pic = document.createElement("img");
+        pic.className = "comment-img";
+        pic.loading = "lazy";
+        pic.alt = "";
+        pic.src = c.image;
+        link.appendChild(pic);
+        body.appendChild(link);
+      }
       const hidden = c.spoiler && !viewerWatched && !c.mine && !revealed.has(c.id);
 
       if (hidden) {
@@ -1619,14 +1763,17 @@
 
     const form = document.getElementById("comment-form");
     if (form) {
+      const ta = form.querySelector("textarea");
+      const pic = picPicker(ta, kind === "episode" ? target : 0);
+      ta.insertAdjacentElement("afterend", pic.el);
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
         const submit = form.querySelector('[type="submit"]');
-        const ta = form.querySelector("textarea");
         const spoiler = form.querySelector('[name="spoiler"]');
-        const data = await run(submit, () => api(base, { body: ta.value, spoiler: spoiler.checked }));
+        const data = await run(submit, () => api(base, { body: ta.value, spoiler: spoiler.checked, image: pic.value() }));
         if (data) {
           form.reset();
+          pic.reset();
           reload();
         }
       });

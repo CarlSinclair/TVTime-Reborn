@@ -72,11 +72,11 @@ func TestCommentsReportsAndBlocks(t *testing.T) {
 	_, eps := seedEpisode(t, s)
 	alice, bob, carol := mkUser(t, s, "alice"), mkUser(t, s, "bob"), mkUser(t, s, "carol")
 
-	cid, err := s.AddComment(alice.ID, EpisodeTarget(eps[0]), 0, "hello", false)
+	cid, err := s.AddComment(alice.ID, EpisodeTarget(eps[0]), 0, "hello", false, "")
 	if err != nil {
 		t.Fatalf("add comment: %v", err)
 	}
-	if _, err := s.AddComment(bob.ID, EpisodeTarget(eps[0]), cid, "reply", false); err != nil {
+	if _, err := s.AddComment(bob.ID, EpisodeTarget(eps[0]), cid, "reply", false, ""); err != nil {
 		t.Fatalf("add reply: %v", err)
 	}
 

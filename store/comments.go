@@ -56,6 +56,8 @@ type Comment struct {
 	// ParentHost and ParentRef name the other server's comment this one answers.
 	ParentHost, ParentRef string
 	MyReports             map[string]bool
+	// Image is the file name of the picture or GIF attached, under media/pics.
+	Image string
 }
 
 // IsSpoiler is the display rule: the author's own tag always stands; otherwise
@@ -68,7 +70,7 @@ func (c *Comment) IsSpoiler() bool {
 	return c.SpoilerReports >= 1 && c.NotSpoilerReports <= c.SpoilerReports
 }
 
-func (s *Store) AddComment(userID int64, t Target, parentID int64, body string, spoiler bool) (int64, error) {
+func (s *Store) AddComment(userID int64, t Target, parentID int64, body string, spoiler bool, image string) (int64, error) {
 	var parent any
 	if parentID != 0 {
 		var pt int64
@@ -96,8 +98,8 @@ func (s *Store) AddComment(userID int64, t Target, parentID int64, body string, 
 	if t.Kind == KindProfile {
 		src = "users"
 	}
-	res, err := s.DB.Exec(`INSERT INTO comments (`+t.col()+`, user_id, parent_id, body, author_spoiler, created_at)
-	  SELECT id, ?, ?, ?, ?, ? FROM `+src+` WHERE id = ?`, userID, parent, body, sp, Now(), t.ID)
+	res, err := s.DB.Exec(`INSERT INTO comments (`+t.col()+`, user_id, parent_id, body, author_spoiler, created_at, image)
+	  SELECT id, ?, ?, ?, ?, ?, ? FROM `+src+` WHERE id = ?`, userID, parent, body, sp, Now(), image, t.ID)
 	if err != nil {
 		return 0, fmt.Errorf("add comment uid=%d %s=%d: %w", userID, t.Kind, t.ID, err)
 	}
@@ -108,7 +110,7 @@ func (s *Store) AddComment(userID int64, t Target, parentID int64, body string, 
 }
 
 const commentSelect = `SELECT c.id, COALESCE(c.episode_id,0), COALESCE(c.profile_id,0), c.user_id, u.username, u.display_name, COALESCE(c.parent_id,0), c.body,
-	    c.author_spoiler, c.spoiler_reports, c.not_spoiler_reports, c.created_at, COALESCE(c.edited_at,''), c.deleted_at IS NOT NULL, c.hidden_at IS NOT NULL, c.parent_host, c.parent_ref
+	    c.author_spoiler, c.spoiler_reports, c.not_spoiler_reports, c.created_at, COALESCE(c.edited_at,''), c.deleted_at IS NOT NULL, c.hidden_at IS NOT NULL, c.parent_host, c.parent_ref, c.image
 	  FROM comments c JOIN users u ON u.id = c.user_id `
 
 func scanComment(row interface{ Scan(...any) error }) (Comment, error) {
@@ -116,7 +118,7 @@ func scanComment(row interface{ Scan(...any) error }) (Comment, error) {
 	var ep, prof int64
 	var as, del, hid int
 	if err := row.Scan(&c.ID, &ep, &prof, &c.UserID, &c.Username, &c.DisplayName, &c.ParentID, &c.Body, &as, &c.SpoilerReports, &c.NotSpoilerReports,
-		&c.CreatedAt, &c.EditedAt, &del, &hid, &c.ParentHost, &c.ParentRef); err != nil {
+		&c.CreatedAt, &c.EditedAt, &del, &hid, &c.ParentHost, &c.ParentRef, &c.Image); err != nil {
 		return c, err
 	}
 	if prof != 0 {
@@ -129,6 +131,7 @@ func scanComment(row interface{ Scan(...any) error }) (Comment, error) {
 	c.Hidden = hid == 1 && !c.Deleted
 	if c.Deleted || c.Hidden {
 		c.Body = ""
+		c.Image = ""
 	}
 	return c, nil
 }
@@ -256,7 +259,7 @@ func (s *Store) EditComment(userID, id int64, body string, spoiler bool) error {
 }
 
 func (s *Store) DeleteComment(actorID int64, admin bool, id int64) error {
-	q := `UPDATE comments SET deleted_at = ?, body = '' WHERE id = ? AND deleted_at IS NULL`
+	q := `UPDATE comments SET deleted_at = ?, body = '', image = '' WHERE id = ? AND deleted_at IS NULL`
 	args := []any{Now(), id}
 	if !admin {
 		q += ` AND user_id = ?`
@@ -402,6 +405,7 @@ type AbuseReport struct {
 	Reporters   int
 	Reasons     string
 	Last        string
+	Image       string
 }
 
 func (s *Store) CountAbuseReports() (int, error) {
@@ -414,7 +418,7 @@ func (s *Store) CountAbuseReports() (int, error) {
 }
 
 func (s *Store) OpenAbuseReports(limit, offset int) ([]AbuseReport, error) {
-	rows, err := s.DB.Query(`SELECT c.id, COALESCE(c.episode_id,0), COALESCE(c.profile_id,0), COALESCE((SELECT username FROM users WHERE id = c.profile_id),''), c.body, u.username, u.id, COUNT(*), COALESCE(GROUP_CONCAT(NULLIF(r.reason,''), ' | '),''), MAX(r.created_at)
+	rows, err := s.DB.Query(`SELECT c.id, COALESCE(c.episode_id,0), COALESCE(c.profile_id,0), COALESCE((SELECT username FROM users WHERE id = c.profile_id),''), c.body, c.image, u.username, u.id, COUNT(*), COALESCE(GROUP_CONCAT(NULLIF(r.reason,''), ' | '),''), MAX(r.created_at)
 	  FROM comment_reports r JOIN comments c ON c.id = r.comment_id JOIN users u ON u.id = c.user_id
 	  WHERE r.kind = 'abuse' AND r.resolved_at IS NULL AND c.deleted_at IS NULL AND c.hidden_at IS NULL
 	  GROUP BY c.id ORDER BY COUNT(*) DESC, MAX(r.created_at) DESC LIMIT ? OFFSET ?`, limit, offset)
@@ -426,7 +430,7 @@ func (s *Store) OpenAbuseReports(limit, offset int) ([]AbuseReport, error) {
 	for rows.Next() {
 		var a AbuseReport
 		var ep, prof int64
-		if err := rows.Scan(&a.CommentID, &ep, &prof, &a.ProfileName, &a.Body, &a.Author, &a.AuthorID, &a.Reporters, &a.Reasons, &a.Last); err != nil {
+		if err := rows.Scan(&a.CommentID, &ep, &prof, &a.ProfileName, &a.Body, &a.Image, &a.Author, &a.AuthorID, &a.Reporters, &a.Reasons, &a.Last); err != nil {
 			return nil, err
 		}
 		if prof != 0 {
@@ -477,7 +481,7 @@ func (s *Store) RestoreComments(userID int64) error {
 // EraseUserComments deletes the text of everything a person has written. The
 // comments stay as "Deleted comment" so replies under them keep their place.
 func (s *Store) EraseUserComments(userID int64) error {
-	if _, err := s.DB.Exec(`UPDATE comments SET deleted_at = ?, body = '' WHERE user_id = ? AND deleted_at IS NULL`, Now(), userID); err != nil {
+	if _, err := s.DB.Exec(`UPDATE comments SET deleted_at = ?, body = '', image = '' WHERE user_id = ? AND deleted_at IS NULL`, Now(), userID); err != nil {
 		return fmt.Errorf("erase comments uid=%d: %w", userID, err)
 	}
 	return nil
@@ -616,4 +620,45 @@ func (s *Store) RemoteParentReplies(episodeID, viewerID int64) ([]Comment, error
 		out = append(out, c)
 	}
 	return out, rows.Err()
+}
+
+// CommentImage is the file name of the picture attached to a comment, or "".
+func (s *Store) CommentImage(id int64) (string, error) {
+	var img string
+	err := s.DB.QueryRow(`SELECT image FROM comments WHERE id = ?`, id).Scan(&img)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", ErrNotFound
+		}
+		return "", fmt.Errorf("comment image id=%d: %w", id, err)
+	}
+	return img, nil
+}
+
+// UserCommentImages lists the pictures attached to a person's comments, so the
+// files can be removed when the comments are erased.
+func (s *Store) UserCommentImages(userID int64) ([]string, error) {
+	rows, err := s.DB.Query(`SELECT DISTINCT image FROM comments WHERE user_id = ? AND image <> ''`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list comment images uid=%d: %w", userID, err)
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var img string
+		if err := rows.Scan(&img); err != nil {
+			return nil, err
+		}
+		out = append(out, img)
+	}
+	return out, rows.Err()
+}
+
+// ImageInUse says whether any comment still shows the picture file.
+func (s *Store) ImageInUse(name string) (bool, error) {
+	var n int
+	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM comments WHERE image = ?`, name).Scan(&n); err != nil {
+		return false, fmt.Errorf("image in use %s: %w", name, err)
+	}
+	return n > 0, nil
 }
