@@ -91,11 +91,15 @@ func ValidPassword(p string) error {
 	return nil
 }
 
+// HashCost is the bcrypt work factor for new password hashes. Tests lower it;
+// nothing else changes it.
+var HashCost = 12
+
 func HashPassword(p string) (string, error) {
 	if err := ValidPassword(p); err != nil {
 		return "", err
 	}
-	h, err := bcrypt.GenerateFromPassword([]byte(p), 12)
+	h, err := bcrypt.GenerateFromPassword([]byte(p), HashCost)
 	if err != nil {
 		return "", fmt.Errorf("bcrypt: %w", err)
 	}

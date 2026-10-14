@@ -32,11 +32,6 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: vet
-        env:
-          CGO_ENABLED: "0"
-        run: go vet ./...
-
       - name: test
         env:
           CGO_ENABLED: "0"

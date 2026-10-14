@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"tvt/handlers"
 )
 
 type remoteItem struct {
@@ -15,6 +17,7 @@ type remoteItem struct {
 	Body     string `json:"body"`
 	Spoiler  bool   `json:"spoiler"`
 	ParentID int64  `json:"parent_id"`
+	Image    string `json:"image"`
 }
 
 type remoteList struct {
@@ -305,5 +308,74 @@ func TestRepliesAcrossServers(t *testing.T) {
 	b.flush(t)
 	if _, raw := alice.get(listA); strings.Contains(raw, "bobby answers across servers") {
 		t.Fatalf("deleting the reply withdraws it from the other server")
+	}
+}
+
+func TestCommentPicturesTravelAsLinksAndOpenTheContentPolicy(t *testing.T) {
+	a, b := newEnv(t), newEnv(t)
+	ctx := context.Background()
+	alice := a.signup(t, "alice", true)
+	bob := b.signup(t, "bobby", true)
+	for _, c := range []*client{alice, bob} {
+		c.post("/api/show/555/follow", map[string]string{"status": "watching"})
+	}
+	if _, err := a.fed.Connect(ctx, hostOf(b)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := b.fed.Connect(ctx, hostOf(a)); err != nil {
+		t.Fatal(err)
+	}
+	shA, _ := a.store.ShowByTMDB(555)
+	shB, _ := b.store.ShowByTMDB(555)
+	epA, _ := a.store.EpisodeByNumber(shA.ID, 1, 1)
+	epB, _ := b.store.EpisodeByNumber(shB.ID, 1, 1)
+
+	csp := func() string {
+		resp, err := bob.http.Get(bob.base + "/login")
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		return resp.Header.Get("Content-Security-Policy")
+	}
+	if strings.Contains(csp(), hostOf(a)) {
+		t.Fatalf("an unapproved server's picture host is not in the content policy")
+	}
+	if err := a.store.SetPeerShare(hostOf(b), true); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.store.SetPeerShare(hostOf(a), true); err != nil {
+		t.Fatal(err)
+	}
+	if origin, _, err := b.store.PeerMedia(hostOf(a)); err != nil || origin != "http://"+hostOf(a) {
+		t.Fatalf("the picture host is learned when servers connect: %q %v", origin, err)
+	}
+	handlers.ResetCSPForTest()
+	if !strings.Contains(csp(), "img-src 'self' data: http://"+hostOf(a)) {
+		t.Fatalf("an approved server's picture host is allowed to load images: %s", csp())
+	}
+
+	code, body := upload(t, alice, "/api/pics", pngBytes(120, 80))
+	if code != 200 {
+		t.Fatalf("upload: %d %s", code, body)
+	}
+	name, _ := picOf(t, body)
+	listA := "/api/episode/" + itoa64(epA.ID) + "/comments"
+	if code, out := alice.post(listA, map[string]any{"body": "", "image": name}); code != 200 {
+		t.Fatalf("picture-only comment: %d %v", code, out)
+	}
+	if code, out := alice.post(listA, map[string]any{"body": "with words", "image": name}); code != 200 {
+		t.Fatalf("comment with a picture: %d %v", code, out)
+	}
+	a.flush(t)
+	got := remoteOf(t, bob, epB.ID)
+	want := "http://" + hostOf(a) + "/media/pics/" + name
+	if len(got.Remote) != 2 {
+		t.Fatalf("both comments arrive: %+v", got)
+	}
+	for _, c := range got.Remote {
+		if c.Image != want {
+			t.Fatalf("the picture arrives as a link to its home: %q want %q", c.Image, want)
+		}
 	}
 }

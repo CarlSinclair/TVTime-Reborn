@@ -39,6 +39,10 @@ func parseStamp(v string) string {
 // onComment keeps a leased copy of an episode comment from an allow-listed
 // server. The copy is shown next to the local discussion of that episode.
 func (s *Service) onComment(host string, m message) error {
+	return s.onCommentCtx(context.Background(), host, m)
+}
+
+func (s *Service) onCommentCtx(ctx context.Context, host string, m message) error {
 	c := m.Comment
 	if c == nil || !commentRefRe.MatchString(c.Ref) || (c.Parent != "" && !commentRefRe.MatchString(c.Parent)) || c.ShowTMDB == 0 {
 		return errBadMessage
@@ -47,7 +51,16 @@ func (s *Service) onComment(host string, m message) error {
 		return err
 	}
 	body := cleanBody(c.Body)
-	if body == "" {
+	image := ""
+	if c.Image != "" {
+		cctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+		image = s.imageFrom(cctx, host, c.Image)
+		cancel()
+		if image == "" {
+			logger.Warn("FEDERATION dropped the picture of %s/%s: not on that server's picture host", host, c.Ref)
+		}
+	}
+	if body == "" && image == "" {
 		return errBadMessage
 	}
 	shadow, err := s.Store.EnsureRemoteUser(host, m.From.Username, cleanName(m.From.Name))
@@ -73,7 +86,7 @@ func (s *Service) onComment(host string, m message) error {
 	if err := s.Store.SaveRemoteComment(store.RemoteComment{
 		UserID: shadow.ID, Host: host, Ref: c.Ref, ParentRef: c.Parent, ParentHost: parentHost, ShowTMDB: c.ShowTMDB,
 		Season: clampInt(c.Season, 0, 5000), Episode: clampInt(c.Episode, 0, 100000),
-		Body: body, Spoiler: c.Spoiler, CreatedAt: parseStamp(c.Created), Edited: edited,
+		Body: body, Spoiler: c.Spoiler, CreatedAt: parseStamp(c.Created), Edited: edited, Image: image,
 	}); err != nil {
 		return err
 	}
@@ -178,9 +191,12 @@ type renewResponse struct {
 }
 
 // CommentMessage builds the shared form of a local comment.
-func CommentMessage(c *store.OpenComment) CommentMsg {
+func CommentMessage(c *store.OpenComment, imageURL func(name string) string) CommentMsg {
 	m := CommentMsg{Ref: "c:" + strconv.FormatInt(c.ID, 10), ShowTMDB: c.ShowTMDB, Season: c.Season, Episode: c.Episode,
 		Body: c.Body, Spoiler: c.Spoiler, Created: c.CreatedAt, Edited: c.EditedAt}
+	if c.Image != "" && imageURL != nil {
+		m.Image = imageURL(c.Image)
+	}
 	switch {
 	case c.ParentRef != "":
 		m.Parent, m.ParentHost = c.ParentRef, c.ParentHost
@@ -221,7 +237,7 @@ func (s *Service) Renew(w http.ResponseWriter, r *http.Request) {
 			case err == nil:
 				u, uerr := s.Store.UserByID(c.UserID)
 				if uerr == nil && u.ShareActivity {
-					m := CommentMessage(c)
+					m := CommentMessage(c, s.ImageURL)
 					res.Status, res.Comment = "ok", &m
 				}
 			case errors.Is(err, store.ErrNotFound):
@@ -311,8 +327,9 @@ func (s *Service) renewBatch(ctx context.Context, host string, items []store.Rem
 			if res.Comment.Edited != "" {
 				edited = parseStamp(res.Comment.Edited)
 			}
-			if body := cleanBody(res.Comment.Body); body != "" {
-				if err := s.Store.RenewRemoteComment(host, res.Ref, body, res.Comment.Spoiler, edited); err != nil {
+			image := s.imageFrom(cctx, host, res.Comment.Image)
+			if body := cleanBody(res.Comment.Body); body != "" || image != "" {
+				if err := s.Store.RenewRemoteComment(host, res.Ref, body, res.Comment.Spoiler, edited, image); err != nil {
 					logger.Error("FEDERATION %v", err)
 				}
 			}

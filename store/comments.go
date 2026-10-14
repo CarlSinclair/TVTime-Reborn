@@ -546,6 +546,7 @@ type OpenComment struct {
 	Season, Episode int
 	ParentHost      string
 	ParentRef       string
+	Image           string
 }
 
 // OpenEpisodeComment returns a comment only while it is shown to everyone: not
@@ -553,10 +554,10 @@ type OpenComment struct {
 func (s *Store) OpenEpisodeComment(id int64) (*OpenComment, error) {
 	var c OpenComment
 	var sp int
-	err := s.DB.QueryRow(`SELECT c.id, c.user_id, u.username, u.display_name, COALESCE(c.parent_id,0), c.body, c.author_spoiler, c.created_at, COALESCE(c.edited_at,''), sh.tmdb_id, e.season_number, e.episode_number, c.parent_host, c.parent_ref
+	err := s.DB.QueryRow(`SELECT c.id, c.user_id, u.username, u.display_name, COALESCE(c.parent_id,0), c.body, c.author_spoiler, c.created_at, COALESCE(c.edited_at,''), sh.tmdb_id, e.season_number, e.episode_number, c.parent_host, c.parent_ref, c.image
 	  FROM comments c JOIN users u ON u.id = c.user_id JOIN episodes e ON e.id = c.episode_id JOIN shows sh ON sh.id = e.show_id
 	  WHERE c.id = ? AND c.deleted_at IS NULL AND c.hidden_at IS NULL AND u.is_deactivated = 0 AND u.remote_host = ''`, id).Scan(
-		&c.ID, &c.UserID, &c.Username, &c.DisplayName, &c.ParentID, &c.Body, &sp, &c.CreatedAt, &c.EditedAt, &c.ShowTMDB, &c.Season, &c.Episode, &c.ParentHost, &c.ParentRef)
+		&c.ID, &c.UserID, &c.Username, &c.DisplayName, &c.ParentID, &c.Body, &sp, &c.CreatedAt, &c.EditedAt, &c.ShowTMDB, &c.Season, &c.Episode, &c.ParentHost, &c.ParentRef, &c.Image)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}

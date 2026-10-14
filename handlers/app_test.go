@@ -256,7 +256,7 @@ func newEnv(t *testing.T) *env {
 	if err != nil {
 		t.Fatalf("federation: %v", err)
 	}
-	app.Fed = fed
+	app.SetFederation(fed)
 	srv.Config.Handler = app.Handler()
 	srv.Start()
 	t.Cleanup(srv.Close)

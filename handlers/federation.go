@@ -66,21 +66,16 @@ func (a *App) emitComment(u *store.User, t store.Target, parentID, commentID int
 		return
 	}
 	ref := "c:" + itoa(commentID)
-	if strings.TrimSpace(body) == "" {
-		a.Fed.Retract(u, ref)
-		a.Fed.WithdrawComment(u, ref)
-		return
-	}
 	if t.Kind == store.KindEpisode {
 		if c, err := a.Store.OpenEpisodeComment(commentID); err != nil {
 			if !errors.Is(err, store.ErrNotFound) {
 				logger.Error("FEDERATION share comment=%d: %v", commentID, err)
 			}
 		} else {
-			a.Fed.ShareComment(u, federation.CommentMessage(c))
+			a.Fed.ShareComment(u, federation.CommentMessage(c, a.picAbsURL))
 		}
 	}
-	if spoiler {
+	if spoiler || strings.TrimSpace(body) == "" {
 		a.Fed.Retract(u, ref)
 		return
 	}
@@ -141,6 +136,7 @@ func (a *App) apiAdminServerShare(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	invalidateCSP()
 	logger.Info("ADMIN uid=%d set sharing with %s to %v", admin.ID, host, in.Share)
 	a.okJSON(w, nil)
 }

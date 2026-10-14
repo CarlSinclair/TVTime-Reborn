@@ -324,6 +324,8 @@
     "server_host_hint": "Adicionar outro servidor ativa o compartilhamento bidirecional de atividade e comentários entre usuários.",
     "server_connect": "Conectar",
     "server_new": "Novo",
+    "server_media": "As imagens são carregadas de %s.",
+    "server_media_note": "Aprovar este servidor permite que os navegadores dos seus visitantes carreguem as imagens dos comentários dele diretamente de %s.",
     "server_approve": "Aprovar",
     "server_pending": "Aguardando aprovação",
     "logo": "Logotipo",

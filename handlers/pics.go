@@ -12,6 +12,7 @@ import (
 	"image/png"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -20,6 +21,7 @@ import (
 
 	xdraw "golang.org/x/image/draw"
 
+	"tvt/federation"
 	"tvt/logger"
 	"tvt/store"
 )
@@ -437,9 +439,16 @@ func (a *App) SweepPics(keep time.Duration) {
 	}
 }
 
-// RunPicJanitor sweeps abandoned uploads every half hour until ctx ends.
+// RunPicJanitor sweeps abandoned uploads once at start-up and then daily, until
+// ctx ends.
 func (a *App) RunPicJanitor(ctx context.Context) {
-	tick := time.NewTicker(30 * time.Minute)
+	select {
+	case <-ctx.Done():
+		return
+	case <-time.After(5 * time.Minute):
+		a.SweepPics(picKeepFor)
+	}
+	tick := time.NewTicker(24 * time.Hour)
 	defer tick.Stop()
 	for {
 		select {
@@ -450,3 +459,69 @@ func (a *App) RunPicJanitor(ctx context.Context) {
 		}
 	}
 }
+
+// picAbsURL is the full address of a stored picture as another server needs it.
+func (a *App) picAbsURL(name string) string {
+	if name == "" {
+		return ""
+	}
+	u := a.picURL(name)
+	if strings.HasPrefix(u, "/") {
+		u = strings.TrimRight(a.Cfg.BaseURL, "/") + u
+	}
+	return u
+}
+
+// picOrigin is the scheme and host this server's pictures are loaded from.
+func (a *App) picOrigin() string {
+	u, err := url.Parse(a.picAbsURL("0-0000000000000000.jpg"))
+	if err != nil || u.Host == "" {
+		return ""
+	}
+	return u.Scheme + "://" + u.Host
+}
+
+// SetFederation connects the federation service and tells it where this
+// server's pictures live.
+func (a *App) SetFederation(f *federation.Service) {
+	a.Fed = f
+	f.MediaOrigin = a.picOrigin
+	f.ImageURL = a.picAbsURL
+}
+
+var (
+	cspMu      sync.Mutex
+	cspAt      time.Time
+	cspOrigins string
+)
+
+// peerImageOrigins is the extra img-src entries for the picture hosts of the
+// servers an admin has approved, so their comment pictures load in the browser.
+func (a *App) peerImageOrigins() string {
+	cspMu.Lock()
+	defer cspMu.Unlock()
+	if time.Since(cspAt) < 20*time.Second && !cspAt.IsZero() {
+		return cspOrigins
+	}
+	list, err := a.Store.ApprovedMediaOrigins()
+	if err != nil {
+		logger.Error("CSP picture hosts of approved servers: %v", err)
+		return cspOrigins
+	}
+	var b strings.Builder
+	for _, o := range list {
+		if cspOriginRe.MatchString(o) {
+			b.WriteString(" " + o)
+		}
+	}
+	cspOrigins, cspAt = b.String(), time.Now()
+	return cspOrigins
+}
+
+func invalidateCSP() {
+	cspMu.Lock()
+	cspAt = time.Time{}
+	cspMu.Unlock()
+}
+
+var cspOriginRe = regexp.MustCompile(`^https?://[A-Za-z0-9.-]{1,253}(:[0-9]{1,5})?$`)
