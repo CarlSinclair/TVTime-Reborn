@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -232,16 +233,50 @@ func TestContactFormGoesToTelegramWhenTheBotCanReachSomeone(t *testing.T) {
 	if !strings.Contains(page, `data-api="/api/contact"`) || !strings.Contains(page, `name="contact"`) {
 		t.Fatalf("with a reachable operator the form is offered without any mail setup and asks for a phone or handle")
 	}
+	noWay := map[string]any{"name": "Pat", "message": "Hello operator", "captcha_id": solveCaptcha(t, anon, page)}
+	if code, _ := anon.post("/api/contact", noWay); code != 400 {
+		t.Fatalf("a message with no phone, handle or email cannot be answered: %d", code)
+	}
+	captcha.ResetRisk()
+	_, page = anon.get("/contact")
+	emailOnly := map[string]any{"name": "Pat", "email": "pat@example.com", "message": "Hello operator", "captcha_id": solveCaptcha(t, anon, page)}
+	if code, out := anon.post("/api/contact", emailOnly); code != 200 {
+		t.Fatalf("an email alone is enough: %d %v", code, out)
+	}
+	captcha.ResetRisk()
+	_, page = anon.get("/contact")
 	body := map[string]any{"name": "Pat", "contact": "@pat", "message": "Hello operator"}
 	body["captcha_id"] = solveCaptcha(t, anon, page)
 	if code, out := anon.post("/api/contact", body); code != 200 {
 		t.Fatalf("send: %d %v", code, out)
 	}
 	got := e.sentTo("900")
-	if len(got) != 1 || !strings.Contains(got[0], "Contact form from Pat") || !strings.Contains(got[0], "@pat") || !strings.Contains(got[0], "Hello operator") {
+	if len(got) != 2 || !strings.Contains(got[1], "Contact form from Pat") || !strings.Contains(got[1], "@pat") || !strings.Contains(got[1], "Hello operator") {
 		t.Fatalf("the operator gets the message on Telegram: %v", got)
 	}
 	if m, _ := e.store.RecentMail(20); len(m) != len(mailBefore) {
 		t.Fatalf("and no email is sent: %+v", m)
+	}
+}
+
+func TestContactEmailFollowsThePageLanguage(t *testing.T) {
+	e := newEnv(t)
+	e.cfg.SMTPHost, e.cfg.MailFrom, e.cfg.ContactEmail = "smtp.test", "no-reply@test.example", "contact@test.example"
+	fetch := func(path, lang string) string {
+		req, _ := http.NewRequest("GET", e.srv.URL+path, nil)
+		req.Header.Set("Accept-Language", lang)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		b, _ := io.ReadAll(resp.Body)
+		return string(b)
+	}
+	if page := fetch("/contato", "pt"); !strings.Contains(page, `mailto:contato@test.example`) {
+		t.Fatalf("Portuguese visitors get contato@")
+	}
+	if page := fetch("/contact", "en"); !strings.Contains(page, `mailto:contact@test.example`) {
+		t.Fatalf("everyone else gets contact@")
 	}
 }
