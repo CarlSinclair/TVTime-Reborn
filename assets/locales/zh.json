@@ -324,6 +324,8 @@
     "server_host_hint": "添加其他服务器后，两边用户之间的动态和评论将双向共享。",
     "server_connect": "连接",
     "server_new": "新",
+    "server_media": "图片从 %s 加载。",
+    "server_media_note": "批准此服务器后，你的访客的浏览器将直接从 %s 加载其评论中的图片。",
     "server_approve": "批准",
     "server_pending": "待批准",
     "logo": "标志",

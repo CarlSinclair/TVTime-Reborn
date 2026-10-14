@@ -94,7 +94,7 @@ func (a *App) remoteThreads(t store.Target, uid int64) *remoteComments {
 				name = name[:i]
 			}
 		}
-		j := commentJSON{ID: -c.ID, User: c.Handle, Name: name, Host: c.Host, Body: c.Body, Spoiler: c.Spoiler, CreatedAt: c.CreatedAt, Edited: c.Edited != ""}
+		j := commentJSON{ID: -c.ID, User: c.Handle, Name: name, Host: c.Host, Body: c.Body, Image: c.Image, Spoiler: c.Spoiler, CreatedAt: c.CreatedAt, Edited: c.Edited != ""}
 		parentHost := c.ParentHost
 		if parentHost == "" {
 			parentHost = c.Host

@@ -46,6 +46,11 @@ type Service struct {
 	Insecure bool
 	Block    map[string]bool
 	Allow    map[string]bool
+	// MediaOrigin is where this server's comment pictures are loaded from and
+	// ImageURL turns a stored picture name into its full address; both are set by
+	// the app that owns the media store.
+	MediaOrigin func() string
+	ImageURL    func(name string) string
 
 	priv      ed25519.PrivateKey
 	pub       ed25519.PublicKey
@@ -129,12 +134,17 @@ type wellKnown struct {
 	Version int    `json:"version"`
 	Host    string `json:"host"`
 	Key     string `json:"key"`
+	Media   string `json:"media,omitempty"`
 }
 
 func (s *Service) WellKnown(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
-	json.NewEncoder(w).Encode(wellKnown{Version: 1, Host: s.Host, Key: base64.StdEncoding.EncodeToString(s.pub)})
+	doc := wellKnown{Version: 1, Host: s.Host, Key: base64.StdEncoding.EncodeToString(s.pub)}
+	if s.MediaOrigin != nil {
+		doc.Media = s.MediaOrigin()
+	}
+	json.NewEncoder(w).Encode(doc)
 }
 
 type userInfo struct {
@@ -214,6 +224,11 @@ func (s *Service) peerKey(ctx context.Context, host string) (ed25519.PublicKey, 
 	}
 	if err := s.Store.PinPeer(host, doc.Key); err != nil {
 		return nil, err
+	}
+	if validOrigin(doc.Media, s.Insecure) {
+		if err := s.Store.SetPeerMedia(host, doc.Media); err != nil {
+			logger.Error("FEDERATION %v", err)
+		}
 	}
 	logger.Info("FEDERATION pinned the key of %s", host)
 	raw, _ := base64.StdEncoding.DecodeString(doc.Key)
@@ -377,6 +392,8 @@ type CommentMsg struct {
 	Spoiler    bool   `json:"spoiler,omitempty"`
 	Created    string `json:"created"`
 	Edited     string `json:"edited,omitempty"`
+	// Image is the address of the picture attached to the comment.
+	Image string `json:"image,omitempty"`
 }
 
 func newID() string {

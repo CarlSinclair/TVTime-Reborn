@@ -236,6 +236,7 @@ func (a *App) apiAdminServer(forget bool) http.HandlerFunc {
 		} else {
 			err = a.Store.SetPeerBlocked(host, in.Blocked)
 		}
+		invalidateCSP()
 		switch {
 		case errors.Is(err, store.ErrNotFound):
 			a.fail(w, r, errNotFound)
@@ -502,6 +503,7 @@ func (a *App) apiAdminServerAdd(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
+	invalidateCSP()
 	if err := a.Store.AckPeer(host); err != nil {
 		logger.Error("ADMIN uid=%d add server %s: could not mark it seen: %v", admin.ID, host, err)
 	}

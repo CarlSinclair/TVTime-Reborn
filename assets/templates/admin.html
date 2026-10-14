@@ -207,6 +207,8 @@
   <li class="panel">
     <p><strong>{{.Host}}</strong> {{if .Blocked}}<span class="tag">{{$.T "admin.server_blocked"}}</span>{{end}} {{if .New}}<span class="tag">{{$.T "admin.server_new"}}</span>{{end}} {{if and (not .Share) (not .Blocked)}}<span class="tag">{{$.T "admin.server_pending"}}</span>{{end}}</p>
     <p class="muted">{{$.T "admin.server_seen" .FirstSeen .LastSeen}}</p>
+    {{if .Media}}<p class="muted">{{$.T "admin.server_media" .Media}}</p>{{end}}
+    {{if and (not .Share) (not .Blocked) .Media}}<p class="muted">{{$.T "admin.server_media_note" .Media}}</p>{{end}}
     <p class="actions">
       {{if and (not .Share) (not .Blocked)}}<button class="btn small" type="button" data-server-approve="{{.Host}}">{{$.T "admin.server_approve"}}</button>{{end}}
       <button class="btn small {{if not .Blocked}}danger{{else}}ghost{{end}}" type="button" data-server-block="{{.Host}}" data-blocked="{{if .Blocked}}0{{else}}1{{end}}">{{if .Blocked}}{{$.T "admin.server_unblock"}}{{else}}{{$.T "admin.server_block"}}{{end}}</button>

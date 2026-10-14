@@ -1638,6 +1638,7 @@
         pic.loading = "lazy";
         pic.alt = "";
         pic.src = c.image;
+        pic.addEventListener("error", () => link.remove());
         link.appendChild(pic);
         body.appendChild(link);
       }

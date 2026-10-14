@@ -430,7 +430,7 @@ func (a *App) middleware(next http.Handler) http.Handler {
 		if a.Cfg.CookieSecure {
 			sw.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		}
-		sw.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:"+a.publicMediaOrigin()+"; style-src 'self'; script-src 'self' https://telegram.org; frame-src https://oauth.telegram.org https://telegram.org; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+		sw.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:"+a.publicMediaOrigin()+a.peerImageOrigins()+"; style-src 'self'; script-src 'self' https://telegram.org; frame-src https://oauth.telegram.org https://telegram.org; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 		ctx := r.Context()
 		if !isStatic(r.URL.Path) {
 			u, err := a.Auth.Authenticate(sw, r)

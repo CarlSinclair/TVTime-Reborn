@@ -123,7 +123,7 @@ func main() {
 		if err != nil {
 			logger.Fatal("federation: %v", err)
 		}
-		app.Fed = fed
+		app.SetFederation(fed)
 		go fed.Run(ctx)
 		logger.Info("federation on as %s", baseURL.Host)
 	}
