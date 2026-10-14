@@ -19,6 +19,25 @@ func (a *App) contactTo() string {
 	return strings.TrimSpace(a.Cfg.ContactEmail)
 }
 
+// contactEmailFor is the address shown on the contact page in the visitor's
+// language: a contact@ or contato@ address switches to contato@ for Portuguese
+// and contact@ for everyone else; any other address is shown as configured.
+func (a *App) contactEmailFor(lang string) string {
+	addr := a.contactTo()
+	at := strings.LastIndex(addr, "@")
+	if at < 1 {
+		return addr
+	}
+	local := strings.ToLower(addr[:at])
+	if local != "contact" && local != "contato" {
+		return addr
+	}
+	if strings.HasPrefix(strings.ToLower(lang), "pt") {
+		return "contato" + addr[at:]
+	}
+	return "contact" + addr[at:]
+}
+
 // contactSlug is the contact page's address in one language: the "contact.slug"
 // key of that language's locale file, or "contact" when it is missing or not a
 // valid slug. A new locale gets its own address by filling in that key.
@@ -47,17 +66,18 @@ func (v *View) ContactSlug() string { return v.App.contactSlug(v.Lang) }
 // the address in any other language redirects there. It offers email, the
 // Telegram bot's support chat, and a form guarded by a captcha.
 func (a *App) pageContact(w http.ResponseWriter, r *http.Request) {
-	own := a.contactSlug(a.langOf(w, r))
+	lang := a.langOf(w, r)
+	own := a.contactSlug(lang)
 	if want := "/" + own; r.URL.Path != want {
 		http.Redirect(w, r, want, http.StatusMovedPermanently)
 		return
 	}
-	email := a.contactTo()
+	email := a.contactEmailFor(lang)
 	bot := ""
 	if a.Bot.Configured() {
 		bot = a.Bot.Username
 	}
-	mailOK := email != "" && a.Mail != nil && a.Mail.Configured()
+	mailOK := a.contactTo() != "" && a.Mail != nil && a.Mail.Configured()
 	formOK := mailOK || len(a.contactChats()) > 0
 	data := map[string]any{"Email": email, "Bot": bot, "TelegramURL": template.URL("tg://resolve?domain=" + url.QueryEscape(bot) + "&start=support"), "FormAvailable": formOK, "PrivacyContact": a.Cfg.PrivacyContact}
 	if formOK {
@@ -148,7 +168,7 @@ func (a *App) apiContact(w http.ResponseWriter, r *http.Request) {
 		}
 		email = e
 	}
-	if name == "" || handle == "" || msg == "" || utf8.RuneCountInString(msg) > 5000 {
+	if name == "" || (handle == "" && email == "") || msg == "" || utf8.RuneCountInString(msg) > 5000 {
 		a.fail(w, r, errBadRequest)
 		return
 	}
