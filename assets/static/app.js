@@ -1112,17 +1112,6 @@
     });
   }
 
-  const SVG_NS = "http://www.w3.org/2000/svg";
-  const icon = (id) => {
-    const svg = document.createElementNS(SVG_NS, "svg");
-    svg.setAttribute("class", "icon");
-    svg.setAttribute("aria-hidden", "true");
-    const use = document.createElementNS(SVG_NS, "use");
-    use.setAttribute("href", "/static/icons.svg#" + id);
-    svg.appendChild(use);
-    return svg;
-  };
-
   const pwRules = [
     ["pw_min", (v) => v.length >= 8],
     ["pw_upper", (v) => /\p{Lu}/u.test(v)],
