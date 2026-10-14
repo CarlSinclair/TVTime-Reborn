@@ -403,6 +403,8 @@
       "trakt_client_id": "Client ID Trakt",
       "telegram_bot": "Токен бота",
       "telegram_name": "Имя пользователя бота",
+      "support_to_group": "Отправлять сообщения поддержки в групповой чат",
+      "support_chat_id": "ID группового чата поддержки",
       "app_name": "Название сайта",
       "default_lang": "Язык по умолчанию (код)",
       "operator_name": "Имя оператора",

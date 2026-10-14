@@ -253,6 +253,12 @@ func (a *App) handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 	lang := tgLangFor(a, hint)
 	if msg.Chat.Type != "private" {
+		if g := a.supportGroup(); g != "" && g == chat {
+			if msg.ReplyToMessage != nil && msg.From != nil && !msg.From.IsBot {
+				a.supportOperatorReply(msg, chat, lang)
+			}
+			return
+		}
 		reply(lang, "private_only")
 		return
 	}

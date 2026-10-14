@@ -98,6 +98,8 @@ var Fields = []Field{
 
 	field("telegram_bot", "telegram", true, func(c *config.Config) *string { return &c.TelegramBot }),
 	field("telegram_name", "telegram", false, func(c *config.Config) *string { return &c.TelegramName }),
+	boolField("support_to_group", "telegram", func(c *config.Config) *bool { return &c.SupportToGroup }),
+	field("support_chat_id", "telegram", false, func(c *config.Config) *string { return &c.SupportChatID }),
 
 	field("app_name", "branding", false, func(c *config.Config) *string { return &c.AppName }),
 	field("default_lang", "branding", false, func(c *config.Config) *string { return &c.DefaultLang }),
@@ -115,7 +117,7 @@ var defaults = map[string]string{"smtp_port": "587", "app_name": "TVT", "default
 var examples = map[string]string{
 	"smtp_host": "smtp.example.com", "smtp_port": "587", "smtp_user": "username", "mail_from": "TVT <no-reply@example.com>",
 	"s3_endpoint": "https://ACCOUNT.r2.cloudflarestorage.com", "s3_region": "auto", "s3_bucket": "tvt-media", "s3_prefix": "tvt",
-	"media_public_url": "https://media.example.com", "trakt_client_id": "", "telegram_name": "MyTvtBot",
+	"media_public_url": "https://media.example.com", "trakt_client_id": "", "telegram_name": "MyTvtBot", "support_chat_id": "-1001234567890",
 	"app_name": "TVT", "default_lang": "en", "operator_name": "Your name or company", "privacy_contact": "privacy@example.com",
 	"contact_email": "contact@example.com", "source_url": "https://github.com/you/tvt",
 }

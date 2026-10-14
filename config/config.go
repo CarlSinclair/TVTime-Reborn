@@ -28,6 +28,8 @@ type Config struct {
 	DataDir        string
 	TelegramBot    string
 	TelegramName   string
+	SupportToGroup bool
+	SupportChatID  string
 	ClientIPHeader string
 	ImageBase      string
 	S3             media.S3Config

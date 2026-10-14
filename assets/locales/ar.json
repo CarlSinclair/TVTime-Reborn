@@ -403,6 +403,8 @@
       "trakt_client_id": "معرّف عميل Trakt",
       "telegram_bot": "رمز البوت",
       "telegram_name": "اسم مستخدم البوت",
+      "support_to_group": "إرسال رسائل الدعم إلى محادثة جماعية",
+      "support_chat_id": "معرّف المحادثة الجماعية للدعم",
       "app_name": "اسم الموقع",
       "default_lang": "اللغة الافتراضية (الرمز)",
       "operator_name": "اسم المشغّل",

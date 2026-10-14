@@ -12,6 +12,24 @@ import (
 	"tvt/telegram"
 )
 
+func (a *App) supportGroup() string {
+	if !a.Cfg.SupportToGroup {
+		return ""
+	}
+	chat := strings.TrimSpace(a.Cfg.SupportChatID)
+	if chat == "" {
+		logger.Error("TELEGRAM support is set to go to a group chat but no chat id is configured; sending to admins instead")
+	}
+	return chat
+}
+
+func (a *App) supportOperators() ([]string, error) {
+	if g := a.supportGroup(); g != "" {
+		return []string{g}, nil
+	}
+	return a.Store.OperatorChats()
+}
+
 const supportKeep = 90 * 24 * time.Hour
 
 func (a *App) tgSend(chat, text string) (int64, error) {
@@ -45,7 +63,7 @@ func cleanChatText(s string, n int) string {
 // supportBegin starts a support conversation: the bot greets the person and
 // asks for their name.
 func (a *App) supportBegin(msg *telegram.Message, chat, lang string, linked *store.User) {
-	ops, err := a.Store.OperatorChats()
+	ops, err := a.supportOperators()
 	if err != nil {
 		logger.Error("TELEGRAM support operators: %v", err)
 		a.tgSay(chat, "❌ "+a.I18n.T(lang, "tg.error"))
@@ -99,7 +117,7 @@ func (a *App) supportHeader(t *store.SupportThread, msg *telegram.Message, first
 // supportForward relays a visitor's message to every operator chat and
 // remembers each relayed message so the operator can answer it by replying.
 func (a *App) supportForward(t *store.SupportThread, msg *telegram.Message, first bool) bool {
-	ops, err := a.Store.OperatorChats()
+	ops, err := a.supportOperators()
 	if err != nil || len(ops) == 0 {
 		if err != nil {
 			logger.Error("TELEGRAM support operators: %v", err)
@@ -185,7 +203,7 @@ func (a *App) supportClose(chat, lang string) {
 		return
 	}
 	a.tgSay(chat, "✅ "+a.tgT(lang, "tg.support_closed", nil))
-	if ops, err := a.Store.OperatorChats(); err == nil {
+	if ops, err := a.supportOperators(); err == nil {
 		for _, op := range ops {
 			a.tgSay(op, fmt.Sprintf("#%d %s closed the conversation.", t.ID, t.Name))
 		}
@@ -198,6 +216,9 @@ func (a *App) supportOperatorReply(msg *telegram.Message, opChat, opLang string)
 	t, err := a.Store.SupportThreadByRelay(opChat, msg.ReplyToMessage.MessageID)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
+			if opChat == a.supportGroup() {
+				return
+			}
 			a.tgSay(opChat, "❌ "+a.tgT(opLang, "tg.support_op_unknown", nil))
 		} else {
 			logger.Error("TELEGRAM support relay lookup: %v", err)
@@ -206,7 +227,7 @@ func (a *App) supportOperatorReply(msg *telegram.Message, opChat, opLang string)
 		return
 	}
 	text := strings.TrimSpace(msg.Text)
-	if text == "/close" {
+	if c, _ := telegram.ParseCommand(text); c == "/close" {
 		if err := a.Store.SetSupportState(t.ID, "closed"); err != nil {
 			logger.Error("TELEGRAM support close: %v", err)
 			a.tgSay(opChat, "❌ "+a.I18n.T(opLang, "tg.error"))
