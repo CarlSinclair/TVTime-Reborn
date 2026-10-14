@@ -480,3 +480,6 @@ body[data-user="0"] .topbar { padding-bottom: 10px; }
 .ed-thumb { padding: 0; border: 2px solid var(--border); border-radius: 6px; background: none; cursor: pointer; overflow: hidden; line-height: 0; }
 .ed-thumb:hover, .ed-thumb:focus-visible { border-color: var(--accent); }
 @media (max-width: 800px) { .editor-body { grid-template-columns: 1fr; } .editor-canvas { max-height: 40vh; } .editor-panel { max-height: none; } }
+.md-help-table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+.md-help-table td { padding: 8px 10px; border-top: 1px solid var(--border); vertical-align: top; }
+.md-help-table td:first-child { white-space: nowrap; width: 1%; }

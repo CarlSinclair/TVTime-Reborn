@@ -1,7 +1,7 @@
 {{define "content"}}
 <h1>{{.T "nav.shows"}}</h1>
 <div class="season-links">
-  <a class="chip" href="/shows" {{if not .Data.Status}}aria-current="page"{{end}}>{{.T "status.all"}} <span class="count">{{index .Data.Counts "all"}}</span></a>
+  <a class="chip" href="/shows?status=all" {{if eq .Data.Status "all"}}aria-current="page"{{end}}>{{.T "status.all"}} <span class="count">{{index .Data.Counts "all"}}</span></a>
   {{range .Data.Statuses}}<a class="chip" href="/shows?status={{.}}" {{if eq . $.Data.Status}}aria-current="page"{{end}}>{{$.T (printf "status.%s" .)}} <span class="count">{{index $.Data.Counts .}}</span></a>{{end}}
 </div>
 {{if .Data.Entries}}

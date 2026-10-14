@@ -252,6 +252,7 @@
   <label>{{.T "admin.pages_slug"}}<input type="text" name="slug" pattern="[a-z0-9][a-z0-9\-]*" maxlength="64" autocomplete="off" spellcheck="false" required></label>
   <label>{{.T "admin.pages_title"}}<input type="text" name="title" maxlength="200" autocomplete="off" required></label>
   <label>{{.T "admin.pages_body"}}<textarea name="body" rows="8"></textarea></label>
+  <div><button class="btn ghost small" type="button" data-modal-open="m-md-help">{{.T "admin.md_help"}}</button></div>
   <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="add-page-en" name="enabled" checked><label for="add-page-en" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="add-page-en">{{.T "admin.pages_enabled"}}</label></div>
   <p class="form-error" role="alert" hidden></p>
   <div><button class="btn" type="submit">{{.T "admin.pages_add"}}</button></div>
@@ -272,6 +273,7 @@
       <label>{{$.T "admin.pages_slug"}}<input type="text" name="slug_{{.Lang}}" value="{{.Slug}}" pattern="[a-z0-9][a-z0-9\-]*" maxlength="64" autocomplete="off" spellcheck="false"></label>
       <label>{{$.T "admin.pages_title"}}<input type="text" name="title_{{.Lang}}" value="{{.Title}}" maxlength="200" autocomplete="off"></label>
       <label>{{$.T "admin.pages_body"}}<textarea name="body_{{.Lang}}" rows="10">{{.Body}}</textarea></label>
+      <div><button class="btn ghost small" type="button" data-modal-open="m-md-help">{{$.T "admin.md_help"}}</button></div>
       <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{$pid}}-{{.Lang}}-en" name="enabled_{{.Lang}}" {{if .Enabled}}checked{{end}}><label for="pg-{{$pid}}-{{.Lang}}-en" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{$pid}}-{{.Lang}}-en">{{$.T "admin.pages_enabled"}}</label></div>
       <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{$pid}}-{{.Lang}}-del" name="del_{{.Lang}}"><label for="pg-{{$pid}}-{{.Lang}}-del" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{$pid}}-{{.Lang}}-del">{{$.T "admin.pages_delete_lang"}}</label></div>
     </fieldset>
@@ -290,6 +292,7 @@
     <label>{{$.T "admin.pages_slug"}}<input type="text" name="slug" pattern="[a-z0-9][a-z0-9\-]*" maxlength="64" autocomplete="off" spellcheck="false" required></label>
     <label>{{$.T "admin.pages_title"}}<input type="text" name="title" maxlength="200" autocomplete="off" required></label>
     <label>{{$.T "admin.pages_body"}}<textarea name="body" rows="6"></textarea></label>
+    <div><button class="btn ghost small" type="button" data-modal-open="m-md-help">{{$.T "admin.md_help"}}</button></div>
     <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{$pid}}-newlang" name="enabled" checked><label for="pg-{{$pid}}-newlang" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{$pid}}-newlang">{{$.T "admin.pages_enabled"}}</label></div>
     <p class="form-error" role="alert" hidden></p>
     <div><button class="btn ghost" type="submit">{{$.T "admin.pages_add_language"}}</button></div>
@@ -297,6 +300,29 @@
 </details>
 {{else}}<p class="muted center">{{$.T "admin.pages_none"}}</p>{{end}}
 {{template "pager" (dict "Pager" .Data.Pager "V" .)}}
+
+<dialog class="modal" id="m-md-help" aria-labelledby="m-md-help-t">
+  <h2 id="m-md-help-t">{{.T "admin.md_title"}}</h2>
+  <table class="md-help-table">
+    <tbody>
+      <tr><td><code># Heading</code></td><td>{{.T "admin.md_heading"}}</td></tr>
+      <tr><td><code>**bold**</code></td><td><strong>{{.T "admin.md_bold"}}</strong></td></tr>
+      <tr><td><code>_italic_</code></td><td><em>{{.T "admin.md_italic"}}</em></td></tr>
+      <tr><td><code>~~strike~~</code></td><td><del>{{.T "admin.md_strike"}}</del></td></tr>
+      <tr><td><code>- item</code></td><td>{{.T "admin.md_list"}}</td></tr>
+      <tr><td><code>1. item</code></td><td>{{.T "admin.md_numbered"}}</td></tr>
+      <tr><td><code>[text](https://example.com)</code></td><td>{{.T "admin.md_link"}}</td></tr>
+      <tr><td><code>![alt](https://example.com/img.png)</code></td><td>{{.T "admin.md_image"}}</td></tr>
+      <tr><td><code>&gt; quote</code></td><td>{{.T "admin.md_quote"}}</td></tr>
+      <tr><td><code>`code`</code></td><td>{{.T "admin.md_code"}}</td></tr>
+      <tr><td><code>```<br>code block<br>```</code></td><td>{{.T "admin.md_codeblock"}}</td></tr>
+      <tr><td><code>---</code></td><td>{{.T "admin.md_hr"}}</td></tr>
+      <tr><td><code>| a | b |<br>|---|---|<br>| 1 | 2 |</code></td><td>{{.T "admin.md_table"}}</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">{{.T "admin.md_note"}}</p>
+  <div class="modal-actions"><button class="btn" type="button" data-modal-close>{{.T "js.close"}}</button></div>
+</dialog>
 
 {{else if eq .Data.Tab "faq"}}
 <p class="muted">{{.T "admin.faq_intro"}}</p>
