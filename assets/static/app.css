@@ -526,3 +526,4 @@ body[data-user="0"] .topbar { padding-bottom: 10px; }
   .cover-hero::after { display: none; }
   .hero-bg + * { margin-top: -2.2rem; position: relative; }
 }
+.search input { padding-inline-end: 0; }

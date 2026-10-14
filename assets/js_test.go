@@ -25,6 +25,9 @@ func TestEmbeddedScriptsParse(t *testing.T) {
 		if _, err := parser.ParseFile(nil, name, string(src), 0); err != nil {
 			t.Errorf("%s does not parse: %v", name, err)
 		}
+		if _, err := goja.Compile(name, string(src), false); err != nil {
+			t.Errorf("%s does not compile (redeclared names and other early errors): %v", name, err)
+		}
 	}
 }
 
