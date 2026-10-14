@@ -49,6 +49,8 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/pics", a.apiUploadPic)
 	mux.HandleFunc("POST /api/pics/still", a.apiPicFromStill)
 	mux.HandleFunc("POST /api/pics/discard", a.apiDiscardPic)
+	mux.HandleFunc("GET /api/pics/source/{name}", a.apiPicSource)
+	mux.HandleFunc("GET /api/episode/{id}/still", a.apiStillBytes)
 	mux.HandleFunc("GET /api/episode/{id}/stills", a.apiEpisodeStills)
 	mux.HandleFunc("GET /search", a.pageSearch)
 	mux.HandleFunc("GET /show/{tmdb}", a.pageShow)

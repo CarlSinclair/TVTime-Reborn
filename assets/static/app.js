@@ -182,7 +182,7 @@
   const askUpto = (missing) =>
     new Promise((resolve) => {
       const dlg = document.createElement("dialog");
-      dlg.className = "confirm-dialog";
+      dlg.className = "confirm-dialog modal";
       const title = document.createElement("h2");
       title.textContent = t("upto_title");
       const text = document.createElement("p");
@@ -208,7 +208,7 @@
     const data = await run(trigger, () => api("/api/episode/" + episodeId + "/stills", null, "GET"));
     if (!data) return;
     const dlg = document.createElement("dialog");
-    dlg.className = "stills-dialog";
+    dlg.className = "stills-dialog modal";
     const title = document.createElement("h2");
     title.textContent = t("pic_stills_title");
     dlg.appendChild(title);
@@ -249,6 +249,25 @@
     dlg.showModal();
   };
 
+  let editorScript = null;
+  const loadEditor = () => {
+    if (window.TVTEditor) return Promise.resolve(window.TVTEditor);
+    if (!editorScript) {
+      editorScript = new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        const base = document.querySelector('script[src*="/static/app.js"]');
+        s.src = "/static/editor.js" + (base ? new URL(base.src, window.location.href).search : "");
+        s.onload = () => resolve(window.TVTEditor);
+        s.onerror = () => {
+          editorScript = null;
+          reject(new Error(t("network_error")));
+        };
+        document.head.appendChild(s);
+      });
+    }
+    return editorScript;
+  };
+
   const picPicker = (textarea, episodeId) => {
     let name = "";
     const wrap = document.createElement("div");
@@ -268,6 +287,7 @@
       name = data ? data.name : "";
       img.src = data ? data.url : "";
       preview.hidden = !data;
+      editBtn.hidden = !data || data.name.endsWith(".gif");
       bar.hidden = !!data;
       textarea.required = !data;
     };
@@ -276,9 +296,15 @@
       set(null);
       if (old) api("/api/pics/discard", { name: old }).catch((err) => console.error("discard picture", err));
     };
-    preview.append(img, plainButton(t("pic_remove"), "btn small ghost", discard));
+    const openEditor = async (button, initial) => {
+      const editor = await run(button, () => loadEditor());
+      if (editor) editor.open({ t, api, upload, toast, episodeId, initial, onDone: set });
+    };
+    const editBtn = plainButton(t("ed_edit"), "btn small ghost", (b) => openEditor(b, "/api/pics/source/" + name));
+    preview.append(img, editBtn, plainButton(t("pic_remove"), "btn small ghost", discard));
     bar.appendChild(plainButton(t("pic_add"), "btn small ghost", () => file.click()));
     if (episodeId) bar.appendChild(plainButton(t("pic_stills"), "btn small ghost", (b) => openStills(episodeId, set, b)));
+    bar.appendChild(plainButton(t("ed_create"), "btn small ghost", (b) => openEditor(b, "")));
     file.addEventListener("change", async () => {
       const chosen = file.files[0];
       file.value = "";

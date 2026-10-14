@@ -525,3 +525,80 @@ func invalidateCSP() {
 }
 
 var cspOriginRe = regexp.MustCompile(`^https?://[A-Za-z0-9.-]{1,253}(:[0-9]{1,5})?$`)
+
+// apiPicSource gives the editor the bytes of a picture the person uploaded,
+// from this origin, so drawing it on a canvas does not taint the canvas.
+func (a *App) apiPicSource(w http.ResponseWriter, r *http.Request) {
+	u, err := a.needVerified(r)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	name := r.PathValue("name")
+	if !ownPic(name, u.ID) {
+		a.fail(w, r, errNotFound)
+		return
+	}
+	a.serveObject(w, r, "pics/"+name)
+}
+
+// apiStillBytes gives the editor one of an episode's stills at full size,
+// without storing anything: only the finished picture is ever saved.
+func (a *App) apiStillBytes(w http.ResponseWriter, r *http.Request) {
+	u, err := a.needVerified(r)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	if err := a.allow(a.imgLimit, "still:"+itoa(u.ID)); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		a.fail(w, r, errNotFound)
+		return
+	}
+	ep, err := a.Store.Episode(id, 0)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			a.fail(w, r, errNotFound)
+		} else {
+			a.fail(w, r, err)
+		}
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	defer cancel()
+	paths, err := a.episodeStills(ctx, ep)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	file := r.URL.Query().Get("file")
+	listed := false
+	for _, p := range paths {
+		listed = listed || p == file
+	}
+	if !listed {
+		a.fail(w, r, errBadRequest)
+		return
+	}
+	raw, err := a.fetchStill(ctx, strings.TrimPrefix(file, "/"))
+	if err != nil {
+		logger.Error("PICS still bytes %s for uid=%d: %v", file, u.ID, err)
+		a.fail(w, r, apiErr{http.StatusBadGateway, "err.image_invalid"})
+		return
+	}
+	ct := http.DetectContentType(raw)
+	if ct != "image/jpeg" && ct != "image/png" && ct != "image/webp" {
+		a.fail(w, r, apiErr{http.StatusBadGateway, "err.image_invalid"})
+		return
+	}
+	w.Header().Set("Content-Type", ct)
+	w.Header().Set("Cache-Control", "private, max-age=3600")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	if _, err := w.Write(raw); err != nil {
+		logger.Warn("PICS still bytes write: %v", err)
+	}
+}

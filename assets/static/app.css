@@ -466,3 +466,17 @@ body[data-user="0"] .topbar { padding-bottom: 10px; }
 .still-choice img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
 .still-choice:hover, .still-choice:focus-visible { border-color: var(--accent); }
 .confirm-dialog { max-width: 420px; }
+.editor-dialog { width: min(1100px, 96vw); }
+.editor-body { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 14px; margin: 10px 0; }
+.editor-stage { background: #111; border-radius: 8px; display: flex; align-items: center; justify-content: center; padding: 8px; min-height: 240px; }
+.editor-canvas { max-width: 100%; max-height: 62vh; touch-action: none; cursor: grab; border-radius: 4px; }
+.editor-panel { display: flex; flex-direction: column; gap: 10px; max-height: 66vh; overflow-y: auto; }
+.ed-group { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin: 0; min-width: 0; }
+.ed-group legend { font-weight: 600; font-size: .85rem; padding: 0 4px; }
+.ed-field { display: flex; flex-direction: column; gap: 3px; margin: 6px 0; font-size: .85rem; }
+.ed-check { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+.ed-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+.ed-tray { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.ed-thumb { padding: 0; border: 2px solid var(--border); border-radius: 6px; background: none; cursor: pointer; overflow: hidden; line-height: 0; }
+.ed-thumb:hover, .ed-thumb:focus-visible { border-color: var(--accent); }
+@media (max-width: 800px) { .editor-body { grid-template-columns: 1fr; } .editor-canvas { max-height: 40vh; } .editor-panel { max-height: none; } }

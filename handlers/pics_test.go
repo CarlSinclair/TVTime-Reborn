@@ -268,3 +268,44 @@ func TestLargeAnimatedGifsAreAccepted(t *testing.T) {
 		t.Fatalf("a many-frame GIF is accepted: %d %s", code, body)
 	}
 }
+
+func TestEditorSourcesAreServedFromThisOrigin(t *testing.T) {
+	e := newEnv(t)
+	cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/original/stillAAAA1111.jpg" {
+			w.Write(pngBytes(400, 225))
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer cdn.Close()
+	e.cfg.ImageBase = cdn.URL
+	alice := e.signup(t, "alice", true)
+	bob := e.signup(t, "bob", true)
+	alice.post("/api/show/555/follow", map[string]string{"status": "watching"})
+	sh, _ := e.store.ShowByTMDB(555)
+	eps, _ := e.store.Episodes(sh.ID, 1, 0)
+	id := itoa64(eps[1].ID)
+
+	code, body := upload(t, alice, "/api/pics", pngBytes(90, 60))
+	if code != 200 {
+		t.Fatalf("upload: %d %s", code, body)
+	}
+	name, _ := picOf(t, body)
+	if code, got := alice.get("/api/pics/source/" + name); code != 200 || len(got) == 0 {
+		t.Fatalf("the owner can load their picture into the editor: %d", code)
+	}
+	if code, _ := bob.get("/api/pics/source/" + name); code != 404 {
+		t.Fatalf("nobody else can: %d", code)
+	}
+
+	if code, got := alice.get("/api/episode/" + id + "/still?file=%2FstillAAAA1111.jpg"); code != 200 || len(got) == 0 {
+		t.Fatalf("a listed still comes back at full size: %d", code)
+	}
+	if code, _ := alice.get("/api/episode/" + id + "/still?file=%2Fnotlisted9999.jpg"); code != 400 {
+		t.Fatalf("an unlisted still is refused: %d", code)
+	}
+	if list, _ := e.store.PicUploadsBefore("9999-01-01 00:00:00"); len(list) != 1 {
+		t.Fatalf("loading stills into the editor stores nothing: %v", list)
+	}
+}
