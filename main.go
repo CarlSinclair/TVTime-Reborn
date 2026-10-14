@@ -127,6 +127,10 @@ func main() {
 		go fed.Run(ctx)
 		logger.Info("federation on as %s", baseURL.Host)
 	}
+	if err := st.EnsureUpNext(); err != nil {
+		logger.Error("up-next table could not be built; the home page will be empty until it is: %v", err)
+	}
+	go st.RunUpNextMaintenance(ctx)
 	go sy.Run(ctx)
 	nt.Start(ctx)
 	go nt.RunJobs(ctx)
