@@ -236,6 +236,6 @@ func (s *Store) ImportShow(in ImportShowInput) (ImportShowResult, error) {
 	if err := tx.Commit(); err != nil {
 		return res, err
 	}
-	s.upNextChanged(in.UserID)
+	s.refreshUpNext(in.UserID, in.ShowID)
 	return res, nil
 }

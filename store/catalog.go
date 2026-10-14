@@ -344,6 +344,7 @@ func (s *Store) SaveShow(sh *Show, seasons []SeasonInput) (int64, error) {
 	if err := tx.Commit(); err != nil {
 		return 0, fmt.Errorf("commit save show tmdb=%d: %w", sh.TMDBID, err)
 	}
+	s.refreshUpNextShow(showID)
 	return showID, nil
 }
 

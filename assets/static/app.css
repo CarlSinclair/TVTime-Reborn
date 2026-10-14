@@ -519,3 +519,10 @@ body[data-user="0"] .topbar { padding-bottom: 10px; }
 .ed-layouts { display: flex; flex-wrap: wrap; gap: 6px; }
 .ed-layout { padding: 3px; line-height: 0; background: var(--panel); border: 2px solid var(--border); border-radius: 8px; cursor: pointer; }
 .ed-layout[aria-pressed="true"], .ed-layout:hover { border-color: var(--accent); }
+@media (max-width: 720px) {
+  .cover-hero, .cover-hero.season-head { padding: 0 16px 16px; }
+  .hero-bg { position: static; display: block; width: calc(100% + 32px); height: auto; aspect-ratio: 16 / 9; margin: 0 -16px; z-index: auto; object-position: center; -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent); mask-image: linear-gradient(to bottom, #000 60%, transparent); }
+  .hero-bg.poster-bg { aspect-ratio: 4 / 3; object-position: center 20%; opacity: 1; }
+  .cover-hero::after { display: none; }
+  .hero-bg + * { margin-top: -2.2rem; position: relative; }
+}
