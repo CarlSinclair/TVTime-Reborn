@@ -271,7 +271,12 @@
       bar.hidden = !!data;
       textarea.required = !data;
     };
-    preview.append(img, plainButton(t("pic_remove"), "btn small ghost", () => set(null)));
+    const discard = () => {
+      const old = name;
+      set(null);
+      if (old) api("/api/pics/discard", { name: old }).catch((err) => console.error("discard picture", err));
+    };
+    preview.append(img, plainButton(t("pic_remove"), "btn small ghost", discard));
     bar.appendChild(plainButton(t("pic_add"), "btn small ghost", () => file.click()));
     if (episodeId) bar.appendChild(plainButton(t("pic_stills"), "btn small ghost", (b) => openStills(episodeId, set, b)));
     file.addEventListener("change", async () => {
@@ -495,9 +500,6 @@
         return;
       }
       setWatchedState(el, watched);
-      document.querySelectorAll("[data-watch-upto]").forEach((btn) => {
-        if (btn.dataset.watchUpto === d.watch && watched) btn.remove();
-      });
       return;
     }
     if ("friendAdd" in d || "friendAccept" in d || "friendDecline" in d || "friendRemove" in d) {
@@ -674,14 +676,6 @@
         toast(t("rated"), "ok");
       } else {
         toast(t("saved"), "ok");
-      }
-      return;
-    }
-    if ("watchUpto" in d) {
-      const data = await run(el, () => api("/api/episode/" + d.watchUpto + "/watch", { upTo: true }));
-      if (data) {
-        toast(fmt("marked_many", data.marked), "ok");
-        window.location.reload();
       }
       return;
     }

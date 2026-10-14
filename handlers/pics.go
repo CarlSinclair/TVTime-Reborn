@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"image"
-	"image/gif"
 	"image/jpeg"
 	"image/png"
 	"io"
@@ -22,15 +21,18 @@ import (
 	xdraw "golang.org/x/image/draw"
 
 	"tvt/logger"
-	"tvt/media"
 	"tvt/store"
 )
 
 const (
-	maxPicSide   = 1280
-	maxGifFrames = 300
-	maxGifBytes  = 5 << 20
-	maxPngBytes  = 3 << 20
+	maxPicUpload  = 16 << 20
+	maxPicSide    = 1920
+	maxGifSide    = 1280
+	maxGifFrames  = 600
+	maxGifBytes   = 12 << 20
+	maxPngBytes   = 4 << 20
+	maxStillBytes = 12 << 20
+	picKeepFor    = 24 * time.Hour
 )
 
 var (
@@ -43,7 +45,7 @@ var (
 // is after checking it decodes and stays small, anything else is decoded, scaled
 // down and re-encoded, which drops metadata and any non-image payload.
 func processPic(raw []byte) (data []byte, ext string, err error) {
-	if len(raw) > maxUpload {
+	if len(raw) > maxPicUpload {
 		return nil, "", errPicSize
 	}
 	cfg, format, err := image.DecodeConfig(bytes.NewReader(raw))
@@ -51,11 +53,10 @@ func processPic(raw []byte) (data []byte, ext string, err error) {
 		return nil, "", errBadImage
 	}
 	if format == "gif" {
-		if len(raw) > maxGifBytes || cfg.Width > maxPicSide || cfg.Height > maxPicSide {
+		if len(raw) > maxGifBytes || cfg.Width > maxGifSide || cfg.Height > maxGifSide {
 			return nil, "", errPicSize
 		}
-		g, err := gif.DecodeAll(bytes.NewReader(raw))
-		if err != nil || len(g.Image) == 0 || len(g.Image) > maxGifFrames {
+		if frames := gifFrames(raw); frames == 0 || frames > maxGifFrames {
 			return nil, "", errBadImage
 		}
 		return raw, "gif", nil
@@ -90,6 +91,59 @@ func processPic(raw []byte) (data []byte, ext string, err error) {
 	return buf.Bytes(), "jpg", nil
 }
 
+// gifFrames walks the blocks of a GIF without decoding any pixels and returns
+// how many frames it holds, or 0 when the structure is broken. That keeps the
+// memory a large animation needs out of the picture.
+func gifFrames(b []byte) int {
+	if len(b) < 13 || (string(b[:6]) != "GIF87a" && string(b[:6]) != "GIF89a") {
+		return 0
+	}
+	i := 13
+	if b[10]&0x80 != 0 {
+		i += 3 * (1 << (uint(b[10]&7) + 1))
+	}
+	skipSub := func() bool {
+		for i < len(b) {
+			n := int(b[i])
+			i++
+			if n == 0 {
+				return true
+			}
+			i += n
+		}
+		return false
+	}
+	frames := 0
+	for i < len(b) {
+		switch b[i] {
+		case 0x3B:
+			return frames
+		case 0x21:
+			i += 2
+			if !skipSub() {
+				return 0
+			}
+		case 0x2C:
+			if i+10 > len(b) {
+				return 0
+			}
+			flags := b[i+9]
+			i += 10
+			if flags&0x80 != 0 {
+				i += 3 * (1 << (uint(flags&7) + 1))
+			}
+			i++
+			if !skipSub() {
+				return 0
+			}
+			frames++
+		default:
+			return 0
+		}
+	}
+	return 0
+}
+
 // storePic saves a processed picture under the uploader's id and returns its name.
 func (a *App) storePic(ctx context.Context, userID int64, raw []byte) (string, error) {
 	data, ext, err := processPic(raw)
@@ -101,6 +155,9 @@ func (a *App) storePic(ctx context.Context, userID int64, raw []byte) (string, e
 	ct := map[string]string{"jpg": "image/jpeg", "png": "image/png", "gif": "image/gif"}[ext]
 	if err := a.Media.Put(ctx, "pics/"+name, data, ct); err != nil {
 		return "", fmt.Errorf("store picture for uid=%d: %w", userID, err)
+	}
+	if err := a.Store.PicUploadAdd(name, userID); err != nil {
+		logger.Error("PICS %v", err)
 	}
 	return name, nil
 }
@@ -117,14 +174,14 @@ func (a *App) apiUploadPic(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, maxUpload+(1<<20))
+	r.Body = http.MaxBytesReader(w, r.Body, maxPicUpload+(1<<20))
 	file, _, err := r.FormFile("file")
 	if err != nil {
 		a.fail(w, r, errBadImage)
 		return
 	}
 	defer file.Close()
-	raw, err := io.ReadAll(io.LimitReader(file, maxUpload+1))
+	raw, err := io.ReadAll(io.LimitReader(file, maxPicUpload+1))
 	if err != nil {
 		a.fail(w, r, errBadImage)
 		return
@@ -265,28 +322,10 @@ func (a *App) apiPicFromStill(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, errBadRequest)
 		return
 	}
-	file := strings.TrimPrefix(in.File, "/")
-	key := "tmdb/w780/" + file
-	if _, err := a.Media.Get(ctx, key); err != nil {
-		if !errors.Is(err, media.ErrNotFound) {
-			a.fail(w, r, err)
-			return
-		}
-		if err := a.fetchArtwork(ctx, "w780", file, key); err != nil {
-			logger.Error("PICS fetch still %s for uid=%d: %v", file, u.ID, err)
-			a.fail(w, r, apiErr{http.StatusBadGateway, "err.image_invalid"})
-			return
-		}
-	}
-	obj, err := a.Media.Get(ctx, key)
+	raw, err := a.fetchStill(ctx, strings.TrimPrefix(in.File, "/"))
 	if err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	raw, rerr := io.ReadAll(io.LimitReader(obj.Body, maxArtwork+1))
-	obj.Body.Close()
-	if rerr != nil {
-		a.fail(w, r, rerr)
+		logger.Error("PICS fetch still %s for uid=%d: %v", in.File, u.ID, err)
+		a.fail(w, r, apiErr{http.StatusBadGateway, "err.image_invalid"})
 		return
 	}
 	name, err := a.storePic(ctx, u.ID, raw)
@@ -319,5 +358,95 @@ func (a *App) dropPic(name string) {
 	defer cancel()
 	if err := a.Media.Delete(ctx, "pics/"+name); err != nil {
 		logger.Warn("PICS remove %s: %v", name, err)
+		return
+	}
+	if err := a.Store.PicUploadForget(name); err != nil {
+		logger.Error("PICS %v", err)
+	}
+}
+
+// fetchStill downloads the full-size still from TMDB's CDN. It is used once, to
+// make the person's own copy, so it is not cached with the artwork.
+func (a *App) fetchStill(ctx context.Context, file string) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, a.Cfg.ImageBase+"/original/"+file, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := imgHTTP.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("status %d", resp.StatusCode)
+	}
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, maxStillBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(raw) > maxStillBytes {
+		return nil, fmt.Errorf("still exceeds %d bytes", maxStillBytes)
+	}
+	return raw, nil
+}
+
+// apiDiscardPic deletes a picture the person uploaded and then took off the
+// comment they were writing, unless a comment already shows it.
+func (a *App) apiDiscardPic(w http.ResponseWriter, r *http.Request) {
+	u, err := a.needUser(r)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	var in struct{ Name string }
+	if err := decode(r, &in); err != nil || !ownPic(in.Name, u.ID) {
+		a.fail(w, r, errBadRequest)
+		return
+	}
+	a.dropPic(in.Name)
+	a.okJSON(w, nil)
+}
+
+// SweepPics deletes uploads older than keep that no comment uses, and forgets
+// the ones that are in use. Run it from a janitor so abandoned uploads do not
+// pile up in the bucket.
+func (a *App) SweepPics(keep time.Duration) {
+	names, err := a.Store.PicUploadsBefore(store.Ts(time.Now().Add(-keep)))
+	if err != nil {
+		logger.Error("PICS sweep: %v", err)
+		return
+	}
+	for _, n := range names {
+		used, err := a.Store.ImageInUse(n)
+		if err != nil {
+			logger.Error("PICS sweep use of %s: %v", n, err)
+			continue
+		}
+		if !used {
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+			err := a.Media.Delete(ctx, "pics/"+n)
+			cancel()
+			if err != nil {
+				logger.Warn("PICS sweep remove %s: %v", n, err)
+				continue
+			}
+		}
+		if err := a.Store.PicUploadForget(n); err != nil {
+			logger.Error("PICS sweep %v", err)
+		}
+	}
+}
+
+// RunPicJanitor sweeps abandoned uploads every half hour until ctx ends.
+func (a *App) RunPicJanitor(ctx context.Context) {
+	tick := time.NewTicker(30 * time.Minute)
+	defer tick.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+			a.SweepPics(picKeepFor)
+		}
 	}
 }

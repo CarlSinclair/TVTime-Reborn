@@ -131,6 +131,7 @@ func main() {
 	nt.Start(ctx)
 	go nt.RunJobs(ctx)
 	go app.SetupTelegram()
+	go app.RunPicJanitor(ctx)
 
 	srv := &http.Server{
 		Addr:              cfg.Addr,
