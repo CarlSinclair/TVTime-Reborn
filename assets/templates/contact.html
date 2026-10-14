@@ -12,7 +12,8 @@
   {{if or .Data.Email .Data.Bot}}<p class="or-divider"><span>{{.T "contact.or"}}</span></p>{{end}}
   <form class="stack" data-api="/api/contact" data-success="{{.T "contact.sent"}}">
     <label>{{.T "contact.name"}}<input type="text" name="name" maxlength="100" autocomplete="name" required value="{{if .User}}{{.User.DisplayName}}{{end}}"></label>
-    <label>{{.T "contact.email"}}<input type="email" name="email" autocomplete="email" required value="{{if .User}}{{.User.Email}}{{end}}"></label>
+    <label>{{.T "contact.handle"}}<input type="text" name="contact" maxlength="100" required placeholder="@username"></label>
+    <label>{{.T "contact.email"}}<input type="email" name="email" autocomplete="email" value="{{if .User}}{{.User.Email}}{{end}}"></label>
     <label>{{.T "contact.message"}}<textarea name="message" rows="7" maxlength="5000" required></textarea></label>
     <label class="hp" aria-hidden="true">Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
     <div class="captcha-game-container" data-i18n-expired="{{.T "captcha.expired"}}" data-i18n-securing="{{.T "captcha.securing"}}" data-i18n-secured="{{.T "captcha.secured"}}" data-i18n-complete-first="{{.T "captcha.complete_first"}}">
