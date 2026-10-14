@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func gifBytes(frames int) []byte {
@@ -126,7 +127,7 @@ func TestCommentsCarryPicturesAndGifs(t *testing.T) {
 func TestEpisodeStillsCanBeAttached(t *testing.T) {
 	e := newEnv(t)
 	cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/w780/stillAAAA1111.jpg" {
+		if r.URL.Path == "/original/stillAAAA1111.jpg" {
 			w.Write(pngBytes(400, 225))
 			return
 		}
@@ -170,8 +171,8 @@ func TestMarkingAnEpisodeAsksAboutEarlierOnes(t *testing.T) {
 	second := "/api/episode/" + itoa64(eps[1].ID) + "/watch"
 
 	_, page := alice.get("/episode/" + itoa64(eps[1].ID))
-	if !strings.Contains(page, "data-watch-upto") {
-		t.Fatalf("with an earlier episode unwatched the up-to button is offered")
+	if strings.Contains(page, "data-watch-upto") {
+		t.Fatalf("there is no separate up-to button any more")
 	}
 	code, out := alice.post(second, map[string]any{"watched": true})
 	if code != 200 || out["needs_confirm"] != true || out["missing"] != float64(1) {
@@ -186,11 +187,6 @@ func TestMarkingAnEpisodeAsksAboutEarlierOnes(t *testing.T) {
 	if ep, _ := e.store.Episode(eps[0].ID, e.mustUser(t, "alice").ID); ep.Watched {
 		t.Fatalf("the earlier episode stays unwatched on no")
 	}
-	_, page = alice.get("/episode/" + itoa64(eps[1].ID))
-	if strings.Contains(page, "data-watch-upto") {
-		t.Fatalf("a watched episode has no up-to button")
-	}
-
 	if code, _ := alice.post(second, map[string]any{"watched": false}); code != 200 {
 		t.Fatalf("unwatch: %d", code)
 	}
@@ -204,5 +200,71 @@ func TestMarkingAnEpisodeAsksAboutEarlierOnes(t *testing.T) {
 	alice.post(first, map[string]any{"watched": false})
 	if code, out := alice.post(first, map[string]any{"watched": true}); code != 200 || out["needs_confirm"] != nil {
 		t.Fatalf("the first episode never asks: %d %v", code, out)
+	}
+}
+
+func TestAbandonedUploadsAreSweptAndDiscardedOnesGoAtOnce(t *testing.T) {
+	e := newEnv(t)
+	alice := e.signup(t, "alice", true)
+	bob := e.signup(t, "bob", true)
+	upl := func() (string, string) {
+		code, body := upload(t, alice, "/api/pics", pngBytes(64, 64))
+		if code != 200 {
+			t.Fatalf("upload: %d %s", code, body)
+		}
+		return picOf(t, body)
+	}
+	gone := func(url string) bool {
+		resp, err := http.Get(e.srv.URL + url)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		return resp.StatusCode == 404
+	}
+
+	name, url := upl()
+	if code, _ := bob.post("/api/pics/discard", map[string]any{"name": name}); code != 400 {
+		t.Fatalf("someone else cannot discard it: %d", code)
+	}
+	if code, _ := alice.post("/api/pics/discard", map[string]any{"name": name}); code != 200 || !gone(url) {
+		t.Fatalf("taking the picture off the draft deletes it at once")
+	}
+
+	name, url = upl()
+	e.app.SweepPics(-time.Minute)
+	if !gone(url) {
+		t.Fatalf("an upload nobody used is swept")
+	}
+	_ = name
+
+	alice.post("/api/show/555/follow", map[string]string{"status": "watching"})
+	sh, _ := e.store.ShowByTMDB(555)
+	eps, _ := e.store.Episodes(sh.ID, 1, 0)
+	name, url = upl()
+	if code, out := alice.post("/api/episode/"+itoa64(eps[0].ID)+"/comments", map[string]any{"body": "x", "image": name}); code != 200 {
+		t.Fatalf("comment: %d %v", code, out)
+	}
+	e.app.SweepPics(-time.Minute)
+	if gone(url) {
+		t.Fatalf("a picture a comment shows is never swept")
+	}
+	if code, _ := alice.post("/api/pics/discard", map[string]any{"name": name}); code != 200 || gone(url) {
+		t.Fatalf("discard leaves a used picture alone")
+	}
+}
+
+func TestLargeAnimatedGifsAreAccepted(t *testing.T) {
+	e := newEnv(t)
+	alice := e.signup(t, "alice", true)
+	big := gifBytes(120)
+	pad := make([]byte, 7<<20)
+	withPad := append(append([]byte{}, big[:len(big)-1]...), pad...)
+	withPad = append(withPad, 0x3B)
+	if code, body := upload(t, alice, "/api/pics", withPad); code != 400 {
+		t.Fatalf("garbage inside the GIF structure is refused: %d %s", code, body)
+	}
+	if code, body := upload(t, alice, "/api/pics", big); code != 200 {
+		t.Fatalf("a many-frame GIF is accepted: %d %s", code, body)
 	}
 }

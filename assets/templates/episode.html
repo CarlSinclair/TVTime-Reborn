@@ -11,7 +11,6 @@
     <div class="actions">
       {{if aired .AirDate}}
       <button class="btn" type="button" data-watch="{{.ID}}" data-state="{{if .Watched}}1{{else}}0{{end}}" data-label-on="{{$.T "ep.watched"}}" data-label-off="{{$.T "ep.mark_watched"}}">{{if .Watched}}{{$.T "ep.watched"}}{{else}}{{$.T "ep.mark_watched"}}{{end}}</button>
-      {{if and (not .Watched) (gt $.Data.Missing 0)}}<button class="btn ghost" type="button" data-watch-upto="{{.ID}}">{{$.T "ep.mark_upto"}}</button>{{end}}
       {{end}}
       {{if aired .AirDate}}{{template "stars" (dict "ID" .ID "Rating" .UserRating "V" $)}}{{end}}
     </div>
