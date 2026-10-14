@@ -152,7 +152,7 @@ func TestContactPageSendsToTheOperator(t *testing.T) {
 	if strings.Index(page, "or-divider") > strings.Index(page, "<form") || strings.Index(page, "mailto:") > strings.Index(page, "or-divider") {
 		t.Fatalf("the email and Telegram buttons come first, then OR, then the form")
 	}
-	body := map[string]any{"name": "Pat", "email": "pat@example.com", "message": "Hello operator"}
+	body := map[string]any{"name": "Pat", "contact": "@pat", "email": "pat@example.com", "message": "Hello operator"}
 	if code, _ := anon.post("/api/contact", body); code != 400 {
 		t.Fatalf("without a solved captcha nothing is sent: %d", code)
 	}
@@ -169,7 +169,7 @@ func TestContactPageSendsToTheOperator(t *testing.T) {
 		t.Fatalf("a solved captcha works once: %d", code)
 	}
 	before := len(mails)
-	if code, _ := anon.post("/api/contact", map[string]any{"name": "Bot", "email": "b@example.com", "message": "spam", "website": "http://x"}); code != 200 {
+	if code, _ := anon.post("/api/contact", map[string]any{"name": "Bot", "contact": "@b", "message": "spam", "website": "http://x"}); code != 200 {
 		t.Fatalf("honeypot answers success")
 	}
 	if m, _ := e.store.RecentMail(5); len(m) != before {
@@ -216,5 +216,32 @@ func TestContactPageAddressFollowsTheVisitorsLanguage(t *testing.T) {
 	}
 	if code, _ := boss.post("/api/admin/pages", map[string]any{"action": "add", "lang": "en", "slug": "contato", "title": "x", "enabled": true, "body": "x"}); code != 409 {
 		t.Fatalf("a page cannot take a contact address from any language: %d", code)
+	}
+}
+
+func TestContactFormGoesToTelegramWhenTheBotCanReachSomeone(t *testing.T) {
+	captcha.ResetRisk()
+	e := newEnv(t)
+	e.makeAdmin(t, "boss")
+	if err := e.store.SetTelegramChat(e.mustUser(t, "boss").ID, "900"); err != nil {
+		t.Fatal(err)
+	}
+	mailBefore, _ := e.store.RecentMail(20)
+	anon := newClient(t, e.srv.URL)
+	_, page := anon.get("/contact")
+	if !strings.Contains(page, `data-api="/api/contact"`) || !strings.Contains(page, `name="contact"`) {
+		t.Fatalf("with a reachable operator the form is offered without any mail setup and asks for a phone or handle")
+	}
+	body := map[string]any{"name": "Pat", "contact": "@pat", "message": "Hello operator"}
+	body["captcha_id"] = solveCaptcha(t, anon, page)
+	if code, out := anon.post("/api/contact", body); code != 200 {
+		t.Fatalf("send: %d %v", code, out)
+	}
+	got := e.sentTo("900")
+	if len(got) != 1 || !strings.Contains(got[0], "Contact form from Pat") || !strings.Contains(got[0], "@pat") || !strings.Contains(got[0], "Hello operator") {
+		t.Fatalf("the operator gets the message on Telegram: %v", got)
+	}
+	if m, _ := e.store.RecentMail(20); len(m) != len(mailBefore) {
+		t.Fatalf("and no email is sent: %+v", m)
 	}
 }

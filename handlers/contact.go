@@ -57,7 +57,8 @@ func (a *App) pageContact(w http.ResponseWriter, r *http.Request) {
 	if a.Bot.Configured() {
 		bot = a.Bot.Username
 	}
-	formOK := email != "" && a.Mail != nil && a.Mail.Configured()
+	mailOK := email != "" && a.Mail != nil && a.Mail.Configured()
+	formOK := mailOK || len(a.contactChats()) > 0
 	data := map[string]any{"Email": email, "Bot": bot, "TelegramURL": template.URL("tg://resolve?domain=" + url.QueryEscape(bot) + "&start=support"), "FormAvailable": formOK, "PrivacyContact": a.Cfg.PrivacyContact}
 	if formOK {
 		ip := auth.ClientIP(r)
@@ -99,12 +100,27 @@ func (a *App) apiCaptchaVerify(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"success": ok, "expired": expired})
 }
 
-// apiContact sends a visitor's message to the operator by email, once the
-// captcha has been solved.
+// contactChats are the Telegram chats a contact form message goes to: the
+// support group when one is set, otherwise every admin who connected the bot.
+func (a *App) contactChats() []string {
+	if !a.Bot.Configured() {
+		return nil
+	}
+	chats, err := a.supportOperators()
+	if err != nil {
+		logger.Error("CONTACT could not look up the support chats: %v", err)
+		return nil
+	}
+	return chats
+}
+
+// apiContact sends a visitor's message to the operator once the captcha has
+// been solved: to Telegram when the bot has somewhere to send it, for the
+// fastest answer, otherwise by email.
 func (a *App) apiContact(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		Name, Email, Message, Website string
-		CaptchaID                     string `json:"captcha_id"`
+		Name, Contact, Email, Message, Website string
+		CaptchaID                              string `json:"captcha_id"`
 	}
 	if err := decode(r, &in); err != nil {
 		a.fail(w, r, err)
@@ -122,24 +138,59 @@ func (a *App) apiContact(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, apiErr{http.StatusBadRequest, "err.captcha_failed"})
 		return
 	}
-	name, msg := strings.TrimSpace(in.Name), strings.TrimSpace(in.Message)
-	email, ok := normEmail(in.Email)
-	if name == "" || msg == "" || !ok || utf8.RuneCountInString(name) > 100 || utf8.RuneCountInString(msg) > 5000 {
+	name, handle, msg := cleanChatText(in.Name, 100), cleanChatText(in.Contact, 100), strings.TrimSpace(in.Message)
+	email := ""
+	if strings.TrimSpace(in.Email) != "" {
+		e, ok := normEmail(in.Email)
+		if !ok {
+			a.fail(w, r, errBadRequest)
+			return
+		}
+		email = e
+	}
+	if name == "" || handle == "" || msg == "" || utf8.RuneCountInString(msg) > 5000 {
 		a.fail(w, r, errBadRequest)
 		return
 	}
+
+	if chats := a.contactChats(); len(chats) > 0 {
+		text := "📨 Contact form from " + name + "\nContact: " + handle
+		if email != "" {
+			text += "\nEmail: " + email
+		}
+		text += "\n\n" + msg
+		delivered := false
+		for _, chat := range chats {
+			if _, err := a.tgSend(chat, text); err != nil {
+				logger.Error("CONTACT telegram delivery to chat=%s from %q failed: %v", chat, name, err)
+				continue
+			}
+			delivered = true
+		}
+		if delivered {
+			logger.Info("CONTACT message delivered to Telegram")
+			a.okJSON(w, nil)
+			return
+		}
+		logger.Error("CONTACT no Telegram chat accepted the message from %q", name)
+	}
+
 	to := a.contactTo()
 	if to == "" || a.Mail == nil || !a.Mail.Configured() {
 		a.fail(w, r, apiErr{http.StatusServiceUnavailable, "err.contact_unavailable"})
 		return
 	}
 	subject := a.Cfg.AppName + " contact: " + strings.NewReplacer("\r", " ", "\n", " ").Replace(name)
-	body := "From: " + name + " <" + email + ">\n\n" + msg + "\n"
+	body := "From: " + name + "\nContact: " + handle
+	if email != "" {
+		body += "\nEmail: " + email
+	}
+	body += "\n\n" + msg + "\n"
 	if err := a.Mail.Send(to, subject, body); err != nil {
-		logger.Error("CONTACT could not send a message from %s: %v", email, err)
+		logger.Error("CONTACT could not email a message from %q: %v", name, err)
 		a.fail(w, r, errMailDown)
 		return
 	}
-	logger.Info("CONTACT message delivered to the operator")
+	logger.Info("CONTACT message delivered to the operator by email")
 	a.okJSON(w, nil)
 }
