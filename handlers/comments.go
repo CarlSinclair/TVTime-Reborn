@@ -14,9 +14,9 @@ import (
 	"tvt/store"
 )
 
-func cleanBody(s string) (string, bool) {
+func cleanBody(s string, hasImage bool) (string, bool) {
 	s = strings.ReplaceAll(strings.TrimSpace(s), "\r\n", "\n")
-	if s == "" || utf8.RuneCountInString(s) > store.MaxCommentLen || !utf8.ValidString(s) {
+	if (s == "" && !hasImage) || utf8.RuneCountInString(s) > store.MaxCommentLen || !utf8.ValidString(s) {
 		return "", false
 	}
 	for _, r := range s {
@@ -32,6 +32,7 @@ type commentJSON struct {
 	User      string          `json:"user"`
 	Name      string          `json:"name"`
 	Body      string          `json:"body"`
+	Image     string          `json:"image,omitempty"`
 	Spoiler   bool            `json:"spoiler"`
 	ParentID  int64           `json:"parent_id"`
 	CreatedAt string          `json:"created_at"`
@@ -318,7 +319,7 @@ func (a *App) apiListComments() http.HandlerFunc {
 				name = c.Username
 			}
 			out = append(out, commentJSON{
-				ID: c.ID, User: c.Username, Name: name, Body: c.Body, Spoiler: c.IsSpoiler(), ParentID: c.ParentID,
+				ID: c.ID, User: c.Username, Name: name, Body: c.Body, Image: a.picURL(c.Image), Spoiler: c.IsSpoiler(), ParentID: c.ParentID,
 				CreatedAt: c.CreatedAt, Edited: c.EditedAt != "", Deleted: c.Deleted, Hidden: c.Hidden, Mine: uid != 0 && c.UserID == uid, Reported: c.MyReports,
 			})
 		}
@@ -351,6 +352,7 @@ func (a *App) apiAddComment() http.HandlerFunc {
 			Body     string
 			Spoiler  bool
 			ParentID int64 `json:"parent_id"`
+			Image    string
 		}
 		if err := decode(r, &in); err != nil {
 			a.fail(w, r, err)
@@ -366,7 +368,11 @@ func (a *App) apiAddComment() http.HandlerFunc {
 				return
 			}
 		}
-		body, ok := cleanBody(in.Body)
+		if in.Image != "" && (!ownPic(in.Image, u.ID) || in.ParentID < 0) {
+			a.fail(w, r, errBadRequest)
+			return
+		}
+		body, ok := cleanBody(in.Body, in.Image != "")
 		if !ok {
 			a.fail(w, r, apiErr{http.StatusBadRequest, "err.comment_invalid"})
 			return
@@ -379,7 +385,7 @@ func (a *App) apiAddComment() http.HandlerFunc {
 			a.replyToRemote(w, r, u, t, in.ParentID, body, in.Spoiler)
 			return
 		}
-		cid, err := a.Store.AddComment(u.ID, t, in.ParentID, body, in.Spoiler)
+		cid, err := a.Store.AddComment(u.ID, t, in.ParentID, body, in.Spoiler, in.Image)
 		if err != nil {
 			if errors.Is(err, store.ErrNotFound) {
 				a.fail(w, r, errNotFound)
@@ -487,7 +493,11 @@ func (a *App) apiEditComment(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	body, ok := cleanBody(in.Body)
+	hasImage := false
+	if img, err := a.Store.CommentImage(id); err == nil {
+		hasImage = img != ""
+	}
+	body, ok := cleanBody(in.Body, hasImage)
 	if !ok {
 		a.fail(w, r, apiErr{http.StatusBadRequest, "err.comment_invalid"})
 		return
@@ -516,6 +526,10 @@ func (a *App) apiDeleteComment(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	image, imgErr := a.Store.CommentImage(id)
+	if imgErr != nil && !errors.Is(imgErr, store.ErrNotFound) {
+		logger.Error("COMMENTS image of comment=%d before delete: %v", id, imgErr)
+	}
 	if err := a.Store.DeleteComment(u.ID, false, id); err != nil {
 		if errors.Is(err, store.ErrForbidden) {
 			a.fail(w, r, errForbidden)
@@ -524,6 +538,7 @@ func (a *App) apiDeleteComment(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	a.dropPic(image)
 	if a.Fed != nil {
 		a.Fed.Retract(u, "c:"+itoa(id))
 		a.Fed.WithdrawComment(u, "c:"+itoa(id))

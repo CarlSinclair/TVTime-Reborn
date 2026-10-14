@@ -454,3 +454,15 @@ details.fold > summary .count { font-size: .8rem; font-weight: 700; color: var(-
 .spoiler-row { padding: 0; border-bottom: 0; }
 body[data-user="0"] .topbar { padding-bottom: 10px; }
 .container > .tabs.centered:first-child { margin-top: -12px; }
+
+.comment-img { display: block; max-width: 100%; max-height: 420px; border-radius: 8px; margin-top: 8px; }
+.pic-picker { margin: 6px 0; }
+.pic-bar { display: flex; gap: 8px; flex-wrap: wrap; }
+.pic-preview { display: flex; align-items: flex-start; gap: 10px; }
+.pic-preview img { max-width: 160px; max-height: 120px; border-radius: 8px; }
+.stills-dialog { width: min(720px, 94vw); }
+.stills-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; max-height: 60vh; overflow: auto; margin-bottom: 12px; }
+.still-choice { padding: 0; border: 2px solid transparent; border-radius: 8px; background: none; cursor: pointer; overflow: hidden; }
+.still-choice img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+.still-choice:hover, .still-choice:focus-visible { border-color: var(--accent); }
+.confirm-dialog { max-width: 420px; }

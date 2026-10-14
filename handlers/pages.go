@@ -46,6 +46,9 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/captcha/verify", a.apiCaptchaVerify)
 	mux.HandleFunc("POST /api/admin/pages", a.apiAdminPages)
 	mux.HandleFunc("POST /api/admin/faq", a.apiAdminFAQ)
+	mux.HandleFunc("POST /api/pics", a.apiUploadPic)
+	mux.HandleFunc("POST /api/pics/still", a.apiPicFromStill)
+	mux.HandleFunc("GET /api/episode/{id}/stills", a.apiEpisodeStills)
 	mux.HandleFunc("GET /search", a.pageSearch)
 	mux.HandleFunc("GET /show/{tmdb}", a.pageShow)
 	mux.HandleFunc("GET /show/{tmdb}/season/{n}", a.pageSeason)
@@ -544,8 +547,15 @@ func (a *App) pageEpisode(w http.ResponseWriter, r *http.Request) {
 	if err := a.Store.LocalizeEpisodes(lang, group...); err != nil {
 		logger.Error("PAGE localize episode id=%d lang=%s: %v", ep.ID, lang, err)
 	}
+	missing := 0
+	if viewer := auth.UserFrom(r.Context()); viewer != nil && !ep.Watched {
+		if missing, err = a.Store.UnwatchedBefore(viewer.ID, sh.ID, ep.SeasonNumber, ep.EpisodeNumber); err != nil {
+			logger.Error("PAGE episode earlier unwatched id=%d: %v", ep.ID, err)
+			missing = 0
+		}
+	}
 	a.render(w, r, "episode", http.StatusOK, sh.Name+" "+episodeCode(ep.SeasonNumber, ep.EpisodeNumber),
-		map[string]any{"Show": sh, "Episode": ep, "Prev": prev, "Next": next})
+		map[string]any{"Show": sh, "Episode": ep, "Prev": prev, "Next": next, "Missing": missing})
 }
 
 func (a *App) pageMyShows(w http.ResponseWriter, r *http.Request) {

@@ -66,6 +66,11 @@ func (a *App) emitComment(u *store.User, t store.Target, parentID, commentID int
 		return
 	}
 	ref := "c:" + itoa(commentID)
+	if strings.TrimSpace(body) == "" {
+		a.Fed.Retract(u, ref)
+		a.Fed.WithdrawComment(u, ref)
+		return
+	}
 	if t.Kind == store.KindEpisode {
 		if c, err := a.Store.OpenEpisodeComment(commentID); err != nil {
 			if !errors.Is(err, store.ErrNotFound) {

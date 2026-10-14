@@ -109,6 +109,24 @@ func (s *Store) MarkUpTo(userID, showID int64, season, episode int) (int, error)
 	return int(n), nil
 }
 
+// UnwatchedBefore counts the aired episodes before the given one (specials
+// never count) that the person has not marked as watched.
+func (s *Store) UnwatchedBefore(userID, showID int64, season, episode int) (int, error) {
+	if season <= 0 {
+		return 0, nil
+	}
+	var n int
+	err := s.DB.QueryRow(`SELECT COUNT(*) FROM episodes e
+	  WHERE e.show_id = ? AND e.season_number > 0 AND e.air_date IS NOT NULL AND e.air_date <= ?
+	    AND (e.season_number < ? OR (e.season_number = ? AND e.episode_number < ?))
+	    AND NOT EXISTS (SELECT 1 FROM watched w WHERE w.user_id = ? AND w.episode_id = e.id)`,
+		showID, today(), season, season, episode, userID).Scan(&n)
+	if err != nil {
+		return 0, fmt.Errorf("unwatched before uid=%d show=%d s%de%d: %w", userID, showID, season, episode, err)
+	}
+	return n, nil
+}
+
 func (s *Store) MarkSeason(userID, showID int64, season int, watched bool) (int, error) {
 	if !watched {
 		res, err := s.DB.Exec(`DELETE FROM watched WHERE user_id = ? AND show_id = ? AND episode_id IN

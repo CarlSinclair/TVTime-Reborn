@@ -536,8 +536,18 @@ func (a *App) apiDeactivateAccount(w http.ResponseWriter, r *http.Request) {
 // does not undo the deletion.
 func (a *App) deleteAccount(ctx context.Context, u *store.User, mode string) error {
 	a.withdrawAll(u)
+	var images []string
+	if mode == "delete" {
+		var err error
+		if images, err = a.Store.UserCommentImages(u.ID); err != nil {
+			logger.Error("ACCOUNT delete: images of uid=%d: %v", u.ID, err)
+		}
+	}
 	if err := a.Store.TransferUserComments(u.ID, mode); err != nil {
 		return err
+	}
+	for _, img := range images {
+		a.dropPic(img)
 	}
 	if a.Fed != nil {
 		if friends, err := a.Store.RemoteFriends(u.ID); err != nil {

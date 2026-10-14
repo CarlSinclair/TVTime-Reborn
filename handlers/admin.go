@@ -25,6 +25,10 @@ func (a *App) apiAdminDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	author, aerr := a.Store.CommentByID(id)
+	image, imgErr := a.Store.CommentImage(id)
+	if imgErr != nil && !errors.Is(imgErr, store.ErrNotFound) {
+		logger.Error("ADMIN image of comment=%d before delete: %v", id, imgErr)
+	}
 	if err := a.Store.DeleteComment(u.ID, true, id); err != nil {
 		if errors.Is(err, store.ErrForbidden) {
 			a.fail(w, r, errNotFound)
@@ -33,6 +37,7 @@ func (a *App) apiAdminDelete(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	a.dropPic(image)
 	if err := a.Store.ResolveReports(id); err != nil {
 		a.fail(w, r, err)
 		return
@@ -276,7 +281,16 @@ func (a *App) applyCommentMode(uid int64, mode string) error {
 	case "hide":
 		return a.Store.HideUserComments(uid)
 	case "delete":
-		return a.Store.EraseUserComments(uid)
+		images, err := a.Store.UserCommentImages(uid)
+		if err != nil {
+			logger.Error("ADMIN images of uid=%d before erasing their comments: %v", uid, err)
+		}
+		if err := a.Store.EraseUserComments(uid); err != nil {
+			return err
+		}
+		for _, img := range images {
+			a.dropPic(img)
+		}
 	}
 	return nil
 }
