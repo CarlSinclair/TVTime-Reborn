@@ -403,6 +403,8 @@
       "trakt_client_id": "Trakt 클라이언트 ID",
       "telegram_bot": "봇 토큰",
       "telegram_name": "봇 사용자 이름",
+      "support_to_group": "지원 메시지를 그룹 채팅으로 보내기",
+      "support_chat_id": "지원 그룹 채팅 ID",
       "app_name": "사이트 이름",
       "default_lang": "기본 언어(코드)",
       "operator_name": "운영자 이름",

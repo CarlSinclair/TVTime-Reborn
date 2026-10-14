@@ -314,6 +314,7 @@ type User struct {
 	Username     string `json:"username"`
 	FirstName    string `json:"first_name"`
 	LanguageCode string `json:"language_code"`
+	IsBot        bool   `json:"is_bot"`
 }
 
 // ParseCommand splits "/start abc" or "/start@MyBot abc" into command and arg.

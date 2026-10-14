@@ -131,3 +131,49 @@ func TestConnectingTelegramTurnsOnNotificationsAndAnswersInTheUsersLanguage(t *t
 		t.Fatalf("failure is a red cross: %v", got)
 	}
 }
+
+func (e *env) tgGroupUpdate(t *testing.T, chat int64, text string, replyTo int64) {
+	t.Helper()
+	body := fmt.Sprintf(`{"update_id":1,"message":{"message_id":6,"text":%q,"chat":{"id":%d,"type":"group"},"from":{"id":55,"username":"agent","first_name":"A","language_code":"en"},"reply_to_message":{"message_id":%d,"chat":{"id":%d,"type":"group"}}}}`, text, chat, replyTo, chat)
+	req, _ := http.NewRequest("POST", e.srv.URL+"/api/telegram/webhook", strings.NewReader(body))
+	req.Header.Set("X-Telegram-Bot-Api-Secret-Token", "whsecret")
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+}
+
+func TestTelegramSupportCanGoToAGroupChat(t *testing.T) {
+	e := newEnv(t)
+	e.makeAdmin(t, "boss")
+	if err := e.store.SetTelegramChat(e.mustUser(t, "boss").ID, "900"); err != nil {
+		t.Fatal(err)
+	}
+	e.cfg.SupportToGroup, e.cfg.SupportChatID = true, "-500"
+
+	e.tgUpdate(t, 700, "/support", 0)
+	e.tgUpdate(t, 700, "Pat", 0)
+	e.tgUpdate(t, 700, "Cannot log in", 0)
+	if got := e.sentTo("-500"); len(got) != 1 || !strings.Contains(got[0], "Cannot log in") {
+		t.Fatalf("the request goes to the group: %v", got)
+	}
+	if got := e.sentTo("900"); len(got) != 0 {
+		t.Fatalf("the admin is not messaged directly: %v", got)
+	}
+	e.tgGroupUpdate(t, -500, "Try resetting your password", e.lastMessageID("-500"))
+	if got := e.sentTo("700"); got[len(got)-1] != "Try resetting your password" {
+		t.Fatalf("a reply in the group reaches the visitor: %v", got)
+	}
+	n := len(e.sentTo("-500"))
+	e.tgGroupUpdate(t, -500, "unrelated", 424242)
+	if len(e.sentTo("-500")) != n {
+		t.Fatalf("the group is not spammed by replies that are not support")
+	}
+	e.cfg.SupportToGroup = false
+	e.tgGroupUpdate(t, -500, "ignored", e.lastMessageID("-500"))
+	if got := e.sentTo("700"); got[len(got)-1] == "ignored" {
+		t.Fatalf("with the switch off the group is not an operator")
+	}
+}

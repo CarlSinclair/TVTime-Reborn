@@ -403,6 +403,8 @@
       "trakt_client_id": "Trakt クライアントID",
       "telegram_bot": "ボットトークン",
       "telegram_name": "ボットのユーザー名",
+      "support_to_group": "サポートメッセージをグループチャットに送る",
+      "support_chat_id": "サポート用グループチャット ID",
       "app_name": "サイト名",
       "default_lang": "既定の言語（コード）",
       "operator_name": "運営者名",
