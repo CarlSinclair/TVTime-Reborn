@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"tvt/i18n"
 	"unicode/utf8"
 
 	"tvt/logger"
@@ -17,7 +18,7 @@ import (
 // faqFor is the FAQ the bot shows someone: the entries in their language, or
 // in the site's default language when theirs has none, or English.
 func (a *App) faqFor(lang string) []store.FAQ {
-	for _, l := range []string{lang, a.Cfg.DefaultLang, "en"} {
+	for _, l := range []string{lang, i18n.Fallback} {
 		list, err := a.Store.FAQList(l, true)
 		if err != nil {
 			logger.Error("TELEGRAM support faq lang=%s: %v", l, err)

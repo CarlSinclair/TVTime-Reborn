@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"tvt/i18n"
 
 	"tvt/auth"
 	"tvt/logger"
@@ -79,7 +80,7 @@ func (a *App) apiChangeEmail(w http.ResponseWriter, r *http.Request) {
 	}
 	lang := u.Locale
 	if !a.I18n.Has(lang) {
-		lang = a.Cfg.DefaultLang
+		lang = i18n.Fallback
 	}
 	link := a.Cfg.BaseURL + "/t/" + auth.PurposeEmail + "?token=" + url.QueryEscape(tok)
 	if err := a.Mail.Send(email, a.I18n.T(lang, "mail.emailchange.subject", a.Cfg.AppName), a.I18n.T(lang, "mail.emailchange.body", a.Cfg.AppName, link)); err != nil {
@@ -118,7 +119,7 @@ func (a *App) apiEmailChangeConsume(w http.ResponseWriter, r *http.Request) {
 	} else {
 		lang := u.Locale
 		if !a.I18n.Has(lang) {
-			lang = a.Cfg.DefaultLang
+			lang = i18n.Fallback
 		}
 		if oldEmail != "" {
 			if err := a.Mail.Send(oldEmail, a.I18n.T(lang, "mail.emailchanged.subject", a.Cfg.AppName), a.I18n.T(lang, "mail.emailchanged.body", a.Cfg.AppName, maskEmail(newEmail))); err != nil {

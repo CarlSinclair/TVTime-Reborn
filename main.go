@@ -75,7 +75,7 @@ func main() {
 	if cfg.TraktClientID != "" {
 		sy.Trakt = trakt.New(cfg.TraktClientID)
 	}
-	bundle, err := i18n.Load(assets.FS, "locales", cfg.DefaultLang)
+	bundle, err := i18n.Load(assets.FS, "locales", i18n.Fallback)
 	if err != nil {
 		logger.Fatal("locales: %v", err)
 	}

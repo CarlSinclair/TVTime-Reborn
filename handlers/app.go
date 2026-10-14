@@ -70,7 +70,7 @@ type App struct {
 }
 
 func New(cfg *config.Config, st *store.Store, a *auth.Service, sy *syncer.Syncer, tm *tmdb.Client, ml *mailer.Mailer, nt *notify.Service, bot *telegram.Bot, md media.Store) (*App, error) {
-	bundle, err := i18n.Load(assets.FS, "locales", cfg.DefaultLang)
+	bundle, err := i18n.Load(assets.FS, "locales", i18n.Fallback)
 	if err != nil {
 		return nil, err
 	}

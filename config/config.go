@@ -17,7 +17,6 @@ type Config struct {
 	JWTSecret      string
 	TMDBKey        string
 	CookieSecure   bool
-	DefaultLang    string
 	SMTPHost       string
 	SMTPPort       int
 	SMTPUser       string
@@ -71,7 +70,6 @@ func Load() (*Config, error) {
 		DBPath:         env("TVT_DB", "tvt.db"),
 		JWTSecret:      env("TVT_JWT_SECRET", ""),
 		TMDBKey:        env("TVT_TMDB_KEY", ""),
-		DefaultLang:    env("TVT_DEFAULT_LANG", "en"),
 		SMTPHost:       env("TVT_SMTP_HOST", ""),
 		MailFrom:       env("TVT_MAIL_FROM", ""),
 		SMTPUser:       env("TVT_SMTP_USER", ""),

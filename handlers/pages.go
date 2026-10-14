@@ -201,7 +201,7 @@ func cacheControl(h http.Handler) http.Handler {
 		if r.URL.Query().Get("v") != "" {
 			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 		} else {
-			w.Header().Set("Cache-Control", "public, max-age=300")
+			w.Header().Set("Cache-Control", "public, max-age=3600")
 		}
 		h.ServeHTTP(w, r)
 	})

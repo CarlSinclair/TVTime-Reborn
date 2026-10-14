@@ -4,8 +4,8 @@
   <p class="muted">{{.T "contact.intro"}}</p>
   {{if or .Data.Email .Data.Bot}}
   <div class="contact-options">
-    {{if .Data.Email}}<a class="btn" href="mailto:{{.Data.Email}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-envelope"></use></svg> {{.T "contact.email_us"}}</a>{{end}}
-    {{if .Data.Bot}}<a class="btn" href="{{.Data.TelegramURL}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-telegram"></use></svg> {{.T "contact.telegram_us"}}</a>{{end}}
+    {{if .Data.Email}}<a class="btn" href="mailto:{{.Data.Email}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-envelope"></use></svg> {{.T "contact.email_us"}}</a>{{end}}
+    {{if .Data.Bot}}<a class="btn" href="{{.Data.TelegramURL}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-telegram"></use></svg> {{.T "contact.telegram_us"}}</a>{{end}}
   </div>
   {{end}}
   {{if .Data.FormAvailable}}
@@ -27,7 +27,7 @@
         </div>
       </div>
       <div class="captcha-success-view" aria-hidden="true">
-        <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-check-circle"></use></svg>
+        <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-check-circle"></use></svg>
         <p>{{.T "captcha.secured"}}</p>
       </div>
       <input type="hidden" name="captcha_id" value="{{.Data.CaptchaID}}">

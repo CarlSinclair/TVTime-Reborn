@@ -10,6 +10,10 @@ import (
 	"tvt/logger"
 )
 
+// Fallback is the language used when a person's own language is unknown or
+// unsupported.
+const Fallback = "en"
+
 type Bundle struct {
 	langs    map[string]map[string]string
 	fallback string

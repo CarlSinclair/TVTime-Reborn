@@ -225,7 +225,7 @@ func newEnv(t *testing.T) *env {
 	t.Cleanup(func() { d.Close() })
 	st := store.New(d)
 	srv := httptest.NewUnstartedServer(nil)
-	cfg := &config.Config{AppName: "TVT", BaseURL: "http://" + srv.Listener.Addr().String(), FedInsecure: true, DefaultLang: "en", DevLogMail: true, JWTSecret: "0123456789abcdef0123456789abcdef", DataDir: t.TempDir(), ImageBase: "http://127.0.0.1:1"}
+	cfg := &config.Config{AppName: "TVT", BaseURL: "http://" + srv.Listener.Addr().String(), FedInsecure: true, DevLogMail: true, JWTSecret: "0123456789abcdef0123456789abcdef", DataDir: t.TempDir(), ImageBase: "http://127.0.0.1:1"}
 	tm := tmdb.New("testkey")
 	tm.Base = fakeTMDB(t).URL
 	a := auth.New(st, cfg.JWTSecret, false)

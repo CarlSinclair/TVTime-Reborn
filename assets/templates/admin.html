@@ -70,7 +70,7 @@
     <input type="hidden" name="tab" value="users">
     <input type="search" name="q" value="{{.Data.Query}}" placeholder="{{.T "admin.user_search"}}" aria-label="{{.T "admin.user_search"}}">
   </form>
-  <button class="icon-btn solid" type="button" data-modal-open="m-user-add" aria-label="{{.T "admin.user_add"}}" title="{{.T "admin.user_add"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-plus"></use></svg></button>
+  <button class="icon-btn solid" type="button" data-modal-open="m-user-add" aria-label="{{.T "admin.user_add"}}" title="{{.T "admin.user_add"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-plus"></use></svg></button>
 </div>
 <div class="switch-row"><label class="notify-text" for="signups-switch">{{.T "admin.signups"}}</label><span class="tswitch"><input type="checkbox" class="tswitch-input" id="signups-switch" {{if not .Data.SignupsClosed}}checked{{end}}><label for="signups-switch" class="tswitch-label"><span class="ball"></span></label></span></div>
 {{if .Data.Users}}
@@ -85,10 +85,10 @@
     </p>
     <p class="muted">{{if .Email}}{{.Email}} &middot; {{end}}{{$.T "admin.user_joined" (slice .CreatedAt 0 10)}}</p>
     <p class="actions">
-      <a class="icon-btn" href="/u/{{.Username}}" aria-label="{{$.T "admin.view"}}" title="{{$.T "admin.view"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-eye"></use></svg></a>
+      <a class="icon-btn" href="/u/{{.Username}}" aria-label="{{$.T "admin.view"}}" title="{{$.T "admin.view"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-eye"></use></svg></a>
       <button class="icon-btn" type="button" aria-label="{{$.T "admin.user_edit"}}" title="{{$.T "admin.user_edit"}}"
         data-user-edit="{{.ID}}" data-username="{{.Username}}" data-display="{{.DisplayName}}" data-email="{{.Email}}" data-verified="{{if .EmailVerified}}1{{else}}0{{end}}"
-        data-banned="{{if .IsBanned}}1{{else}}0{{end}}" data-deactivated="{{if .IsDeactivated}}1{{else}}0{{end}}" data-protected="{{if or .IsAdmin (eq .ID $.User.ID)}}1{{else}}0{{end}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-pen"></use></svg></button>
+        data-banned="{{if .IsBanned}}1{{else}}0{{end}}" data-deactivated="{{if .IsDeactivated}}1{{else}}0{{end}}" data-protected="{{if or .IsAdmin (eq .ID $.User.ID)}}1{{else}}0{{end}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-pen"></use></svg></button>
     </p>
   </li>
   {{end}}
@@ -199,7 +199,7 @@
 {{template "pending" .}}
 <div class="toolbar">
   {{if .Data.HasSettings}}<div class="switch-row" style="margin:0;flex:1"><label class="notify-text" for="federation-switch">{{.T "admin.federation"}}</label><span class="tswitch"><input type="checkbox" class="tswitch-input" id="federation-switch" {{if .Data.FedWant}}checked{{end}}><label for="federation-switch" class="tswitch-label"><span class="ball"></span></label></span></div>{{else}}<span class="muted" style="flex:1">{{if not .Data.FederationOn}}{{.T "admin.federation_off"}}{{end}}</span>{{end}}
-  {{if .Data.FederationOn}}<button class="icon-btn solid" type="button" data-modal-open="m-server-add" aria-label="{{.T "admin.server_add"}}" title="{{.T "admin.server_add"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-plus"></use></svg></button>{{end}}
+  {{if .Data.FederationOn}}<button class="icon-btn solid" type="button" data-modal-open="m-server-add" aria-label="{{.T "admin.server_add"}}" title="{{.T "admin.server_add"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-plus"></use></svg></button>{{end}}
 </div>
 {{if .Data.Peers}}
 <ul class="reports">

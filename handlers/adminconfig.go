@@ -106,9 +106,6 @@ func (a *App) candidate(in map[string]any) (*config.Config, map[string]*string, 
 	if err != nil {
 		return nil, nil, group, err
 	}
-	if !a.I18n.Has(c.DefaultLang) {
-		return nil, nil, group, fmt.Errorf("the default language %q is not one of the available languages", c.DefaultLang)
-	}
 	if len([]rune(c.AppName)) == 0 || len([]rune(c.AppName)) > 40 {
 		return nil, nil, group, fmt.Errorf("the app name must be 1 to 40 characters")
 	}

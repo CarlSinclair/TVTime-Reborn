@@ -436,7 +436,6 @@
       "support_to_group": "将支持消息发送到群聊",
       "support_chat_id": "支持群聊 ID",
       "app_name": "站点名称",
-      "default_lang": "默认语言（代码）",
       "operator_name": "运营者名称",
       "privacy_contact": "隐私联系方式",
       "source_url": "源代码网址",
