@@ -227,6 +227,10 @@ func (a *App) handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+	if upd.CallbackQuery != nil {
+		a.handleTelegramCallback(upd.CallbackQuery)
+		return
+	}
 	msg := upd.Message
 	if msg == nil {
 		return
@@ -247,7 +251,11 @@ func (a *App) handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 		case "link_invalid", "error", "private_only", "status_unlinked":
 			text = "❌ " + text
 		}
-		if err := a.Bot.SendMessage(ctx, chat, text); err != nil {
+		var buttons []telegram.Button
+		if msg.Chat.Type == "private" {
+			buttons = a.helpButtons(lang)
+		}
+		if _, err := a.Bot.SendMessageButtons(ctx, chat, text, buttons); err != nil {
 			logger.Error("TELEGRAM reply chat=%s key=%s: %v", chat, key, err)
 		}
 	}
@@ -289,6 +297,8 @@ func (a *App) handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch cmd {
+	case "/faq", "/help":
+		a.faqMenu(chat, lang)
 	case "/close":
 		a.supportClose(chat, lang)
 	case "/start":

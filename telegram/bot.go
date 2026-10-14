@@ -252,13 +252,33 @@ func (b *Bot) SendMessage(ctx context.Context, chatID, text string) error {
 	return err
 }
 
+// Button is one inline keyboard button; pressing it sends Data back as a
+// callback query.
+type Button struct {
+	Text string
+	Data string
+}
+
 // SendMessageID sends a message and returns its id in that chat, so a reply to
 // it can be recognised later.
 func (b *Bot) SendMessageID(ctx context.Context, chatID, text string) (int64, error) {
+	return b.SendMessageButtons(ctx, chatID, text, nil)
+}
+
+// SendMessageButtons is SendMessageID with one inline button per row under the
+// message.
+func (b *Bot) SendMessageButtons(ctx context.Context, chatID, text string, buttons []Button) (int64, error) {
 	if len(text) > 4000 {
 		text = text[:4000]
 	}
 	payload := map[string]any{"chat_id": chatID, "text": text, "disable_web_page_preview": true}
+	if len(buttons) > 0 {
+		rows := make([][]map[string]string, 0, len(buttons))
+		for _, bt := range buttons {
+			rows = append(rows, []map[string]string{{"text": bt.Text, "callback_data": bt.Data}})
+		}
+		payload["reply_markup"] = map[string]any{"inline_keyboard": rows}
+	}
 	if err := b.pace(ctx, chatID); err != nil {
 		return 0, err
 	}
@@ -285,15 +305,29 @@ func (b *Bot) SendMessageID(ctx context.Context, chatID, text string) (int64, er
 	return sent.MessageID, nil
 }
 
+// AnswerCallback acknowledges a button press so the client stops its spinner.
+func (b *Bot) AnswerCallback(ctx context.Context, callbackID string) error {
+	_, err := b.callResult(ctx, "answerCallbackQuery", map[string]any{"callback_query_id": callbackID})
+	return err
+}
+
 func (b *Bot) SetWebhook(ctx context.Context, webhookURL string) error {
 	return b.call(ctx, "setWebhook", map[string]any{
-		"url": webhookURL, "secret_token": b.Secret, "allowed_updates": []string{"message"}, "drop_pending_updates": false,
+		"url": webhookURL, "secret_token": b.Secret, "allowed_updates": []string{"message", "callback_query"}, "drop_pending_updates": false,
 	})
 }
 
 type Update struct {
-	UpdateID int64    `json:"update_id"`
-	Message  *Message `json:"message"`
+	UpdateID      int64          `json:"update_id"`
+	Message       *Message       `json:"message"`
+	CallbackQuery *CallbackQuery `json:"callback_query"`
+}
+
+type CallbackQuery struct {
+	ID      string   `json:"id"`
+	From    User     `json:"from"`
+	Message *Message `json:"message"`
+	Data    string   `json:"data"`
 }
 
 type Message struct {
