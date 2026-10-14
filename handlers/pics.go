@@ -37,19 +37,23 @@ const (
 	picKeepFor    = 24 * time.Hour
 )
 
+var decodeSlots = make(chan struct{}, 2)
+
 var (
 	picFileRe  = regexp.MustCompile(`^[0-9]+-[0-9a-f]{16}\.(jpg|png|gif)$`)
 	stillFile  = regexp.MustCompile(`^/[A-Za-z0-9_-]{8,64}\.(jpg|jpeg|png|webp)$`)
 	errPicSize = apiErr{http.StatusBadRequest, "err.image_invalid"}
 )
 
-// processPic turns an upload into the file that is stored: a GIF is kept as it
-// is after checking it decodes and stays small, anything else is decoded, scaled
+// processPic turns an upload into the file that is stored: a GIF is rebuilt
+// without its non-image blocks after checking it stays small, anything else is decoded, scaled
 // down and re-encoded, which drops metadata and any non-image payload.
 func processPic(raw []byte) (data []byte, ext string, err error) {
 	if len(raw) > maxPicUpload {
 		return nil, "", errPicSize
 	}
+	decodeSlots <- struct{}{}
+	defer func() { <-decodeSlots }()
 	cfg, format, err := image.DecodeConfig(bytes.NewReader(raw))
 	if err != nil || cfg.Width < 8 || cfg.Height < 8 || cfg.Width > 8000 || cfg.Height > 8000 || cfg.Width*cfg.Height > 40_000_000 {
 		return nil, "", errBadImage
@@ -58,10 +62,11 @@ func processPic(raw []byte) (data []byte, ext string, err error) {
 		if len(raw) > maxGifBytes || cfg.Width > maxGifSide || cfg.Height > maxGifSide {
 			return nil, "", errPicSize
 		}
-		if frames := gifFrames(raw); frames == 0 || frames > maxGifFrames {
+		clean, frames := cleanGIF(raw)
+		if frames == 0 || frames > maxGifFrames {
 			return nil, "", errBadImage
 		}
-		return raw, "gif", nil
+		return clean, "gif", nil
 	}
 	img, _, err := image.Decode(bytes.NewReader(raw))
 	if err != nil {
@@ -93,17 +98,26 @@ func processPic(raw []byte) (data []byte, ext string, err error) {
 	return buf.Bytes(), "jpg", nil
 }
 
-// gifFrames walks the blocks of a GIF without decoding any pixels and returns
-// how many frames it holds, or 0 when the structure is broken. That keeps the
-// memory a large animation needs out of the picture.
-func gifFrames(b []byte) int {
+// cleanGIF walks the blocks of a GIF without decoding any pixels and returns a
+// copy that holds only what is needed to play it: the header, the colour tables,
+// timing and loop settings and the frames. Comments, text overlays, other
+// application blocks and anything after the trailer are dropped, so a GIF cannot
+// carry a hidden payload. It also returns the frame count, or 0 when the
+// structure is broken or a frame reaches outside the picture.
+func cleanGIF(b []byte) ([]byte, int) {
 	if len(b) < 13 || (string(b[:6]) != "GIF87a" && string(b[:6]) != "GIF89a") {
-		return 0
+		return nil, 0
 	}
+	sw, sh := int(b[6])|int(b[7])<<8, int(b[8])|int(b[9])<<8
 	i := 13
 	if b[10]&0x80 != 0 {
 		i += 3 * (1 << (uint(b[10]&7) + 1))
 	}
+	if i > len(b) {
+		return nil, 0
+	}
+	out := make([]byte, 0, len(b))
+	out = append(out, b[:i]...)
 	skipSub := func() bool {
 		for i < len(b) {
 			n := int(b[i])
@@ -117,17 +131,34 @@ func gifFrames(b []byte) int {
 	}
 	frames := 0
 	for i < len(b) {
+		start := i
 		switch b[i] {
 		case 0x3B:
-			return frames
+			return append(out, 0x3B), frames
 		case 0x21:
+			if i+2 > len(b) {
+				return nil, 0
+			}
+			label := b[i+1]
 			i += 2
+			keep := label == 0xF9
+			if label == 0xFF {
+				keep = i+12 <= len(b) && b[i] == 11 && string(b[i+1:i+12]) == "NETSCAPE2.0"
+			}
 			if !skipSub() {
-				return 0
+				return nil, 0
+			}
+			if keep {
+				out = append(out, b[start:i]...)
 			}
 		case 0x2C:
 			if i+10 > len(b) {
-				return 0
+				return nil, 0
+			}
+			left, top := int(b[i+1])|int(b[i+2])<<8, int(b[i+3])|int(b[i+4])<<8
+			w, h := int(b[i+5])|int(b[i+6])<<8, int(b[i+7])|int(b[i+8])<<8
+			if w == 0 || h == 0 || left+w > sw || top+h > sh {
+				return nil, 0
 			}
 			flags := b[i+9]
 			i += 10
@@ -135,15 +166,16 @@ func gifFrames(b []byte) int {
 				i += 3 * (1 << (uint(flags&7) + 1))
 			}
 			i++
-			if !skipSub() {
-				return 0
+			if !skipSub() || i > len(b) {
+				return nil, 0
 			}
+			out = append(out, b[start:i]...)
 			frames++
 		default:
-			return 0
+			return nil, 0
 		}
 	}
-	return 0
+	return nil, 0
 }
 
 // storePic saves a processed picture under the uploader's id and returns its name.

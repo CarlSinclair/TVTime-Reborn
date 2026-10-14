@@ -134,7 +134,7 @@
     const form = event.target.closest("form[data-api]");
     if (!form) return;
     event.preventDefault();
-    if (form.dataset.confirm && !window.confirm(form.dataset.confirm)) return;
+    if (form.dataset.confirm && !(await confirmDialog(form.dataset.confirm))) return;
     const errBox = form.querySelector(".form-error");
     if (errBox) errBox.hidden = true;
     const submit = form.querySelector('[type="submit"]');
@@ -178,6 +178,32 @@
     b.addEventListener("click", () => onClick(b));
     return b;
   };
+
+  const confirmDialog = (message, label) =>
+    new Promise((resolve) => {
+      const dlg = document.createElement("dialog");
+      dlg.className = "confirm-dialog modal";
+      const text = document.createElement("p");
+      text.className = "confirm-text";
+      text.textContent = message;
+      const row = document.createElement("div");
+      row.className = "modal-actions";
+      let answer = false;
+      row.append(
+        plainButton(t("cancel"), "btn ghost", () => dlg.close()),
+        plainButton(label || t("confirm_ok"), "btn danger", () => {
+          answer = true;
+          dlg.close();
+        })
+      );
+      dlg.append(text, row);
+      dlg.addEventListener("close", () => {
+        dlg.remove();
+        resolve(answer);
+      });
+      document.body.appendChild(dlg);
+      dlg.showModal();
+    });
 
   const askUpto = (missing) =>
     new Promise((resolve) => {
@@ -611,7 +637,7 @@
       else if ("friendAccept" in d) call = () => api("/api/friends/respond", { username, accept: true });
       else if ("friendDecline" in d) call = () => api("/api/friends/respond", { username, accept: false });
       else {
-        if (!window.confirm(t("friend_remove_confirm"))) return;
+        if (!(await confirmDialog(t("friend_remove_confirm")))) return;
         call = () => api("/api/friends/remove", { username });
       }
       const data = await run(el, call);
@@ -625,7 +651,7 @@
       return;
     }
     if ("blockUser" in d) {
-      if (!window.confirm(t("block_confirm"))) return;
+      if (!(await confirmDialog(t("block_confirm")))) return;
       const data = await run(el, () => api("/api/users/block", { username: d.blockUser }));
       if (data) {
         toast(t("user_blocked"), "ok");
@@ -648,7 +674,7 @@
       return;
     }
     if ("serverForget" in d) {
-      if (!window.confirm(t("server_forget_confirm"))) return;
+      if (!(await confirmDialog(t("server_forget_confirm")))) return;
       const data = await run(el, () => api("/api/admin/servers/forget", { host: d.serverForget }));
       if (data) window.location.reload();
       return;
@@ -677,7 +703,7 @@
       return;
     }
     if ("restart" in d) {
-      if (!window.confirm(d.confirm)) return;
+      if (!(await confirmDialog(d.confirm))) return;
       const data = await run(el, () => api("/api/admin/restart"));
       if (data) {
         toast(t("restarting"), "ok");
@@ -686,7 +712,7 @@
       return;
     }
     if ("pagesAction" in d) {
-      if (d.confirm && !window.confirm(d.confirm)) return;
+      if (d.confirm && !(await confirmDialog(d.confirm))) return;
       const data = await run(el, () => api("/api/admin/pages", { action: d.pagesAction, page_id: d.pageId ? parseInt(d.pageId, 10) : 0 }));
       if (data) window.location.reload();
       return;
@@ -734,7 +760,7 @@
       return;
     }
     if ("userBan" in d || "userDeactivate" in d) {
-      if (el.dataset.state !== "1" && !window.confirm(el.dataset.confirm)) return;
+      if (el.dataset.state !== "1" && !(await confirmDialog(el.dataset.confirm))) return;
       const id = el.closest("form").dataset.userId;
       const on = el.dataset.state !== "1";
       const toggles = commentToggleValues(el.closest(".danger-row"));
@@ -744,7 +770,7 @@
       return;
     }
     if ("userDeleteModal" in d) {
-      if (!window.confirm(d.confirm)) return;
+      if (!(await confirmDialog(d.confirm))) return;
       const id = el.closest("form").dataset.userId;
       const data = await run(el, () => api("/api/admin/users/" + id + "/delete", commentToggleValues(el.closest(".danger-row"))));
       if (data) window.location.reload();
@@ -804,13 +830,13 @@
       return;
     }
     if ("adminDelete" in d) {
-      if (!window.confirm(t("delete_confirm"))) return;
+      if (!(await confirmDialog(t("delete_confirm"), t("delete")))) return;
       const data = await run(el, () => api("/api/admin/comments/" + d.adminDelete + "/delete"));
       if (data) window.location.reload();
       return;
     }
     if ("adminBan" in d) {
-      if (!window.confirm(t("ban_confirm"))) return;
+      if (!(await confirmDialog(t("ban_confirm")))) return;
       const data = await run(el, () => api("/api/admin/users/" + d.adminBan + "/ban", { banned: true }));
       if (data) window.location.reload();
       return;
@@ -827,7 +853,7 @@
       return;
     }
     if ("telegramUnlink" in d) {
-      if (!window.confirm(t("telegram_unlink_confirm"))) return;
+      if (!(await confirmDialog(t("telegram_unlink_confirm")))) return;
       const data = await run(el, () => api("/api/account/telegram/unlink"));
       if (data) window.location.reload();
       return;
@@ -902,7 +928,7 @@
       return;
     }
     if ("passkeyDelete" in d) {
-      if (!window.confirm(t("passkey_remove_confirm"))) return;
+      if (!(await confirmDialog(t("passkey_remove_confirm")))) return;
       const data = await run(el, () => api("/api/account/passkey/" + d.passkeyDelete + "/delete"));
       if (data) window.location.reload();
       return;
@@ -1325,8 +1351,8 @@
     }
     if (kind === "outgoing") return (p) => [actionButton("fa-x", "no", t("friend_cancel"), () => act("/api/friends/remove", { username: p.username }))];
     return (p) => [
-      actionButton("fa-x", "no", t("friend_remove"), () => {
-        if (window.confirm(t("friend_remove_confirm"))) act("/api/friends/remove", { username: p.username });
+      actionButton("fa-x", "no", t("friend_remove"), async () => {
+        if (await confirmDialog(t("friend_remove_confirm"))) act("/api/friends/remove", { username: p.username });
       }),
     ];
   };
@@ -1651,6 +1677,7 @@
       save.className = "btn small";
       save.textContent = t("save");
       const cancel = button(t("cancel"), () => form.replaceWith(bodyEl));
+      cancel.className = "btn small ghost";
       row.append(label, save, cancel);
       form.append(ta, row);
       form.addEventListener("submit", async (event) => {
@@ -1790,7 +1817,7 @@
           );
           actions.appendChild(
             button(t("block"), async (b) => {
-              if (!window.confirm(t("block_confirm"))) return;
+              if (!(await confirmDialog(t("block_confirm")))) return;
               const data = await run(b, () => api("/api/users/block", { username: c.user }));
               if (data) reload();
             })
@@ -1800,7 +1827,7 @@
         actions.appendChild(button(t("edit"), () => editForm(c, body)));
         actions.appendChild(
           button(t("delete"), async (b) => {
-            if (!window.confirm(t("delete_confirm"))) return;
+            if (!(await confirmDialog(t("delete_confirm"), t("delete")))) return;
             const data = await run(b, () => api("/api/comments/" + c.id + "/delete"));
             if (data) reload();
           })
@@ -1828,7 +1855,7 @@
         );
         actions.appendChild(
           button(t("block"), async (b) => {
-            if (!window.confirm(t("block_confirm"))) return;
+            if (!(await confirmDialog(t("block_confirm")))) return;
             const data = await run(b, () => api("/api/comments/" + c.id + "/block"));
             if (data) reload();
           })
@@ -1837,7 +1864,7 @@
       if (admin && !c.mine && !c.host) {
         actions.appendChild(
           button(t("admin_delete"), async (b) => {
-            if (!window.confirm(t("delete_confirm"))) return;
+            if (!(await confirmDialog(t("delete_confirm"), t("delete")))) return;
             const data = await run(b, () => api("/api/admin/comments/" + c.id + "/delete"));
             if (data) reload();
           })

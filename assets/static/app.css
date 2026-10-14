@@ -483,7 +483,7 @@ body[data-user="0"] .topbar { padding-bottom: 10px; }
 .md-help-table td:first-child { white-space: nowrap; width: 1%; }
 .cover-hero { position: relative; overflow: hidden; isolation: isolate; border-radius: var(--radius); padding: 150px 24px 24px; margin-bottom: 28px; display: block; }
 .cover-hero.season-head { padding-top: 110px; }
-.hero-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center top; z-index: -2; max-width: none; }
+.hero-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%; z-index: -2; max-width: none; }
 .hero-bg.poster-bg { object-position: center 25%; opacity: .75; }
 .cover-hero::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(to bottom, transparent 0, color-mix(in srgb, var(--bg) 60%, transparent) 38%, var(--bg) 100%); }
 .cover-hero h1, .cover-hero .crumbs, .cover-hero .meta, .cover-hero .original-name { text-shadow: 0 1px 14px color-mix(in srgb, var(--bg) 90%, transparent); }
@@ -520,10 +520,22 @@ body[data-user="0"] .topbar { padding-bottom: 10px; }
 .ed-layout { padding: 3px; line-height: 0; background: var(--panel); border: 2px solid var(--border); border-radius: 8px; cursor: pointer; }
 .ed-layout[aria-pressed="true"], .ed-layout:hover { border-color: var(--accent); }
 @media (max-width: 720px) {
-  .cover-hero, .cover-hero.season-head { padding: 0 16px 16px; }
-  .hero-bg { position: static; display: block; width: calc(100% + 32px); height: auto; aspect-ratio: 16 / 9; margin: 0 -16px; z-index: auto; object-position: center; -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent); mask-image: linear-gradient(to bottom, #000 60%, transparent); }
-  .hero-bg.poster-bg { aspect-ratio: 4 / 3; object-position: center 20%; opacity: 1; }
+  .cover-hero, .cover-hero.season-head { padding: 0 0 16px; }
+  .hero-bg { position: static; display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; z-index: auto; object-fit: cover; object-position: 50% 50%; -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent); mask-image: linear-gradient(to bottom, #000 60%, transparent); }
+  .hero-bg.poster-bg { aspect-ratio: 4 / 3; object-position: 50% 20%; opacity: 1; }
   .cover-hero::after { display: none; }
-  .hero-bg + * { margin-top: -2.2rem; position: relative; }
+  .cover-hero > :not(.hero-bg) { margin-inline: 16px; position: relative; }
+  .hero-bg + * { margin-top: -2.2rem; }
+}
 }
 .search input { padding-inline-end: 0; }
+.ed-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.ed-head .ed-tools { margin: 0; }
+.ed-tool { width: 44px; height: 44px; padding: 0; justify-content: center; font-size: 1.2rem; }
+.ed-undo { width: 44px; height: 44px; font-size: 1.2rem; }
+.ed-undo:disabled { opacity: .4; cursor: default; }
+.ed-inline { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 6px 16px; }
+.ed-inline .ed-field, .ed-inline .ed-check { margin: 0; }
+.ed-inline .ed-field input[type="color"] { width: 44px; height: 32px; padding: 2px; }
+.ed-delete { align-self: flex-start; color: var(--danger); border-color: var(--danger); }
+.confirm-text { margin: 0 0 16px; }
