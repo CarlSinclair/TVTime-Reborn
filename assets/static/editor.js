@@ -262,9 +262,14 @@
     const { t, api, upload, toast, icon, episodeId, hasStills, chooseStill, stillUrl, initialUrl, initialFile, onDone } = deps;
     const state = { layout: "single", aspect: "auto", gap: 0, bg: "#000000", cells: [emptyCell()], texts: [], sel: { kind: "cell", index: 0 } };
     const tray = [];
+    const owned = [];
+    const history = [];
+    let lastKey = "";
+    let lastAt = 0;
     let tool = "crop";
 
     const dlg = el("dialog", { class: "editor-dialog modal" });
+    dlg.setAttribute("aria-label", t("ed_title"));
     const canvas = el("canvas", { class: "editor-canvas" });
     const ctx = canvas.getContext("2d");
 
@@ -319,12 +324,50 @@
       redraw();
     };
 
+    const undoBtn = el("button", { type: "button", class: "icon-btn ed-undo", title: t("ed_undo"), disabled: true }, icon("fa-undo"));
+    undoBtn.setAttribute("aria-label", t("ed_undo"));
+
+    const snapshot = () => ({
+      layout: state.layout,
+      aspect: state.aspect,
+      gap: state.gap,
+      bg: state.bg,
+      cells: state.cells.map((c) => ({ ...c })),
+      texts: state.texts.map((x) => ({ ...x, box: null })),
+      sel: { ...state.sel },
+    });
+    const checkpoint = (key) => {
+      const now = Date.now();
+      if (key && key === lastKey && now - lastAt < 800) {
+        lastAt = now;
+        return;
+      }
+      lastKey = key || "";
+      lastAt = now;
+      history.push(snapshot());
+      if (history.length > 80) history.shift();
+      undoBtn.disabled = false;
+    };
+    const undo = () => {
+      const prev = history.pop();
+      if (!prev) return;
+      lastKey = "";
+      Object.assign(state, prev);
+      aspectSelect.value = state.aspect;
+      bgInput.value = state.bg;
+      gapInput.value = state.gap;
+      undoBtn.disabled = history.length === 0;
+      sync();
+      redraw();
+    };
+
     const rebuildTray = () => {
       trayBox.replaceChildren();
       tray.forEach((bmp) => {
         const b = el("button", { type: "button", class: "ed-thumb" });
         b.append(thumb(bmp));
         b.addEventListener("click", () => {
+          checkpoint();
           let index = state.sel.kind === "cell" ? state.sel.index : -1;
           if (index < 0) index = state.cells.findIndex((c) => !c.bmp);
           if (index < 0) index = 0;
@@ -336,6 +379,7 @@
     };
 
     const addBitmap = (bmp) => {
+      checkpoint();
       tray.push(bmp);
       rebuildTray();
       let index = state.cells.findIndex((c) => !c.bmp);
@@ -345,6 +389,7 @@
     };
 
     const setLayout = (layout) => {
+      checkpoint();
       state.layout = layout;
       const n = LAYOUTS[layout].length;
       while (state.cells.length < n) state.cells.push(emptyCell());
@@ -355,6 +400,7 @@
     };
 
     const newText = (text, y) => {
+      checkpoint();
       state.texts.push({ text, x: 0.5, y, size: 0.09, color: "#ffffff", outline: true, upper: true, box: null });
       select("text", state.texts.length - 1);
     };
@@ -369,20 +415,24 @@
 
     const on = (node, type, fn) => node.addEventListener(type, fn);
     on(aspectSelect, "change", () => {
+      checkpoint();
       state.aspect = aspectSelect.value;
       redraw();
     });
     on(bgInput, "input", () => {
+      checkpoint("bg");
       state.bg = bgInput.value;
       redraw();
     });
     on(gapInput, "input", () => {
+      checkpoint("gap");
       state.gap = Number(gapInput.value);
       redraw();
     });
     on(zoomInput, "input", () => {
       const c = selectedCell();
       if (c) {
+        checkpoint("zoom");
         c.zoom = Number(zoomInput.value);
         redraw();
       }
@@ -390,6 +440,7 @@
     on(textArea, "input", () => {
       const tx = selectedText();
       if (tx) {
+        checkpoint("text");
         tx.text = textArea.value;
         redraw();
       }
@@ -397,6 +448,7 @@
     on(sizeInput, "input", () => {
       const tx = selectedText();
       if (tx) {
+        checkpoint("size");
         tx.size = Number(sizeInput.value);
         redraw();
       }
@@ -404,6 +456,7 @@
     on(colorInput, "input", () => {
       const tx = selectedText();
       if (tx) {
+        checkpoint("color");
         tx.color = colorInput.value;
         redraw();
       }
@@ -411,6 +464,7 @@
     on(outlineBox, "change", () => {
       const tx = selectedText();
       if (tx) {
+        checkpoint();
         tx.outline = outlineBox.checked;
         redraw();
       }
@@ -418,6 +472,7 @@
     on(upperBox, "change", () => {
       const tx = selectedText();
       if (tx) {
+        checkpoint();
         tx.upper = upperBox.checked;
         redraw();
       }
@@ -446,6 +501,7 @@
       for (let i = state.texts.length - 1; i >= 0; i--) {
         const b = state.texts[i].box;
         if (b && p.x >= b.x - 12 && p.x <= b.x + b.w + 12 && p.y >= b.y - 12 && p.y <= b.y + b.h + 12) {
+          checkpoint();
           setTool("text");
           select("text", i);
           drag = { kind: "text", index: i, dx: p.x - state.texts[i].x * canvas.width, dy: p.y - state.texts[i].y * canvas.height };
@@ -456,6 +512,7 @@
       const rects = cellRects(state.layout, canvas.width, canvas.height, state.gap);
       const hit = rects.findIndex((r) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h);
       if (hit >= 0) {
+        checkpoint();
         select("cell", hit);
         drag = { kind: "cell", index: hit, x: p.x, y: p.y };
         canvas.setPointerCapture(e.pointerId);
@@ -493,6 +550,7 @@
         const factor = e.deltaY < 0 ? 1.06 : 0.94;
         const tx = selectedText();
         const c = selectedCell();
+        if (tx || c) checkpoint("wheel");
         if (tx) tx.size = clamp(tx.size * factor, 0.03, 0.2);
         else if (c) c.zoom = clamp(c.zoom * factor, 1, 6);
         sync();
@@ -509,13 +567,22 @@
       return b;
     };
 
+    const iconButton = (iconName, label, className, onClick) => {
+      const b = el("button", { type: "button", class: className, title: label });
+      b.setAttribute("aria-label", label);
+      b.append(icon(iconName));
+      b.addEventListener("click", () => onClick(b));
+      return b;
+    };
+
     const adjust = async (op) => {
       const c = selectedCell();
       if (!c || !c.bmp) return;
       try {
         const next = await transformed(c.bmp, op);
-        if (c.own) c.bmp.close();
-        state.cells[state.sel.index] = { bmp: next, own: true, zoom: 1, ox: 0, oy: 0 };
+        checkpoint();
+        owned.push(next);
+        state.cells[state.sel.index] = { bmp: next, zoom: 1, ox: 0, oy: 0 };
         sync();
         redraw();
       } catch (err) {
@@ -552,6 +619,7 @@
         () => {
           const c = selectedCell();
           if (c) {
+            checkpoint();
             c.zoom = 1;
             c.ox = 0;
             c.oy = 0;
@@ -572,6 +640,7 @@
       labelled(t("ed_gap"), gapInput),
       button(t("ed_clear"), "btn small ghost", () => {
         if (selectedCell()) {
+          checkpoint();
           state.cells[state.sel.index] = emptyCell();
           sync();
           redraw();
@@ -594,11 +663,16 @@
     textControls.append(
       labelled(t("ed_text_content"), textArea),
       labelled(t("ed_size"), sizeInput),
-      labelled(t("ed_color"), colorInput),
-      el("label", { class: "ed-check" }, outlineBox, el("span", { text: t("ed_outline") })),
-      el("label", { class: "ed-check" }, upperBox, el("span", { text: t("ed_upper") })),
-      button(t("ed_delete_text"), "btn small danger", () => {
+      el(
+        "div",
+        { class: "ed-inline" },
+        labelled(t("ed_color"), colorInput),
+        el("label", { class: "ed-check" }, outlineBox, el("span", { text: t("ed_outline") })),
+        el("label", { class: "ed-check" }, upperBox, el("span", { text: t("ed_upper") }))
+      ),
+      iconButton("fa-trash", t("ed_delete_text"), "icon-btn ed-delete", () => {
         if (state.sel.kind !== "text") return;
+        checkpoint();
         state.texts.splice(state.sel.index, 1);
         select("cell", 0);
       })
@@ -619,15 +693,14 @@
       ["collage", "fa-collage", t("ed_tool_collage")],
       ["text", "fa-text", t("ed_tool_text")],
     ].forEach(([key, iconName, label]) => {
-      toolButtons[key] = button(label, "ed-tool", () => setTool(key), iconName);
+      toolButtons[key] = iconButton(iconName, label, "ed-tool", () => setTool(key));
       toolbar.append(toolButtons[key]);
     });
 
     const cancel = el("button", { type: "button", class: "btn ghost", text: t("ed_cancel") });
     const use = el("button", { type: "button", class: "btn", text: t("ed_use") });
     dlg.append(
-      el("h2", { text: t("ed_title") }),
-      toolbar,
+      el("div", { class: "ed-head" }, toolbar, undoBtn),
       el("div", { class: "editor-body" }, el("div", { class: "editor-stage" }, canvas), el("div", { class: "editor-panel" }, cropPanel, collagePanel, textPanel)),
       el("p", { class: "muted", text: t("ed_drag_hint") }),
       el("div", { class: "modal-actions" }, cancel, use)
@@ -635,11 +708,10 @@
 
     const close = () => {
       tray.forEach((b) => b.close());
-      state.cells.forEach((c) => {
-        if (c.bmp && c.own) c.bmp.close();
-      });
+      owned.forEach((b) => b.close());
       dlg.remove();
     };
+    on(undoBtn, "click", undo);
     on(dlg, "cancel", close);
     on(cancel, "click", () => {
       dlg.close();
