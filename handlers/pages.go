@@ -561,8 +561,9 @@ func (a *App) pageMyShows(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	status := r.URL.Query().Get("status")
-	if status != "" && status != "all" && !store.ValidStatus(status) {
-		status = ""
+	explicit := status != ""
+	if status != "all" && !store.ValidStatus(status) {
+		status, explicit = "watching", false
 	}
 	counts, err := a.Store.StatusCounts(u.ID)
 	if err != nil {
@@ -570,11 +571,10 @@ func (a *App) pageMyShows(w http.ResponseWriter, r *http.Request) {
 		a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
 		return
 	}
-	key := status
-	if key == "" {
-		key = "all"
+	if !explicit && counts["watching"] == 0 {
+		status = "all"
 	}
-	offset, pg := paginate(r, "page", 36, counts[key], "")
+	offset, pg := paginate(r, "page", 36, counts[status], "")
 	list, err := a.Store.UserShows(u.ID, status, 36, offset)
 	if err != nil {
 		logger.Error("PAGE my shows uid=%d: %v", u.ID, err)

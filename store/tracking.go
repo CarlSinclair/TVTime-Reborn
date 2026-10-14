@@ -351,20 +351,30 @@ func (s *Store) UpNextFor(userID, showID int64) (*UpNextItem, error) {
 }
 
 func (s *Store) upNext(userID, showID int64, limit int) ([]UpNextItem, error) {
-	rows, err := s.DB.Query(`SELECT s.id, s.tmdb_id, s.name, s.poster_path, s.backdrop_path,
-	    `+episodeCols+`,
-	    (SELECT COUNT(*) FROM episodes e3 WHERE e3.show_id = s.id AND e3.season_number > 0 AND e3.air_date IS NOT NULL AND e3.air_date <= ?
-	      AND NOT EXISTS (SELECT 1 FROM watched w3 WHERE w3.user_id = f.user_id AND w3.episode_id = e3.id))
-	  FROM follows f
-	  JOIN shows s ON s.id = f.show_id
-	  JOIN episodes e ON e.id = (
-	    SELECT e2.id FROM episodes e2
-	    WHERE e2.show_id = f.show_id AND e2.season_number > 0 AND e2.air_date IS NOT NULL AND e2.air_date <= ?
-	      AND NOT EXISTS (SELECT 1 FROM watched w WHERE w.user_id = f.user_id AND w.episode_id = e2.id)
-	    ORDER BY e2.season_number, e2.episode_number LIMIT 1)
-	  WHERE f.user_id = ? AND f.status = 'watching' AND (? = 0 OR f.show_id = ?)
-	  ORDER BY COALESCE((SELECT MAX(w4.watched_at) FROM watched w4 WHERE w4.user_id = f.user_id AND w4.show_id = s.id), f.created_at) DESC
-	  LIMIT ?`, today(), today(), userID, showID, showID, limit)
+	// One pass over the followed shows' aired episodes finds each show's first
+	// unwatched one and how many are left; running those as per-show subqueries
+	// made the home page slow for people who follow many shows.
+	rows, err := s.DB.Query(`WITH unw AS (
+	    SELECT e.id AS eid, e.show_id AS sid,
+	      ROW_NUMBER() OVER (PARTITION BY e.show_id ORDER BY e.season_number, e.episode_number) AS rn,
+	      COUNT(*) OVER (PARTITION BY e.show_id) AS remaining
+	    FROM episodes e
+	    WHERE e.show_id IN (SELECT show_id FROM follows WHERE user_id = ?1 AND status = 'watching' AND (?2 = 0 OR show_id = ?2))
+	      AND e.season_number > 0 AND e.air_date IS NOT NULL AND e.air_date <= ?3
+	      AND NOT EXISTS (SELECT 1 FROM watched w WHERE w.user_id = ?1 AND w.episode_id = e.id)
+	  ), last AS (
+	    SELECT show_id AS sid, MAX(watched_at) AS at FROM watched WHERE user_id = ?1 GROUP BY show_id
+	  )
+	  SELECT s.id, s.tmdb_id, s.name, s.poster_path, s.backdrop_path,
+	    `+episodeCols+`, unw.remaining
+	  FROM unw
+	  JOIN follows f ON f.user_id = ?1 AND f.show_id = unw.sid
+	  JOIN shows s ON s.id = unw.sid
+	  JOIN episodes e ON e.id = unw.eid
+	  LEFT JOIN last ON last.sid = unw.sid
+	  WHERE unw.rn = 1
+	  ORDER BY COALESCE(last.at, f.created_at) DESC, s.id
+	  LIMIT ?4`, userID, showID, today(), limit)
 	if err != nil {
 		return nil, fmt.Errorf("up next uid=%d: %w", userID, err)
 	}
