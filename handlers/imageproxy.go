@@ -21,7 +21,7 @@ import (
 // first time it is requested, so a visitor's browser never contacts TMDB and
 // the cache fills with just what people actually look at.
 var (
-	tmdbSizes   = map[string]bool{"w92": true, "w154": true, "w185": true, "w300": true, "w342": true, "w500": true, "w780": true}
+	tmdbSizes   = map[string]bool{"w92": true, "w154": true, "w185": true, "w300": true, "w342": true, "w500": true, "w780": true, "w1280": true}
 	imgFileRe   = regexp.MustCompile(`^[A-Za-z0-9_-]{8,64}\.(jpg|jpeg|png|webp)$`)
 	imgFlight   singleflight.Group
 	imgMissMu   sync.Mutex

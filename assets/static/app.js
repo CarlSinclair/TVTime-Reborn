@@ -204,46 +204,61 @@
       dlg.showModal();
     });
 
-  const openStills = async (episodeId, pick, trigger) => {
-    const data = await run(trigger, () => api("/api/episode/" + episodeId + "/stills", null, "GET"));
-    if (!data) return;
+  const icon = (name) => {
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("class", "icon");
+    svg.setAttribute("aria-hidden", "true");
+    const use = document.createElementNS(ns, "use");
+    use.setAttribute("href", "/static/icons.svg#" + name);
+    svg.appendChild(use);
+    return svg;
+  };
+
+  const stillsCache = new Map();
+  const stillsFor = (episodeId) => {
+    if (!episodeId) return Promise.resolve([]);
+    if (!stillsCache.has(episodeId)) {
+      stillsCache.set(
+        episodeId,
+        api("/api/episode/" + episodeId + "/stills", null, "GET")
+          .then((data) => data.stills || [])
+          .catch((err) => {
+            console.error("episode stills", err);
+            stillsCache.delete(episodeId);
+            return [];
+          })
+      );
+    }
+    return stillsCache.get(episodeId);
+  };
+
+  const openStills = (stills, pick) => {
     const dlg = document.createElement("dialog");
     dlg.className = "stills-dialog modal";
     const title = document.createElement("h2");
     title.textContent = t("pic_stills_title");
-    dlg.appendChild(title);
-    if (data.stills.length === 0) {
-      const none = document.createElement("p");
-      none.className = "muted";
-      none.textContent = t("pic_stills_none");
-      dlg.appendChild(none);
-    } else {
-      const grid = document.createElement("div");
-      grid.className = "stills-grid";
-      data.stills.forEach((file) => {
-        const choice = document.createElement("button");
-        choice.type = "button";
-        choice.className = "still-choice";
-        const im = document.createElement("img");
-        im.loading = "lazy";
-        im.alt = "";
-        im.src = "/img/w300" + file;
-        choice.appendChild(im);
-        choice.addEventListener("click", async () => {
-          const picked = await run(choice, () => api("/api/pics/still", { episode: episodeId, file }));
-          if (picked) {
-            pick(picked);
-            dlg.close();
-          }
-        });
-        grid.appendChild(choice);
+    const grid = document.createElement("div");
+    grid.className = "stills-grid";
+    stills.forEach((file) => {
+      const choice = document.createElement("button");
+      choice.type = "button";
+      choice.className = "still-choice";
+      const im = document.createElement("img");
+      im.loading = "lazy";
+      im.alt = "";
+      im.src = "/img/w300" + file;
+      choice.appendChild(im);
+      choice.addEventListener("click", () => {
+        dlg.close();
+        pick(file);
       });
-      dlg.appendChild(grid);
-    }
+      grid.appendChild(choice);
+    });
     const row = document.createElement("div");
     row.className = "modal-actions";
     row.appendChild(plainButton(t("close"), "btn ghost", () => dlg.close()));
-    dlg.appendChild(row);
+    dlg.append(title, grid, row);
     dlg.addEventListener("close", () => dlg.remove());
     document.body.appendChild(dlg);
     dlg.showModal();
@@ -283,6 +298,10 @@
     file.type = "file";
     file.accept = "image/jpeg,image/png,image/gif,image/webp";
     file.hidden = true;
+    const menu = document.createElement("div");
+    menu.className = "pic-menu";
+    menu.hidden = true;
+
     const set = (data) => {
       name = data ? data.name : "";
       img.src = data ? data.url : "";
@@ -296,22 +315,79 @@
       set(null);
       if (old) api("/api/pics/discard", { name: old }).catch((err) => console.error("discard picture", err));
     };
-    const openEditor = async (button, initial) => {
-      const editor = await run(button, () => loadEditor());
-      if (editor) editor.open({ t, api, upload, toast, episodeId, initial, onDone: set });
+    const launch = async (button, options) => {
+      const [editor, stills] = await run(button, () => Promise.all([loadEditor(), stillsFor(episodeId)])) || [];
+      if (!editor) return;
+      editor.open({
+        t,
+        api,
+        upload,
+        toast,
+        icon,
+        episodeId,
+        hasStills: stills.length > 0,
+        chooseStill: (pick) => openStills(stills, pick),
+        stillUrl: (f) => "/api/episode/" + episodeId + "/still?file=" + encodeURIComponent(f),
+        onDone: set,
+        ...options,
+      });
     };
-    const editBtn = plainButton(t("ed_edit"), "btn small ghost", (b) => openEditor(b, "/api/pics/source/" + name));
-    preview.append(img, editBtn, plainButton(t("pic_remove"), "btn small ghost", discard));
-    bar.appendChild(plainButton(t("pic_add"), "btn small ghost", () => file.click()));
-    if (episodeId) bar.appendChild(plainButton(t("pic_stills"), "btn small ghost", (b) => openStills(episodeId, set, b)));
-    bar.appendChild(plainButton(t("ed_create"), "btn small ghost", (b) => openEditor(b, "")));
+
+    const photoBtn = document.createElement("button");
+    photoBtn.type = "button";
+    photoBtn.className = "icon-btn pic-btn";
+    photoBtn.title = t("pic_add");
+    photoBtn.setAttribute("aria-label", t("pic_add"));
+    photoBtn.setAttribute("aria-haspopup", "true");
+    photoBtn.appendChild(icon("fa-photo"));
+
+    const item = (iconName, label, onClick) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "pic-menu-item";
+      b.append(icon(iconName), document.createTextNode(" " + label));
+      b.addEventListener("click", () => {
+        menu.hidden = true;
+        onClick();
+      });
+      return b;
+    };
+    const uploadItem = item("fa-upload", t("pic_upload"), () => file.click());
+    const momentItem = item("fa-film", t("pic_moments"), async () => {
+      const stills = await stillsFor(episodeId);
+      openStills(stills, (f) => launch(photoBtn, { initialUrl: "/api/episode/" + episodeId + "/still?file=" + encodeURIComponent(f) }));
+    });
+    momentItem.hidden = true;
+    menu.append(uploadItem, momentItem);
+
+    const closeMenu = (event) => {
+      if (event && wrap.contains(event.target)) return;
+      menu.hidden = true;
+      document.removeEventListener("click", closeMenu);
+    };
+    photoBtn.addEventListener("click", () => {
+      menu.hidden = !menu.hidden;
+      if (menu.hidden) return;
+      setTimeout(() => document.addEventListener("click", closeMenu), 0);
+      if (episodeId) stillsFor(episodeId).then((list) => (momentItem.hidden = list.length === 0));
+    });
+    if (episodeId) stillsFor(episodeId);
+
     file.addEventListener("change", async () => {
       const chosen = file.files[0];
       file.value = "";
       if (!chosen) return;
-      const data = await run(bar.firstChild, () => upload("/api/pics", chosen));
-      if (data) set(data);
+      if (chosen.type === "image/gif") {
+        const data = await run(photoBtn, () => upload("/api/pics", chosen));
+        if (data) set(data);
+        return;
+      }
+      launch(photoBtn, { initialFile: chosen });
     });
+
+    const editBtn = plainButton(t("ed_edit"), "btn small ghost", (b) => launch(b, { initialUrl: "/api/pics/source/" + name }));
+    preview.append(img, editBtn, plainButton(t("pic_remove"), "btn small ghost", discard));
+    bar.append(photoBtn, menu);
     wrap.append(preview, bar, file);
     return { el: wrap, value: () => name, reset: () => set(null) };
   };

@@ -211,9 +211,18 @@
     const c = document.createElement("canvas");
     c.width = 96;
     c.height = 64;
-    const ctx = c.getContext("2d");
     const r = coverRect(bmp.width, bmp.height, { x: 0, y: 0, w: 96, h: 64 }, 1, 0, 0);
-    ctx.drawImage(bmp, r.x, r.y, r.w, r.h);
+    c.getContext("2d").drawImage(bmp, r.x, r.y, r.w, r.h);
+    return c;
+  };
+
+  const layoutThumb = (key) => {
+    const c = document.createElement("canvas");
+    c.width = 54;
+    c.height = 36;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#8a8fa8";
+    cellRects(key, c.width, c.height, 4).forEach((r) => ctx.fillRect(r.x, r.y, r.w, r.h));
     return c;
   };
 
@@ -229,10 +238,31 @@
     return createImageBitmap(await res.blob());
   };
 
+  const transformed = async (bmp, op) => {
+    const swap = op === "left" || op === "right";
+    const c = document.createElement("canvas");
+    c.width = swap ? bmp.height : bmp.width;
+    c.height = swap ? bmp.width : bmp.height;
+    const ctx = c.getContext("2d");
+    if (op === "right") {
+      ctx.translate(c.width, 0);
+      ctx.rotate(Math.PI / 2);
+    } else if (op === "left") {
+      ctx.translate(0, c.height);
+      ctx.rotate(-Math.PI / 2);
+    } else {
+      ctx.translate(c.width, 0);
+      ctx.scale(-1, 1);
+    }
+    ctx.drawImage(bmp, 0, 0);
+    return createImageBitmap(c);
+  };
+
   const open = (deps) => {
-    const { t, api, upload, toast, episodeId, initial, onDone } = deps;
+    const { t, api, upload, toast, icon, episodeId, hasStills, chooseStill, stillUrl, initialUrl, initialFile, onDone } = deps;
     const state = { layout: "single", aspect: "auto", gap: 0, bg: "#000000", cells: [emptyCell()], texts: [], sel: { kind: "cell", index: 0 } };
     const tray = [];
+    let tool = "crop";
 
     const dlg = el("dialog", { class: "editor-dialog modal" });
     const canvas = el("canvas", { class: "editor-canvas" });
@@ -250,23 +280,19 @@
       render(state, ctx, s.w, s.h, true);
     };
 
-    const layoutSelect = el("select", {});
-    Object.keys(LAYOUTS).forEach((key) => layoutSelect.append(el("option", { value: key, text: t("ed_l_" + key) })));
     const aspectSelect = el("select", {});
     Object.keys(ASPECTS).forEach((key) => aspectSelect.append(el("option", { value: key, text: key === "auto" ? t("ed_a_auto") : key })));
+    const zoomInput = el("input", { type: "range", min: 1, max: 6, step: 0.02, value: 1 });
     const bgInput = el("input", { type: "color", value: state.bg });
     const gapInput = el("input", { type: "range", min: 0, max: 48, step: 2, value: 0 });
-
-    const addFiles = el("input", { type: "file", accept: "image/*", multiple: true, hidden: true });
-    const trayBox = el("div", { class: "ed-tray" });
-    const zoomInput = el("input", { type: "range", min: 1, max: 6, step: 0.02, value: 1 });
-    const cellBox = el("fieldset", { class: "ed-group" }, el("legend", { text: t("ed_picture") }));
-    const textBox = el("fieldset", { class: "ed-group" }, el("legend", { text: t("ed_text") }));
     const textArea = el("textarea", { rows: 2, maxLength: 200 });
     const sizeInput = el("input", { type: "range", min: 0.03, max: 0.2, step: 0.005, value: 0.09 });
     const colorInput = el("input", { type: "color", value: "#ffffff" });
     const outlineBox = el("input", { type: "checkbox", checked: true });
     const upperBox = el("input", { type: "checkbox", checked: true });
+    const addFiles = el("input", { type: "file", accept: "image/*", multiple: true, hidden: true });
+    const trayBox = el("div", { class: "ed-tray" });
+    const layoutBox = el("div", { class: "ed-layouts" });
     const textControls = el("div", { class: "ed-textcontrols", hidden: true });
 
     const selectedCell = () => (state.sel.kind === "cell" ? state.cells[state.sel.index] : null);
@@ -274,8 +300,7 @@
 
     const sync = () => {
       const c = selectedCell();
-      cellBox.hidden = !c;
-      if (c) zoomInput.value = c.zoom;
+      zoomInput.value = c ? c.zoom : 1;
       const tx = selectedText();
       textControls.hidden = !tx;
       if (tx) {
@@ -285,6 +310,7 @@
         outlineBox.checked = tx.outline;
         upperBox.checked = tx.upper;
       }
+      layoutBox.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.layout === state.layout ? "true" : "false"));
     };
 
     const select = (kind, index) => {
@@ -333,63 +359,70 @@
       select("text", state.texts.length - 1);
     };
 
-    layoutSelect.addEventListener("change", () => setLayout(layoutSelect.value));
-    aspectSelect.addEventListener("change", () => {
+    Object.keys(LAYOUTS).forEach((key) => {
+      const b = el("button", { type: "button", class: "ed-layout", title: t("ed_l_" + key) }, layoutThumb(key));
+      b.dataset.layout = key;
+      b.setAttribute("aria-label", t("ed_l_" + key));
+      b.addEventListener("click", () => setLayout(key));
+      layoutBox.append(b);
+    });
+
+    const on = (node, type, fn) => node.addEventListener(type, fn);
+    on(aspectSelect, "change", () => {
       state.aspect = aspectSelect.value;
       redraw();
     });
-    bgInput.addEventListener("input", () => {
+    on(bgInput, "input", () => {
       state.bg = bgInput.value;
       redraw();
     });
-    gapInput.addEventListener("input", () => {
+    on(gapInput, "input", () => {
       state.gap = Number(gapInput.value);
       redraw();
     });
-    zoomInput.addEventListener("input", () => {
+    on(zoomInput, "input", () => {
       const c = selectedCell();
       if (c) {
         c.zoom = Number(zoomInput.value);
         redraw();
       }
     });
-    textArea.addEventListener("input", () => {
+    on(textArea, "input", () => {
       const tx = selectedText();
       if (tx) {
         tx.text = textArea.value;
         redraw();
       }
     });
-    sizeInput.addEventListener("input", () => {
+    on(sizeInput, "input", () => {
       const tx = selectedText();
       if (tx) {
         tx.size = Number(sizeInput.value);
         redraw();
       }
     });
-    colorInput.addEventListener("input", () => {
+    on(colorInput, "input", () => {
       const tx = selectedText();
       if (tx) {
         tx.color = colorInput.value;
         redraw();
       }
     });
-    outlineBox.addEventListener("change", () => {
+    on(outlineBox, "change", () => {
       const tx = selectedText();
       if (tx) {
         tx.outline = outlineBox.checked;
         redraw();
       }
     });
-    upperBox.addEventListener("change", () => {
+    on(upperBox, "change", () => {
       const tx = selectedText();
       if (tx) {
         tx.upper = upperBox.checked;
         redraw();
       }
     });
-
-    addFiles.addEventListener("change", async () => {
+    on(addFiles, "change", async () => {
       const files = Array.from(addFiles.files);
       addFiles.value = "";
       for (const file of files) {
@@ -408,11 +441,12 @@
     };
 
     let drag = null;
-    canvas.addEventListener("pointerdown", (e) => {
+    on(canvas, "pointerdown", (e) => {
       const p = pointAt(e);
       for (let i = state.texts.length - 1; i >= 0; i--) {
         const b = state.texts[i].box;
         if (b && p.x >= b.x - 12 && p.x <= b.x + b.w + 12 && p.y >= b.y - 12 && p.y <= b.y + b.h + 12) {
+          setTool("text");
           select("text", i);
           drag = { kind: "text", index: i, dx: p.x - state.texts[i].x * canvas.width, dy: p.y - state.texts[i].y * canvas.height };
           canvas.setPointerCapture(e.pointerId);
@@ -427,7 +461,7 @@
         canvas.setPointerCapture(e.pointerId);
       }
     });
-    canvas.addEventListener("pointermove", (e) => {
+    on(canvas, "pointermove", (e) => {
       if (!drag) return;
       const p = pointAt(e);
       if (drag.kind === "text") {
@@ -450,8 +484,8 @@
     const endDrag = () => {
       drag = null;
     };
-    canvas.addEventListener("pointerup", endDrag);
-    canvas.addEventListener("pointercancel", endDrag);
+    on(canvas, "pointerup", endDrag);
+    on(canvas, "pointercancel", endDrag);
     canvas.addEventListener(
       "wheel",
       (e) => {
@@ -459,146 +493,161 @@
         const factor = e.deltaY < 0 ? 1.06 : 0.94;
         const tx = selectedText();
         const c = selectedCell();
-        if (tx) {
-          tx.size = clamp(tx.size * factor, 0.03, 0.2);
-        } else if (c) {
-          c.zoom = clamp(c.zoom * factor, 1, 6);
-        }
+        if (tx) tx.size = clamp(tx.size * factor, 0.03, 0.2);
+        else if (c) c.zoom = clamp(c.zoom * factor, 1, 6);
         sync();
         redraw();
       },
       { passive: false }
     );
 
-    const chooseStill = async () => {
-      let data;
-      try {
-        data = await api("/api/episode/" + episodeId + "/stills", null, "GET");
-      } catch (err) {
-        toast(err.message, "error");
-        return;
-      }
-      const picker = el("dialog", { class: "stills-dialog modal" }, el("h2", { text: t("pic_stills_title") }));
-      if (data.stills.length === 0) {
-        picker.append(el("p", { class: "muted", text: t("pic_stills_none") }));
-      } else {
-        const grid = el("div", { class: "stills-grid" });
-        data.stills.forEach((file) => {
-          const im = el("img", { loading: "lazy", alt: "", src: "/img/w300" + file });
-          const choice = el("button", { type: "button", class: "still-choice" }, im);
-          choice.addEventListener("click", async () => {
-            choice.disabled = true;
-            try {
-              addBitmap(await fetchBitmap("/api/episode/" + episodeId + "/still?file=" + encodeURIComponent(file), t));
-              picker.close();
-            } catch (err) {
-              toast(err.message, "error");
-            }
-            choice.disabled = false;
-          });
-          grid.append(choice);
-        });
-        picker.append(grid);
-      }
-      const close = el("button", { type: "button", class: "btn ghost", text: t("close") });
-      close.addEventListener("click", () => picker.close());
-      picker.append(el("div", { class: "modal-actions" }, close));
-      picker.addEventListener("close", () => picker.remove());
-      document.body.append(picker);
-      picker.showModal();
+    const button = (label, className, onClick, iconName) => {
+      const b = el("button", { type: "button", class: className });
+      if (iconName) b.append(icon(iconName));
+      b.append(document.createTextNode(label));
+      b.addEventListener("click", () => onClick(b));
+      return b;
     };
 
-    const stillsBtn = el("button", { type: "button", class: "btn small ghost", text: t("pic_stills") });
-    stillsBtn.addEventListener("click", chooseStill);
-    stillsBtn.hidden = !episodeId;
-    const addBtn = el("button", { type: "button", class: "btn small ghost", text: t("ed_add_images") });
-    addBtn.addEventListener("click", () => addFiles.click());
-    const clearBtn = el("button", { type: "button", class: "btn small ghost", text: t("ed_clear") });
-    clearBtn.addEventListener("click", () => {
+    const adjust = async (op) => {
       const c = selectedCell();
-      if (c) {
-        state.cells[state.sel.index] = emptyCell();
+      if (!c || !c.bmp) return;
+      try {
+        const next = await transformed(c.bmp, op);
+        if (c.own) c.bmp.close();
+        state.cells[state.sel.index] = { bmp: next, own: true, zoom: 1, ox: 0, oy: 0 };
         sync();
         redraw();
+      } catch (err) {
+        console.error("editor transform", err);
+        toast(t("ed_failed"), "error");
       }
-    });
-    const resetBtn = el("button", { type: "button", class: "btn small ghost", text: t("ed_reset") });
-    resetBtn.addEventListener("click", () => {
-      const c = selectedCell();
-      if (c) {
-        c.zoom = 1;
-        c.ox = 0;
-        c.oy = 0;
-        sync();
-        redraw();
-      }
-    });
-    const topBtn = el("button", { type: "button", class: "btn small ghost", text: t("ed_top") });
-    topBtn.addEventListener("click", () => newText(t("ed_top_default"), 0.12));
-    const bottomBtn = el("button", { type: "button", class: "btn small ghost", text: t("ed_bottom") });
-    bottomBtn.addEventListener("click", () => newText(t("ed_bottom_default"), 0.88));
-    const freeBtn = el("button", { type: "button", class: "btn small ghost", text: t("ed_add_text") });
-    freeBtn.addEventListener("click", () => newText(t("ed_text_default"), 0.5));
-    const deleteBtn = el("button", { type: "button", class: "btn small danger", text: t("ed_delete_text") });
-    deleteBtn.addEventListener("click", () => {
-      if (state.sel.kind !== "text") return;
-      state.texts.splice(state.sel.index, 1);
-      select("cell", 0);
-    });
+    };
 
-    cellBox.append(labelled(t("ed_zoom"), zoomInput), el("div", { class: "ed-row" }, resetBtn, clearBtn));
+    const addFromDevice = () => addFiles.click();
+    const addMoment = () =>
+      chooseStill(async (file) => {
+        try {
+          addBitmap(await fetchBitmap(stillUrl(file), t));
+        } catch (err) {
+          toast(err.message, "error");
+        }
+      });
+
+    const cropPanel = el(
+      "div",
+      { class: "ed-panel" },
+      labelled(t("ed_aspect"), aspectSelect),
+      labelled(t("ed_zoom"), zoomInput),
+      el(
+        "div",
+        { class: "ed-row" },
+        button(t("ed_rotate_left"), "btn small ghost", () => adjust("left"), "fa-rotate-left"),
+        button(t("ed_rotate_right"), "btn small ghost", () => adjust("right"), "fa-rotate-right"),
+        button(t("ed_flip"), "btn small ghost", () => adjust("flip"), "fa-flip")
+      ),
+      button(
+        t("ed_reset"),
+        "btn small ghost",
+        () => {
+          const c = selectedCell();
+          if (c) {
+            c.zoom = 1;
+            c.ox = 0;
+            c.oy = 0;
+            sync();
+            redraw();
+          }
+        }
+      )
+    );
+    const collagePanel = el(
+      "div",
+      { class: "ed-panel" },
+      el("span", { class: "ed-label", text: t("ed_layout") }),
+      layoutBox,
+      el("div", { class: "ed-row" }, button(t("ed_add_device"), "btn small ghost", addFromDevice, "fa-upload"), hasStills ? button(t("ed_add_moment"), "btn small ghost", addMoment, "fa-film") : null),
+      trayBox,
+      labelled(t("ed_background"), bgInput),
+      labelled(t("ed_gap"), gapInput),
+      button(t("ed_clear"), "btn small ghost", () => {
+        if (selectedCell()) {
+          state.cells[state.sel.index] = emptyCell();
+          sync();
+          redraw();
+        }
+      }),
+      addFiles
+    );
+    const textPanel = el(
+      "div",
+      { class: "ed-panel" },
+      el(
+        "div",
+        { class: "ed-row" },
+        button(t("ed_top"), "btn small ghost", () => newText(t("ed_top_default"), 0.12)),
+        button(t("ed_bottom"), "btn small ghost", () => newText(t("ed_bottom_default"), 0.88)),
+        button(t("ed_add_text"), "btn small ghost", () => newText(t("ed_text_default"), 0.5))
+      ),
+      textControls
+    );
     textControls.append(
       labelled(t("ed_text_content"), textArea),
       labelled(t("ed_size"), sizeInput),
       labelled(t("ed_color"), colorInput),
       el("label", { class: "ed-check" }, outlineBox, el("span", { text: t("ed_outline") })),
       el("label", { class: "ed-check" }, upperBox, el("span", { text: t("ed_upper") })),
-      deleteBtn
+      button(t("ed_delete_text"), "btn small danger", () => {
+        if (state.sel.kind !== "text") return;
+        state.texts.splice(state.sel.index, 1);
+        select("cell", 0);
+      })
     );
-    textBox.append(el("div", { class: "ed-row" }, topBtn, bottomBtn, freeBtn), textControls);
 
-    const panel = el(
-      "div",
-      { class: "editor-panel" },
-      el(
-        "fieldset",
-        { class: "ed-group" },
-        el("legend", { text: t("ed_layout") }),
-        labelled(t("ed_layout"), layoutSelect),
-        labelled(t("ed_aspect"), aspectSelect),
-        labelled(t("ed_background"), bgInput),
-        labelled(t("ed_gap"), gapInput)
-      ),
-      el("fieldset", { class: "ed-group" }, el("legend", { text: t("ed_images") }), el("div", { class: "ed-row" }, addBtn, stillsBtn), trayBox, el("p", { class: "muted", text: t("ed_gif_note") }), addFiles),
-      cellBox,
-      textBox
-    );
+    const panels = { crop: cropPanel, collage: collagePanel, text: textPanel };
+    const toolButtons = {};
+    function setTool(next) {
+      tool = next;
+      Object.entries(panels).forEach(([k, node]) => {
+        node.hidden = k !== tool;
+        toolButtons[k].setAttribute("aria-pressed", k === tool ? "true" : "false");
+      });
+    }
+    const toolbar = el("div", { class: "ed-tools", role: "toolbar" });
+    [
+      ["crop", "fa-crop", t("ed_tool_crop")],
+      ["collage", "fa-collage", t("ed_tool_collage")],
+      ["text", "fa-text", t("ed_tool_text")],
+    ].forEach(([key, iconName, label]) => {
+      toolButtons[key] = button(label, "ed-tool", () => setTool(key), iconName);
+      toolbar.append(toolButtons[key]);
+    });
 
     const cancel = el("button", { type: "button", class: "btn ghost", text: t("ed_cancel") });
     const use = el("button", { type: "button", class: "btn", text: t("ed_use") });
     dlg.append(
       el("h2", { text: t("ed_title") }),
+      toolbar,
+      el("div", { class: "editor-body" }, el("div", { class: "editor-stage" }, canvas), el("div", { class: "editor-panel" }, cropPanel, collagePanel, textPanel)),
       el("p", { class: "muted", text: t("ed_drag_hint") }),
-      el("div", { class: "editor-body" }, el("div", { class: "editor-stage" }, canvas), panel),
       el("div", { class: "modal-actions" }, cancel, use)
     );
 
     const close = () => {
       tray.forEach((b) => b.close());
       state.cells.forEach((c) => {
-        if (c.bmp && !tray.includes(c.bmp)) c.bmp.close();
+        if (c.bmp && c.own) c.bmp.close();
       });
       dlg.remove();
     };
-    dlg.addEventListener("cancel", close);
-    cancel.addEventListener("click", () => {
+    on(dlg, "cancel", close);
+    on(cancel, "click", () => {
       dlg.close();
       close();
     });
 
-    use.addEventListener("click", async () => {
-      const hasPicture = state.cells.some((c) => c.bmp);
-      if (!hasPicture && state.texts.length === 0) {
+    on(use, "click", async () => {
+      if (!state.cells.some((c) => c.bmp) && state.texts.length === 0) {
         toast(t("ed_empty"), "error");
         return;
       }
@@ -611,7 +660,7 @@
         render(state, out.getContext("2d"), s.w, s.h, false);
         const blob = await new Promise((resolve) => out.toBlob(resolve, "image/jpeg", 0.92));
         if (!blob) throw new Error(t("ed_failed"));
-        const data = await upload("/api/pics", new File([blob], "collage.jpg", { type: "image/jpeg" }));
+        const data = await upload("/api/pics", new File([blob], "picture.jpg", { type: "image/jpeg" }));
         dlg.close();
         close();
         onDone(data);
@@ -623,10 +672,18 @@
 
     document.body.append(dlg);
     dlg.showModal();
+    setTool("crop");
     sync();
     redraw();
-    if (initial) {
-      fetchBitmap(initial, t)
+    if (initialFile) {
+      createImageBitmap(initialFile)
+        .then((bmp) => addBitmap(bmp))
+        .catch((err) => {
+          console.error("editor decode", err);
+          toast(t("ed_failed"), "error");
+        });
+    } else if (initialUrl) {
+      fetchBitmap(initialUrl, t)
         .then((bmp) => addBitmap(bmp))
         .catch((err) => toast(err.message, "error"));
     }

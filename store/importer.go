@@ -233,5 +233,9 @@ func (s *Store) ImportShow(in ImportShowInput) (ImportShowResult, error) {
 		}
 		res.FollowAdded = exists == 0
 	}
-	return res, tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return res, err
+	}
+	s.upNextChanged(in.UserID)
+	return res, nil
 }

@@ -11,6 +11,7 @@ import (
 
 type Store struct {
 	DB *sql.DB
+	up upNextCache
 }
 
 func New(d *sql.DB) *Store { return &Store{DB: d} }

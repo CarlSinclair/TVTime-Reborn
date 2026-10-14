@@ -498,7 +498,13 @@ func (a *App) pageSeason(w http.ResponseWriter, r *http.Request) {
 			watched++
 		}
 	}
-	a.render(w, r, "season", http.StatusOK, sh.Name, map[string]any{"Show": sh, "Season": n, "Episodes": eps, "Seasons": seasons, "WatchedCount": watched})
+	data := map[string]any{"Show": sh, "Season": n, "Episodes": eps, "Seasons": seasons, "WatchedCount": watched}
+	if list, err := a.Store.ShowRatings(sh.ID); err != nil {
+		logger.Error("PAGE season ratings show=%d: %v", sh.ID, err)
+	} else if n > 0 {
+		data["Chart"] = seasonRatingChart(list, n)
+	}
+	a.render(w, r, "season", http.StatusOK, sh.Name, data)
 }
 
 func (a *App) pageEpisode(w http.ResponseWriter, r *http.Request) {
@@ -550,8 +556,29 @@ func (a *App) pageEpisode(w http.ResponseWriter, r *http.Request) {
 	if err := a.Store.LocalizeEpisodes(lang, group...); err != nil {
 		logger.Error("PAGE localize episode id=%d lang=%s: %v", ep.ID, lang, err)
 	}
-	a.render(w, r, "episode", http.StatusOK, sh.Name+" "+episodeCode(ep.SeasonNumber, ep.EpisodeNumber),
-		map[string]any{"Show": sh, "Episode": ep, "Prev": prev, "Next": next})
+	data := map[string]any{"Show": sh, "Episode": ep, "Prev": prev, "Next": next}
+	if ep.SeasonNumber > 0 {
+		if list, err := a.Store.ShowRatings(sh.ID); err != nil {
+			logger.Error("PAGE episode ratings show=%d: %v", sh.ID, err)
+		} else {
+			data["Chart"] = episodeRatingChart(list, ep.SeasonNumber, ep.EpisodeNumber)
+		}
+		if stars, err := a.Store.StarCounts(ep.ID); err != nil {
+			logger.Error("PAGE episode star counts id=%d: %v", ep.ID, err)
+		} else {
+			type starRow struct{ Stars, Count int }
+			var rows []starRow
+			total := 0
+			for i := 4; i >= 0; i-- {
+				rows = append(rows, starRow{Stars: i + 1, Count: stars[i]})
+				total += stars[i]
+			}
+			if total > 0 {
+				data["Stars"], data["StarTotal"] = rows, total
+			}
+		}
+	}
+	a.render(w, r, "episode", http.StatusOK, sh.Name+" "+episodeCode(ep.SeasonNumber, ep.EpisodeNumber), data)
 }
 
 func (a *App) pageMyShows(w http.ResponseWriter, r *http.Request) {

@@ -2,7 +2,7 @@
 {{with .Data.Episode}}
 <p class="crumbs"><a href="/show/{{$.Data.Show.TMDBID}}">{{$.Data.Show.Name}}</a> / <a href="/show/{{$.Data.Show.TMDBID}}/season/{{.SeasonNumber}}">{{if eq .SeasonNumber 0}}{{$.T "show.specials"}}{{else}}{{$.T "show.season" .SeasonNumber}}{{end}}</a></p>
 <section class="ep-head">
-  <img class="still" src="{{img "w780" .StillPath}}" alt="">
+  {{if .StillPath}}<img class="still" src="{{img "w780" .StillPath}}" alt="">{{end}}
   <div>
     <h1><span class="code">{{code .SeasonNumber .EpisodeNumber}}</span> {{.Name}}</h1>
     <p class="meta"><span>{{if .AirAt}}<time datetime="{{.AirAt}}" data-ts="{{.AirAt}}">{{.AirAt}}</time>{{else if .AirDate}}{{.AirDate}}{{else}}{{$.T "ep.tba"}}{{end}}</span>{{if gt .Runtime 0}}<span>{{$.T "show.runtime" .Runtime}}</span>{{end}}{{if gt .VoteCount 0}}<span>&#9733; {{stars .VoteAverage}}</span>{{end}}</p>
@@ -17,6 +17,23 @@
     {{end}}
   </div>
 </section>
+{{if or $.Data.Chart $.Data.Stars}}
+<section class="ratings ep-ratings">
+  <h2>{{$.T "ep.ratings"}}</h2>
+  {{if $.Data.Chart}}
+  {{$.Data.Chart.SVG}}
+  <ul class="legend">
+    {{if $.Data.Chart.HasMembers}}<li><span class="swatch members"></span>{{$.T "show.ratings_community" $.AppName}}</li>{{end}}
+    {{if $.Data.Chart.HasTMDB}}<li><span class="swatch tmdb"></span>{{$.T "show.ratings_tmdb"}}</li>{{end}}
+  </ul>
+  {{end}}
+  {{if $.Data.Stars}}
+  <ul class="star-dist" aria-label="{{$.T "ep.star_votes" $.Data.StarTotal}}">
+    {{range $.Data.Stars}}<li><span class="star-label">{{.Stars}} &#9733;</span><progress max="{{$.Data.StarTotal}}" value="{{.Count}}"></progress><span class="star-count">{{.Count}}</span></li>{{end}}
+  </ul>
+  {{end}}
+</section>
+{{end}}
 <nav class="pager">
   {{if $.Data.Prev}}<a class="chip" href="/episode/{{$.Data.Prev.ID}}"><span class="arr-l" aria-hidden="true"></span> {{code $.Data.Prev.SeasonNumber $.Data.Prev.EpisodeNumber}}</a>{{else}}<span></span>{{end}}
   {{if $.Data.Next}}<a class="chip" href="/episode/{{$.Data.Next.ID}}">{{code $.Data.Next.SeasonNumber $.Data.Next.EpisodeNumber}} <span class="arr-r" aria-hidden="true"></span></a>{{end}}
