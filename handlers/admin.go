@@ -389,6 +389,13 @@ func (a *App) pageAdmin(w http.ResponseWriter, r *http.Request) {
 			fail("pages", err)
 			return
 		}
+	case "faq":
+		list, err := a.Store.FAQList("", false)
+		if err != nil {
+			fail("faq", err)
+			return
+		}
+		data["FAQ"], data["PageLangs"] = list, a.I18n.Langs()
 	case "reports":
 		rTotal, err := a.Store.CountAbuseReports()
 		if err != nil {

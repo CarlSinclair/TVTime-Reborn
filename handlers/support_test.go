@@ -177,3 +177,90 @@ func TestTelegramSupportCanGoToAGroupChat(t *testing.T) {
 		t.Fatalf("with the switch off the group is not an operator")
 	}
 }
+
+func (e *env) tgCallback(t *testing.T, chat int64, data string) {
+	t.Helper()
+	body := fmt.Sprintf(`{"update_id":2,"callback_query":{"id":"cb1","data":%q,"from":{"id":%d,"username":"visitor","first_name":"V","language_code":"en"},"message":{"message_id":7,"chat":{"id":%d,"type":"private"}}}}`, data, chat, chat)
+	req, _ := http.NewRequest("POST", e.srv.URL+"/api/telegram/webhook", strings.NewReader(body))
+	req.Header.Set("X-Telegram-Bot-Api-Secret-Token", "whsecret")
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+}
+
+func (e *env) lastTo(chat string) map[string]any {
+	msgs := e.tg.messages()
+	for i := len(msgs) - 1; i >= 0; i-- {
+		if c, _ := msgs[i]["chat_id"].(string); c == chat {
+			return msgs[i]
+		}
+	}
+	return nil
+}
+
+func buttonsOf(m map[string]any) []string {
+	var out []string
+	markup, _ := m["reply_markup"].(map[string]any)
+	rows, _ := markup["inline_keyboard"].([]any)
+	for _, r := range rows {
+		for _, b := range r.([]any) {
+			out = append(out, b.(map[string]any)["callback_data"].(string))
+		}
+	}
+	return out
+}
+
+func TestSupportBotOffersTheFAQAndAlwaysAWayToAHuman(t *testing.T) {
+	e := newEnv(t)
+	boss := e.makeAdmin(t, "boss")
+	if err := e.store.SetTelegramChat(e.mustUser(t, "boss").ID, "900"); err != nil {
+		t.Fatal(err)
+	}
+
+	e.tgUpdate(t, 700, "hello?", 0)
+	if got := buttonsOf(e.lastTo("700")); len(got) != 1 || got[0] != "human" {
+		t.Fatalf("with no questions the reply still carries the human button: %v", got)
+	}
+
+	if code, _ := boss.post("/api/admin/faq", map[string]any{"action": "add", "lang": "en", "question": "How do I sync?", "answer": "Press the sync button.", "position": "1", "enabled": true}); code != 200 {
+		t.Fatalf("add a question: %d", code)
+	}
+	e.tgUpdate(t, 700, "hello?", 0)
+	if got := buttonsOf(e.lastTo("700")); len(got) != 2 || got[0] != "faq" || got[1] != "human" {
+		t.Fatalf("with questions the reply offers them and the human button: %v", got)
+	}
+
+	e.tgUpdate(t, 700, "/faq", 0)
+	if got := buttonsOf(e.lastTo("700")); len(got) != 2 || got[0] != "faq:1" || got[1] != "human" {
+		t.Fatalf("the question menu lists each question and the human button: %v", got)
+	}
+	e.tgCallback(t, 700, "faq:1")
+	last := e.lastTo("700")
+	if txt, _ := last["text"].(string); !strings.Contains(txt, "Press the sync button.") {
+		t.Fatalf("pressing a question answers it: %v", last)
+	}
+	if got := buttonsOf(last); len(got) != 2 || got[0] != "faq" || got[1] != "human" {
+		t.Fatalf("an answer offers the way back and the human button: %v", got)
+	}
+
+	e.tgCallback(t, 700, "human")
+	if txt, _ := e.lastTo("700")["text"].(string); !strings.Contains(txt, "your name") {
+		t.Fatalf("the human button starts a conversation: %q", txt)
+	}
+	e.tgUpdate(t, 700, "Pat", 0)
+	e.tgUpdate(t, 700, "Need help", 0)
+	e.tgUpdate(t, 700, "/close", 0)
+	if got := buttonsOf(e.lastTo("700")); len(got) == 0 || got[len(got)-1] != "human" {
+		t.Fatalf("closing a conversation leaves the human button: %v", got)
+	}
+
+	if code, _ := boss.post("/api/admin/faq", map[string]any{"action": "save", "id": "1", "delete": true}); code != 200 {
+		t.Fatalf("delete a question: %d", code)
+	}
+	if list, _ := e.store.FAQList("", false); len(list) != 0 {
+		t.Fatalf("the question is gone: %+v", list)
+	}
+}

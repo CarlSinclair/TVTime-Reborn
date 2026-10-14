@@ -45,6 +45,7 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/captcha/new", a.apiCaptchaNew)
 	mux.HandleFunc("POST /api/captcha/verify", a.apiCaptchaVerify)
 	mux.HandleFunc("POST /api/admin/pages", a.apiAdminPages)
+	mux.HandleFunc("POST /api/admin/faq", a.apiAdminFAQ)
 	mux.HandleFunc("GET /search", a.pageSearch)
 	mux.HandleFunc("GET /show/{tmdb}", a.pageShow)
 	mux.HandleFunc("GET /show/{tmdb}/season/{n}", a.pageSeason)

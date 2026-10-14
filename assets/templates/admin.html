@@ -14,6 +14,7 @@
   <a class="tab {{if eq .Data.Tab "config"}}active{{end}}" href="/admin?tab=config">{{.T "admin.config"}}</a>
   <a class="tab {{if eq .Data.Tab "servers"}}active{{end}}" href="/admin?tab=servers">{{.T "admin.servers"}}{{if gt .Data.ServersBadge 0}}<span class="badge inline">{{.Data.ServersBadge}}</span>{{end}}</a>
   <a class="tab {{if eq .Data.Tab "pages"}}active{{end}}" href="/admin?tab=pages">{{.T "admin.pages"}}</a>
+  <a class="tab {{if eq .Data.Tab "faq"}}active{{end}}" href="/admin?tab=faq">{{.T "admin.faq"}}</a>
   <a class="tab {{if eq .Data.Tab "reports"}}active{{end}}" href="/admin?tab=reports">{{.T "admin.reports"}}{{if gt .Data.ReportsBadge 0}}<span class="badge inline">{{.Data.ReportsBadge}}</span>{{end}}</a>
 </nav>
 
@@ -294,6 +295,36 @@
 </details>
 {{else}}<p class="muted center">{{$.T "admin.pages_none"}}</p>{{end}}
 {{template "pager" (dict "Pager" .Data.Pager "V" .)}}
+
+{{else if eq .Data.Tab "faq"}}
+<p class="muted">{{.T "admin.faq_intro"}}</p>
+<form class="panel stack" data-api="/api/admin/faq" data-reload="1" data-success="{{.T "js.saved"}}">
+  <h2>{{.T "admin.faq_add"}}</h2>
+  <input type="hidden" name="action" value="add">
+  <label>{{.T "admin.pages_language"}}<select name="lang">{{range .Data.PageLangs}}<option value="{{.}}" {{if eq . $.Lang}}selected{{end}}>{{$.LangName .}}</option>{{end}}</select></label>
+  <label>{{.T "admin.faq_question"}}<input type="text" name="question" maxlength="200" autocomplete="off" required></label>
+  <label>{{.T "admin.faq_answer"}}<textarea name="answer" rows="5" maxlength="3500" required></textarea></label>
+  <label>{{.T "admin.faq_position"}}<input type="number" name="position" value="0"></label>
+  <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="faq-add-en" name="enabled" checked><label for="faq-add-en" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="faq-add-en">{{.T "admin.faq_enabled"}}</label></div>
+  <p class="form-error" role="alert" hidden></p>
+  <div><button class="btn" type="submit">{{.T "admin.faq_add"}}</button></div>
+</form>
+{{range .Data.FAQ}}
+<details class="panel fold">
+  <summary>{{.Lang}} &middot; {{.Question}} {{if not .Enabled}}<span class="tag">{{$.T "admin.off"}}</span>{{end}}</summary>
+  <form class="stack" data-api="/api/admin/faq" data-reload="1" data-success="{{$.T "js.saved"}}">
+    <input type="hidden" name="action" value="save">
+    <input type="hidden" name="id" value="{{.ID}}">
+    <label>{{$.T "admin.faq_question"}}<input type="text" name="question" value="{{.Question}}" maxlength="200" autocomplete="off" required></label>
+    <label>{{$.T "admin.faq_answer"}}<textarea name="answer" rows="5" maxlength="3500" required>{{.Answer}}</textarea></label>
+    <label>{{$.T "admin.faq_position"}}<input type="number" name="position" value="{{.Position}}"></label>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="faq-{{.ID}}-en" name="enabled" {{if .Enabled}}checked{{end}}><label for="faq-{{.ID}}-en" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="faq-{{.ID}}-en">{{$.T "admin.faq_enabled"}}</label></div>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="faq-{{.ID}}-del" name="delete"><label for="faq-{{.ID}}-del" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="faq-{{.ID}}-del">{{$.T "admin.faq_delete"}}</label></div>
+    <p class="form-error" role="alert" hidden></p>
+    <div><button class="btn" type="submit">{{$.T "settings.save"}}</button></div>
+  </form>
+</details>
+{{else}}<p class="muted center">{{$.T "admin.faq_none"}}</p>{{end}}
 
 {{else}}
 {{if .Data.Reports}}

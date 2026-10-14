@@ -194,7 +194,7 @@ func (a *App) supportText(msg *telegram.Message, chat, lang string) bool {
 func (a *App) supportClose(chat, lang string) {
 	t, err := a.Store.ActiveSupportThread(chat)
 	if err != nil {
-		a.tgSay(chat, a.tgT(lang, "tg.support_none", nil))
+		a.tgSayHelp(chat, lang, a.tgT(lang, "tg.support_none", nil))
 		return
 	}
 	if err := a.Store.SetSupportState(t.ID, "closed"); err != nil {
@@ -202,7 +202,7 @@ func (a *App) supportClose(chat, lang string) {
 		a.tgSay(chat, "❌ "+a.I18n.T(lang, "tg.error"))
 		return
 	}
-	a.tgSay(chat, "✅ "+a.tgT(lang, "tg.support_closed", nil))
+	a.tgSayHelp(chat, lang, "✅ "+a.tgT(lang, "tg.support_closed", nil))
 	if ops, err := a.supportOperators(); err == nil {
 		for _, op := range ops {
 			a.tgSay(op, fmt.Sprintf("#%d %s closed the conversation.", t.ID, t.Name))
@@ -233,7 +233,7 @@ func (a *App) supportOperatorReply(msg *telegram.Message, opChat, opLang string)
 			a.tgSay(opChat, "❌ "+a.I18n.T(opLang, "tg.error"))
 			return
 		}
-		a.tgSay(t.ChatID, "✅ "+a.tgT(t.Lang, "tg.support_closed", nil))
+		a.tgSayHelp(t.ChatID, t.Lang, "✅ "+a.tgT(t.Lang, "tg.support_closed", nil))
 		a.tgSay(opChat, "✅ "+a.tgT(opLang, "tg.support_op_closed", map[string]string{"id": fmt.Sprint(t.ID)}))
 		return
 	}
