@@ -72,7 +72,7 @@
   {{else}}<p class="muted">{{.T "settings.passkey_none"}}</p>{{end}}
   <div class="inline-field">
     <input type="text" id="passkey-name" maxlength="40" placeholder="{{.T "settings.passkey_name"}}" aria-label="{{.T "settings.passkey_name"}}">
-    <button class="icon-btn solid" type="button" id="passkey-add" aria-label="{{.T "settings.passkey_add"}}" title="{{.T "settings.passkey_add"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-plus"></use></svg></button>
+    <button class="icon-btn solid" type="button" id="passkey-add" aria-label="{{.T "settings.passkey_add"}}" title="{{.T "settings.passkey_add"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-plus"></use></svg></button>
   </div>
 </section>
 {{end}}

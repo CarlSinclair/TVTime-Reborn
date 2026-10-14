@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"tvt/i18n"
 
 	"tvt/auth"
 	"tvt/logger"
@@ -26,7 +27,7 @@ func hashLinkToken(t string) string {
 func tgLangFor(a *App, code string) string {
 	code = strings.ToLower(strings.TrimSpace(code))
 	if code == "" {
-		return a.Cfg.DefaultLang
+		return i18n.Fallback
 	}
 	return a.I18n.Pick(code)
 }

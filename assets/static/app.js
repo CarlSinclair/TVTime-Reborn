@@ -230,13 +230,18 @@
       dlg.showModal();
     });
 
+  const spriteURL = (() => {
+    const own = document.querySelector('script[src*="/static/app.js"]');
+    return "/static/icons.svg" + (own ? new URL(own.src, window.location.href).search : "");
+  })();
+
   const icon = (name) => {
     const ns = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(ns, "svg");
     svg.setAttribute("class", "icon");
     svg.setAttribute("aria-hidden", "true");
     const use = document.createElementNS(ns, "use");
-    use.setAttribute("href", "/static/icons.svg#" + name);
+    use.setAttribute("href", spriteURL + "#" + name);
     svg.appendChild(use);
     return svg;
   };

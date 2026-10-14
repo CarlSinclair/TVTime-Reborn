@@ -31,8 +31,8 @@
     <div id="dark-switch">
       <input type="checkbox" class="dswitch" id="dswitch" aria-label="{{.T "nav.theme"}}">
       <label for="dswitch" class="dswitch-label">
-        <svg class="icon fa-moon" aria-hidden="true"><use href="/static/icons.svg#fa-moon"></use></svg>
-        <svg class="icon fa-sun" aria-hidden="true"><use href="/static/icons.svg#fa-sun"></use></svg>
+        <svg class="icon fa-moon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-moon"></use></svg>
+        <svg class="icon fa-sun" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-sun"></use></svg>
         <span class="ball"></span>
       </label>
     </div>
@@ -52,16 +52,16 @@
       <summary aria-label="{{.T "nav.account"}}">
         {{if .User.AvatarPath}}<img class="avatar xs" src="{{avatar .User.AvatarPath}}" alt="">{{else}}<span class="avatar xs fallback">{{initial .User.Name}}</span>{{end}}
         <span class="user-name">{{.User.Name}}</span>
-        <svg class="icon caret" aria-hidden="true"><use href="/static/icons.svg#fa-chevron-down"></use></svg>
+        <svg class="icon caret" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-chevron-down"></use></svg>
       </summary>
       <div class="menu">
-        <a href="/u/{{.User.Username}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-user"></use></svg>{{.T "nav.profile"}}</a>
-        <button type="button" data-friends-open><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-user-plus"></use></svg>{{.T "js.friends_title"}}{{if gt .Friends 0}} <span class="badge inline" id="friends-badge">{{.Friends}}</span>{{end}}</button>
-        <a href="/settings"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-gear"></use></svg>{{.T "nav.settings"}}</a>
+        <a href="/u/{{.User.Username}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-user"></use></svg>{{.T "nav.profile"}}</a>
+        <button type="button" data-friends-open><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-user-plus"></use></svg>{{.T "js.friends_title"}}{{if gt .Friends 0}} <span class="badge inline" id="friends-badge">{{.Friends}}</span>{{end}}</button>
+        <a href="/settings"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-gear"></use></svg>{{.T "nav.settings"}}</a>
         {{if .User.IsAdmin}}<hr>
-        <a href="/admin"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-user-shield"></use></svg>{{.T "nav.admin"}}{{if gt .AdminOpen 0}} <span class="badge inline">{{.AdminOpen}}</span>{{end}}</a>{{end}}
+        <a href="/admin"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-user-shield"></use></svg>{{.T "nav.admin"}}{{if gt .AdminOpen 0}} <span class="badge inline">{{.AdminOpen}}</span>{{end}}</a>{{end}}
         <hr>
-        <button type="button" data-logout><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-logout"></use></svg>{{.T "auth.logout"}}</button>
+        <button type="button" data-logout><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-logout"></use></svg>{{.T "auth.logout"}}</button>
       </div>
     </details>
     {{end}}
@@ -78,9 +78,9 @@
 </main>
 {{if .User}}
 <nav class="bottomnav" aria-label="{{.T "nav.menu"}}">
-  <a href="/" aria-label="{{.T "nav.home"}}" {{if eq .Path "/"}}aria-current="page"{{end}}><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-home"></use></svg></a>
-  <a href="/shows" aria-label="{{.T "nav.shows"}}" {{if eq .Path "/shows"}}aria-current="page"{{end}}><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-tv"></use></svg></a>
-  <a href="/calendar" aria-label="{{.T "nav.calendar"}}" {{if eq .Path "/calendar"}}aria-current="page"{{end}}><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-calendar"></use></svg></a>
+  <a href="/" aria-label="{{.T "nav.home"}}" {{if eq .Path "/"}}aria-current="page"{{end}}><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-home"></use></svg></a>
+  <a href="/shows" aria-label="{{.T "nav.shows"}}" {{if eq .Path "/shows"}}aria-current="page"{{end}}><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-tv"></use></svg></a>
+  <a href="/calendar" aria-label="{{.T "nav.calendar"}}" {{if eq .Path "/calendar"}}aria-current="page"{{end}}><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-calendar"></use></svg></a>
 </nav>
 {{end}}
 <footer class="footer">
@@ -98,7 +98,7 @@
     <h2 id="m-friends-t">{{.T "js.friends_title"}}</h2>
     <form class="inline-field" id="friends-add-form">
       <input type="text" id="friends-add-name" maxlength="64" placeholder="{{.T "js.friends_username"}}" aria-label="{{.T "js.friends_username"}}" autocomplete="off">
-      <button class="icon-btn solid" type="submit" aria-label="{{.T "js.friend_add"}}" title="{{.T "js.friend_add"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#fa-plus"></use></svg></button>
+      <button class="icon-btn solid" type="submit" aria-label="{{.T "js.friend_add"}}" title="{{.T "js.friend_add"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-plus"></use></svg></button>
     </form>
     <p class="form-error" id="friends-error" role="alert" hidden></p>
     <div id="friends-incoming-box" hidden><h3>{{.T "js.friends_requests"}}</h3><ul class="blocked" id="friends-incoming"></ul><button class="btn ghost small" type="button" id="friends-incoming-more" data-friends-more="incoming" hidden>{{.T "js.feed_more"}}</button></div>

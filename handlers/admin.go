@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"tvt/i18n"
 
 	"tvt/auth"
 	"tvt/federation"
@@ -595,7 +596,7 @@ func (a *App) apiAdminUserCreate(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	u, err := a.Store.CreateUser(email, in.Username, hash, a.Cfg.DefaultLang, false)
+	u, err := a.Store.CreateUser(email, in.Username, hash, i18n.Fallback, false)
 	switch {
 	case errors.Is(err, store.ErrEmailTaken):
 		a.fail(w, r, apiErr{http.StatusConflict, "err.email_taken"})

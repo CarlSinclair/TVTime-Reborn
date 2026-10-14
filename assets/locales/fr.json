@@ -436,7 +436,6 @@
       "support_to_group": "Envoyer les messages de support vers un chat de groupe",
       "support_chat_id": "ID du chat de groupe du support",
       "app_name": "Nom du site",
-      "default_lang": "Langue par défaut (code)",
       "operator_name": "Nom de l'opérateur",
       "privacy_contact": "Contact vie privée",
       "source_url": "URL du code source",

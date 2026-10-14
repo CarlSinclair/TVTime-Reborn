@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"tvt/i18n"
 
 	"tvt/auth"
 	"tvt/logger"
@@ -35,7 +36,7 @@ func (a *App) sendLink(u *store.User, purpose string) error {
 	link := a.Cfg.BaseURL + "/t/" + purpose + "?token=" + url.QueryEscape(tok)
 	lang := u.Locale
 	if !a.I18n.Has(lang) {
-		lang = a.Cfg.DefaultLang
+		lang = i18n.Fallback
 	}
 	subject := a.I18n.T(lang, "mail."+purpose+".subject", a.Cfg.AppName)
 	body := a.I18n.T(lang, "mail."+purpose+".body", a.Cfg.AppName, link)

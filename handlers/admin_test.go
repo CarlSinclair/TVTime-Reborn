@@ -204,9 +204,6 @@ func TestAdminConfigSavesOverridesAndSealsSecrets(t *testing.T) {
 	if code, out := boss.post("/api/admin/config", map[string]any{"group": "storage", "s3_endpoint": "https://a.r2.cloudflarestorage.com", "s3_bucket": "b"}); code != 400 {
 		t.Fatalf("a partly filled storage group must be refused: %d %v", code, out)
 	}
-	if code, out := boss.post("/api/admin/config", map[string]any{"group": "branding", "default_lang": "xx"}); code != 400 {
-		t.Fatalf("unknown default language must be refused: %d %v", code, out)
-	}
 	if code, out := boss.post("/api/admin/config", map[string]any{"group": "federation", "federation": false}); code != 200 {
 		t.Fatalf("federation toggle: %d %v", code, out)
 	}

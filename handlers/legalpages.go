@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"tvt/i18n"
 
 	"tvt/legalpages"
 	"tvt/logger"
@@ -56,7 +57,7 @@ func (a *App) reloadPages() {
 		for _, l := range langs {
 			v, ok := byLang[l]
 			if !ok {
-				if v, ok = byLang[a.Cfg.DefaultLang]; !ok {
+				if v, ok = byLang[i18n.Fallback]; !ok {
 					continue
 				}
 			}
