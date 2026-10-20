@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"tvt/i18n"
 
 	"tvt/auth"
 	"tvt/logger"
@@ -34,7 +36,7 @@ func (a *App) sendLink(u *store.User, purpose string) error {
 	link := a.Cfg.BaseURL + "/t/" + purpose + "?token=" + url.QueryEscape(tok)
 	lang := u.Locale
 	if !a.I18n.Has(lang) {
-		lang = a.Cfg.DefaultLang
+		lang = i18n.Fallback
 	}
 	subject := a.I18n.T(lang, "mail."+purpose+".subject", a.Cfg.AppName)
 	body := a.I18n.T(lang, "mail."+purpose+".body", a.Cfg.AppName, link)
@@ -53,6 +55,10 @@ func (a *App) apiRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := a.allow(a.authLimit, "reg:"+auth.ClientIP(r)); err != nil {
 		a.fail(w, r, err)
+		return
+	}
+	if a.signupsClosed() {
+		a.fail(w, r, errSignupsClosed)
 		return
 	}
 	email, ok := normEmail(in.Email)
@@ -91,7 +97,7 @@ func (a *App) apiRegister(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	if err := a.Auth.StartSession(w, u.ID); err != nil {
+	if err := a.Auth.StartSessionFor(w, r, u.ID); err != nil {
 		a.fail(w, r, err)
 		return
 	}
@@ -119,8 +125,8 @@ func (a *App) apiLogin(w http.ResponseWriter, r *http.Request) {
 		logger.Warn("AUTH login failed from=%s", auth.ClientCountry(r))
 		a.fail(w, r, apiErr{http.StatusUnauthorized, "err.bad_credentials"})
 		return
-	case errors.Is(err, auth.ErrBanned):
-		a.fail(w, r, apiErr{http.StatusForbidden, "err.banned"})
+	case errors.Is(err, auth.ErrDeactivated):
+		a.fail(w, r, apiErr{http.StatusForbidden, "err.deactivated"})
 		return
 	case err != nil:
 		a.fail(w, r, err)
@@ -177,7 +183,7 @@ func (a *App) emailLinkRequest(w http.ResponseWriter, r *http.Request, purpose s
 		a.okJSON(w, nil)
 		return
 	}
-	if u.IsBanned {
+	if u.IsDeactivated && !u.SelfDeactivated {
 		a.okJSON(w, nil)
 		return
 	}
@@ -260,8 +266,8 @@ func (a *App) apiMagicConsume(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	if u.IsBanned {
-		a.fail(w, r, apiErr{http.StatusForbidden, "err.banned"})
+	if u.IsDeactivated && !u.SelfDeactivated {
+		a.fail(w, r, apiErr{http.StatusForbidden, "err.deactivated"})
 		return
 	}
 	if !u.EmailVerified {
@@ -324,14 +330,16 @@ func (a *App) apiSetLocale(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, errBadRequest)
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: "tt_lang", Value: in.Locale, Path: "/", MaxAge: 60 * 60 * 24 * 365, SameSite: http.SameSiteLaxMode, Secure: a.Cfg.CookieSecure})
-	if u := auth.UserFrom(r.Context()); u != nil {
-		if err := a.Store.SetLocale(u.ID, in.Locale); err != nil {
-			a.fail(w, r, err)
-			return
-		}
-		a.Sync.PrefetchLanguages()
+	u := auth.UserFrom(r.Context())
+	if u == nil {
+		a.fail(w, r, errUnauth)
+		return
 	}
+	if err := a.Store.SetLocale(u.ID, in.Locale); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	a.Sync.PrefetchLanguages()
 	a.okJSON(w, nil)
 }
 
@@ -367,7 +375,7 @@ func (a *App) apiChangePassword(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	if err := a.Auth.StartSession(w, u.ID); err != nil {
+	if err := a.Auth.StartSessionFor(w, r, u.ID); err != nil {
 		a.fail(w, r, err)
 		return
 	}
@@ -447,8 +455,16 @@ func (a *App) apiDeleteAccount(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	var in struct{ Password, Confirm string }
+	var in struct {
+		Password, Confirm string
+		commentToggles
+	}
 	if err := decode(r, &in); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	mode, err := in.mode()
+	if err != nil {
 		a.fail(w, r, err)
 		return
 	}
@@ -461,16 +477,100 @@ func (a *App) apiDeleteAccount(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, apiErr{http.StatusBadRequest, "err.confirm_username"})
 		return
 	}
-	if err := a.Store.DeleteUser(u.ID); err != nil {
+	if err := a.deleteAccount(r.Context(), u, mode); err != nil {
 		a.fail(w, r, err)
 		return
 	}
-	if err := a.removeUserMedia(r.Context(), u); err != nil {
-		logger.Error("ACCOUNT delete media uid=%d: %v", u.ID, err)
+	a.Auth.ClearCookies(w)
+	a.okJSON(w, map[string]any{"redirect": "/"})
+}
+
+// apiDeactivateAccount lets people step away: their profile and comments are
+// hidden (or the comments deleted, as they choose) and they are signed out.
+// Signing in again reactivates the account.
+func (a *App) apiDeactivateAccount(w http.ResponseWriter, r *http.Request) {
+	u, err := a.needUser(r)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	var in struct {
+		Password, Confirm string
+		commentToggles
+	}
+	if err := decode(r, &in); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	mode, err := in.mode()
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	if u.HasPassword() {
+		if !a.Auth.CheckPassword(u, in.Password) {
+			a.fail(w, r, apiErr{http.StatusUnauthorized, "err.bad_credentials"})
+			return
+		}
+	} else if !strings.EqualFold(strings.TrimSpace(in.Confirm), u.Username) {
+		a.fail(w, r, apiErr{http.StatusBadRequest, "err.confirm_username"})
+		return
+	}
+	a.withdrawAll(u)
+	if err := a.applyCommentMode(u.ID, mode); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	if err := a.Store.DeactivateSelf(u.ID); err != nil {
+		a.fail(w, r, err)
+		return
 	}
 	a.Auth.ClearCookies(w)
-	logger.Info("ACCOUNT deleted uid=%d", u.ID)
+	logger.Info("ACCOUNT deactivated by its owner uid=%d comments=%s", u.ID, mode)
 	a.okJSON(w, map[string]any{"redirect": "/"})
+}
+
+// deleteAccount removes an account and everything it owns. Its comments are
+// first hidden, erased or kept as the mode says and then moved to the anonymous
+// deleted account, so nobody's replies are ever lost with it. Remote friends are
+// told the friendship ended; a failure to remove uploaded images is logged but
+// does not undo the deletion.
+func (a *App) deleteAccount(ctx context.Context, u *store.User, mode string) error {
+	a.withdrawAll(u)
+	var images []string
+	if mode == "delete" {
+		var err error
+		if images, err = a.Store.UserCommentImages(u.ID); err != nil {
+			logger.Error("ACCOUNT delete: images of uid=%d: %v", u.ID, err)
+		}
+	}
+	if err := a.Store.TransferUserComments(u.ID, mode); err != nil {
+		return err
+	}
+	for _, img := range images {
+		a.dropPic(img)
+	}
+	if a.Fed != nil {
+		if friends, err := a.Store.RemoteFriends(u.ID); err != nil {
+			logger.Error("ACCOUNT delete: remote friends uid=%d: %v", u.ID, err)
+		} else {
+			for _, f := range friends {
+				if peer, err := a.Store.UserByID(f.UserID); err == nil {
+					a.Fed.SendFriendEnd(u, peer)
+				} else {
+					logger.Error("ACCOUNT delete: remote friend lookup uid=%d friend=%d: %v", u.ID, f.UserID, err)
+				}
+			}
+		}
+	}
+	if err := a.Store.DeleteUser(u.ID); err != nil {
+		return err
+	}
+	if err := a.removeUserMedia(ctx, u); err != nil {
+		logger.Error("ACCOUNT delete media uid=%d: %v", u.ID, err)
+	}
+	logger.Info("ACCOUNT deleted uid=%d", u.ID)
+	return nil
 }
 
 func (a *App) apiExport(w http.ResponseWriter, r *http.Request) {
@@ -508,4 +608,54 @@ func (a *App) promoteIfAdmin(uid int64) {
 		return
 	}
 	logger.Info("AUTH admin granted uid=%d", uid)
+}
+
+var errUsernameCooldown = apiErr{http.StatusTooManyRequests, "err.username_cooldown"}
+
+// changeUsername validates and applies a new username for someone, telling
+// their remote friends' servers. enforceGap is the self-service rate limit.
+func (a *App) changeUsername(u *store.User, name string, enforceGap bool) error {
+	name = strings.TrimSpace(name)
+	if !store.ValidUsername(name) {
+		return apiErr{http.StatusBadRequest, "err.invalid_username"}
+	}
+	if store.ReservedUsername(name) && !strings.EqualFold(name, u.Username) {
+		return apiErr{http.StatusConflict, "err.username_taken"}
+	}
+	old, err := a.Store.RenameUser(u.ID, name, enforceGap)
+	switch {
+	case errors.Is(err, store.ErrUsernameTaken):
+		return apiErr{http.StatusConflict, "err.username_taken"}
+	case errors.Is(err, store.ErrUsernameCooldown):
+		return errUsernameCooldown
+	case err != nil:
+		return err
+	}
+	if old != name {
+		logger.Info("ACCOUNT username changed uid=%d from=%s to=%s", u.ID, old, name)
+		if a.Fed != nil {
+			renamed := *u
+			renamed.Username = name
+			a.Fed.SendRename(&renamed, old)
+		}
+	}
+	return nil
+}
+
+func (a *App) apiChangeUsername(w http.ResponseWriter, r *http.Request) {
+	u, err := a.needUser(r)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	var in struct{ Username string }
+	if err := decode(r, &in); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	if err := a.changeUsername(u, in.Username, true); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	a.okJSON(w, map[string]any{"username": strings.TrimSpace(in.Username)})
 }

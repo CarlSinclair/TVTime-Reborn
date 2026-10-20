@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"strings"
@@ -11,7 +12,23 @@ func imgURL(size, path string) string {
 	if path == "" {
 		return "/static/img/placeholder.svg"
 	}
+	if strings.HasPrefix(path, "tvdb:") {
+		return "/tvdbimg/" + base64.RawURLEncoding.EncodeToString([]byte(strings.TrimPrefix(path, "tvdb:")))
+	}
 	return "/img/" + size + path
+}
+
+// imgSet builds a srcset for artwork at several widths, so a high-density screen
+// gets a sharper copy. TheTVDB images come in one size and get none.
+func imgSet(path string, sizes ...string) string {
+	if path == "" || strings.HasPrefix(path, "tvdb:") {
+		return ""
+	}
+	parts := make([]string, 0, len(sizes))
+	for _, sz := range sizes {
+		parts = append(parts, imgURL(sz, path)+" "+strings.TrimPrefix(sz, "w")+"w")
+	}
+	return strings.Join(parts, ", ")
 }
 
 func episodeCode(season, episode int) string {

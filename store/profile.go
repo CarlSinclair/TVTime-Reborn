@@ -88,12 +88,28 @@ func (s *Store) FavoriteGenres(userID int64, limit int) ([]GenreStat, error) {
 	return out, nil
 }
 
-func (s *Store) FavoriteShows(userID int64) ([]Show, error) {
+func (s *Store) CountFavoriteShows(userID int64) (int, error) {
+	var n int
+	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM follows WHERE user_id = ? AND favorite = 1`, userID).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count favorite shows uid=%d: %w", userID, err)
+	}
+	return n, nil
+}
+
+func (s *Store) CountWatched(userID int64) (int, error) {
+	var n int
+	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM watched WHERE user_id = ?`, userID).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count watched uid=%d: %w", userID, err)
+	}
+	return n, nil
+}
+
+func (s *Store) FavoriteShows(userID int64, limit, offset int) ([]Show, error) {
 	rows, err := s.DB.Query(`SELECT shows.id, shows.tmdb_id, COALESCE(shows.tvdb_id,0), COALESCE(shows.imdb_id,''), shows.name, shows.original_name, shows.overview, shows.status,
 	  COALESCE(shows.first_air_date,''), COALESCE(shows.last_air_date,''), shows.poster_path, shows.backdrop_path, shows.vote_average, shows.vote_count,
 	  shows.genres, shows.networks, shows.original_language, shows.number_of_seasons, shows.number_of_episodes, shows.runtime, shows.needs_sync,
 	  COALESCE(shows.last_synced_at,''), shows.sync_error
-	  FROM follows f JOIN shows ON shows.id = f.show_id WHERE f.user_id = ? AND f.favorite = 1 ORDER BY shows.name COLLATE NOCASE`, userID)
+	  FROM follows f JOIN shows ON shows.id = f.show_id WHERE f.user_id = ? AND f.favorite = 1 ORDER BY shows.name COLLATE NOCASE LIMIT ? OFFSET ?`, userID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("favorite shows uid=%d: %w", userID, err)
 	}
@@ -109,10 +125,10 @@ func (s *Store) FavoriteShows(userID int64) ([]Show, error) {
 	return out, rows.Err()
 }
 
-func (s *Store) RecentlyWatched(userID int64, limit int) ([]CalendarItem, error) {
+func (s *Store) RecentlyWatched(userID int64, limit, offset int) ([]CalendarItem, error) {
 	rows, err := s.DB.Query(`SELECT sh.id, sh.name, sh.poster_path, `+episodeCols+`
 	  FROM watched w JOIN episodes e ON e.id = w.episode_id JOIN shows sh ON sh.id = w.show_id
-	  WHERE w.user_id = ? ORDER BY w.watched_at DESC LIMIT ?`, userID, limit)
+	  WHERE w.user_id = ? ORDER BY w.watched_at DESC LIMIT ? OFFSET ?`, userID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("recently watched uid=%d: %w", userID, err)
 	}

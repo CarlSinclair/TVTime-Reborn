@@ -14,10 +14,12 @@ import (
 	"sync"
 	"testing"
 
+	"tvt/appconfig"
 	"tvt/assets"
 	"tvt/auth"
 	"tvt/config"
 	"tvt/db"
+	"tvt/federation"
 	"tvt/handlers"
 	"tvt/i18n"
 	"tvt/mailer"
@@ -27,7 +29,43 @@ import (
 	"tvt/syncer"
 	"tvt/telegram"
 	"tvt/tmdb"
+	"tvt/tvdb"
 )
+
+func fakeTVDB(t *testing.T) *httptest.Server {
+	t.Helper()
+	mux := http.NewServeMux()
+	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]any{"token": "tok"}})
+	})
+	mux.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) {
+		out := []map[string]any{}
+		if strings.Contains(strings.ToLower(r.URL.Query().Get("query")), "tube") {
+			out = append(out, map[string]any{"tvdb_id": "9001", "name": "Tube Channel", "first_air_time": "2010-01-01", "image_url": "https://artworks.thetvdb.com/banners/posters/abc.jpg", "type": "series"})
+		}
+		json.NewEncoder(w).Encode(map[string]any{"data": out})
+	})
+	mux.HandleFunc("/series/9001/extended", func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{
+			"id": 9001, "name": "Tube Channel", "overview": "A channel.", "image": "https://artworks.thetvdb.com/banners/posters/abc.jpg",
+			"firstAired": "2010-01-01", "lastAired": "2020-02-01", "status": map[string]any{"name": "Continuing"},
+			"originalNetwork": map[string]any{"name": "YouTube"}, "genres": []map[string]any{{"name": "Web"}}, "averageRuntime": 10,
+			"remoteIds": []map[string]any{{"id": "tt9001", "sourceName": "IMDB"}},
+		}})
+	})
+	mux.HandleFunc("/series/9001/episodes/default", func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"episodes": []map[string]any{
+			{"id": 71, "name": "First video", "aired": "2020-01-01", "number": 1, "seasonNumber": 2020, "runtime": 8},
+			{"id": 72, "name": "Second video", "aired": "2020-02-01", "number": 2, "seasonNumber": 2020, "runtime": 9},
+		}}, "links": map[string]any{"next": nil}})
+	})
+	mux.HandleFunc("/banners/posters/abc.jpg", func(w http.ResponseWriter, r *http.Request) {
+		w.Write(pngBytes(1, 1))
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	return srv
+}
 
 func fakeTMDB(t *testing.T) *httptest.Server {
 	t.Helper()
@@ -53,6 +91,20 @@ func fakeTMDB(t *testing.T) *httptest.Server {
 		}
 		json.NewEncoder(w).Encode(out)
 	})
+	mux.HandleFunc("/tv/555/season/1/episode/2/images", func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(map[string]any{"stills": []map[string]any{{"file_path": "/stillAAAA1111.jpg"}, {"file_path": "/stillBBBB2222.jpg"}}})
+	})
+	mux.HandleFunc("/find/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.TrimPrefix(r.URL.Path, "/find/") == "70001" && r.URL.Query().Get("external_source") == "tvdb_id" {
+			json.NewEncoder(w).Encode(map[string]any{"tv_results": []any{}, "tv_episode_results": []map[string]any{{"id": 12, "show_id": 555, "season_number": 1, "episode_number": 2}}})
+			return
+		}
+		if strings.TrimPrefix(r.URL.Path, "/find/") == "5550" && r.URL.Query().Get("external_source") == "tvdb_id" {
+			json.NewEncoder(w).Encode(map[string]any{"tv_results": []map[string]any{{"id": 555, "name": "Fake Show"}}})
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]any{"tv_results": []any{}})
+	})
 	mux.HandleFunc("/search/tv", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]any{"results": []map[string]any{{"id": 555, "name": "Fake Show"}}})
 	})
@@ -73,8 +125,8 @@ type client struct {
 func (c *client) csrf() string {
 	u, _ := url.Parse(c.base)
 	for _, ck := range c.http.Jar.Cookies(u) {
-		if ck.Name == auth.CookieCSRF {
-			return ck.Value
+		if ck.Name == auth.CookieSession {
+			return auth.BagField(ck.Value, "c")
 		}
 	}
 	return ""
@@ -111,7 +163,7 @@ func (c *client) post(path string, body any) (int, map[string]any) {
 func newClient(t *testing.T, base string) *client {
 	jar, _ := cookiejar.New(nil)
 	c := &client{t: t, base: base, http: &http.Client{Jar: jar, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}
-	c.get("/")
+	c.get("/login")
 	return c
 }
 
@@ -125,6 +177,7 @@ type env struct {
 	nt    *notify.Service
 	sync  *syncer.Syncer
 	app   *handlers.App
+	fed   *federation.Service
 }
 
 type tgFake struct {
@@ -151,7 +204,10 @@ func newTelegramFake(t *testing.T) (*tgFake, string) {
 			}
 			f.mu.Lock()
 			f.sent = append(f.sent, body)
+			n := len(f.sent)
 			f.mu.Unlock()
+			w.Write([]byte(fmt.Sprintf(`{"ok":true,"result":{"message_id":%d}}`, 1000+n)))
+			return
 		}
 		w.Write([]byte(`{"ok":true}`))
 	})
@@ -168,7 +224,8 @@ func newEnv(t *testing.T) *env {
 	}
 	t.Cleanup(func() { d.Close() })
 	st := store.New(d)
-	cfg := &config.Config{AppName: "TVT", BaseURL: "http://test", DefaultLang: "en", DevLogMail: true, JWTSecret: "0123456789abcdef0123456789abcdef", DataDir: t.TempDir(), ImageBase: "http://127.0.0.1:1"}
+	srv := httptest.NewUnstartedServer(nil)
+	cfg := &config.Config{AppName: "TVT", BaseURL: "http://" + srv.Listener.Addr().String(), FedInsecure: true, DevLogMail: true, JWTSecret: "0123456789abcdef0123456789abcdef", DataDir: t.TempDir(), ImageBase: "http://127.0.0.1:1"}
 	tm := tmdb.New("testkey")
 	tm.Base = fakeTMDB(t).URL
 	a := auth.New(st, cfg.JWTSecret, false)
@@ -186,18 +243,29 @@ func newEnv(t *testing.T) *env {
 		t.Fatalf("webauthn: %v", err)
 	}
 	sy := syncer.New(st, tm)
+	tvdbSrv := fakeTVDB(t)
+	sy.TVDB = tvdb.New("tvdbkey")
+	sy.TVDB.Base = tvdbSrv.URL
+	cfg.TVDBImageBase = tvdbSrv.URL
 	app, err := handlers.New(cfg, st, a, sy, tm, ml, nt, bot, &media.Disk{Dir: filepath.Join(cfg.DataDir, "media")})
 	if err != nil {
 		t.Fatalf("app: %v", err)
 	}
-	srv := httptest.NewServer(app.Handler())
+	app.Settings = appconfig.New(st, cfg.JWTSecret, cfg)
+	fed, err := federation.New(st, nt, srv.Listener.Addr().String(), cfg.JWTSecret, true, nil, nil)
+	if err != nil {
+		t.Fatalf("federation: %v", err)
+	}
+	app.SetFederation(fed)
+	srv.Config.Handler = app.Handler()
+	srv.Start()
 	t.Cleanup(srv.Close)
-	return &env{srv: srv, store: st, auth: a, cfg: cfg, tg: fake, bot: bot, nt: nt, sync: sy, app: app}
+	return &env{srv: srv, store: st, auth: a, cfg: cfg, tg: fake, bot: bot, nt: nt, sync: sy, app: app, fed: fed}
 }
 
 func (e *env) signup(t *testing.T, name string, verify bool) *client {
 	c := newClient(t, e.srv.URL)
-	code, out := c.post("/api/auth/register", map[string]string{"email": name + "@example.com", "username": name, "password": "password123"})
+	code, out := c.post("/api/auth/register", map[string]string{"email": name + "@example.com", "username": name, "password": "Passw0rd!x1"})
 	if code != 200 || out["ok"] != true {
 		t.Fatalf("register %s: %d %v", name, code, out)
 	}
@@ -215,8 +283,28 @@ func (e *env) signup(t *testing.T, name string, verify bool) *client {
 
 func TestPagesRenderForVisitor(t *testing.T) {
 	e := newEnv(t)
-	c := newClient(t, e.srv.URL)
-	for _, p := range []string{"/", "/login", "/register", "/forgot", "/search?q=fake", "/show/555", "/show/555/season/1", "/offline", "/t/verify?token=x"} {
+	anon := newClient(t, e.srv.URL)
+	for _, p := range []string{"/", "/welcome", "/login", "/register", "/forgot", "/privacy", "/about", "/offline", "/t/verify?token=x"} {
+		code, body := anon.get(p)
+		if code != 200 || !strings.Contains(body, "</html>") {
+			t.Errorf("anonymous GET %s: status %d", p, code)
+		}
+	}
+	for _, p := range []string{"/shows", "/calendar", "/settings", "/search?q=fake", "/show/555", "/u/someone", "/nope"} {
+		resp, err := anon.http.Get(anon.base + p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusSeeOther || !strings.HasPrefix(resp.Header.Get("Location"), "/login") {
+			t.Errorf("anonymous GET %s: status %d location %q, want redirect to /login", p, resp.StatusCode, resp.Header.Get("Location"))
+		}
+	}
+	if code, out := anon.get("/api/search?q=fake"); code != 401 {
+		t.Errorf("anonymous API search: %d %v", code, out)
+	}
+	c := e.signup(t, "viewer", true)
+	for _, p := range []string{"/", "/shows", "/calendar", "/search?q=fake", "/show/555", "/show/555/season/1", "/settings", "/about"} {
 		code, body := c.get(p)
 		if code != 200 || !strings.Contains(body, "</html>") {
 			t.Errorf("GET %s: status %d", p, code)
@@ -317,7 +405,7 @@ func TestFullFlow(t *testing.T) {
 		t.Fatalf("blocked author still visible: %s", raw)
 	}
 
-	if code, _ := alice.get("/admin/reports"); code != 403 {
+	if code, _ := alice.get("/admin"); code != 403 {
 		t.Fatalf("admin page for non-admin: %d", code)
 	}
 	if code, out := alice.post("/api/auth/logout", nil); code != 200 {
@@ -337,7 +425,7 @@ func TestLoginErrorsAreGeneric(t *testing.T) {
 	if code1 != 401 || code2 != 401 || out1["error"] != out2["error"] {
 		t.Fatalf("login failures should be identical: %d %v / %d %v", code1, out1, code2, out2)
 	}
-	if code, out := c.post("/api/auth/login", map[string]string{"email": "dave@example.com", "password": "password123"}); code != 200 {
+	if code, out := c.post("/api/auth/login", map[string]string{"email": "dave@example.com", "password": "Passw0rd!x1"}); code != 200 {
 		t.Fatalf("good login: %d %v", code, out)
 	}
 }

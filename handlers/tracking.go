@@ -4,15 +4,18 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
+	"tvt/logger"
 	"tvt/store"
 	"tvt/tmdb"
+	"tvt/tvdb"
 )
 
 func (a *App) showForAPI(w http.ResponseWriter, r *http.Request) (*store.Show, bool) {
 	tid, err := strconv.ParseInt(r.PathValue("tmdb"), 10, 64)
-	if err != nil || tid <= 0 {
+	if err != nil || tid == 0 {
 		a.fail(w, r, errNotFound)
 		return nil, false
 	}
@@ -22,9 +25,9 @@ func (a *App) showForAPI(w http.ResponseWriter, r *http.Request) (*store.Show, b
 	switch {
 	case err == nil:
 		return sh, true
-	case errors.Is(err, tmdb.ErrNotFound):
+	case errors.Is(err, tmdb.ErrNotFound), errors.Is(err, tvdb.ErrNotFound):
 		a.fail(w, r, errNotFound)
-	case errors.Is(err, tmdb.ErrNoKey):
+	case errors.Is(err, tmdb.ErrNoKey), errors.Is(err, tvdb.ErrNoKey):
 		a.fail(w, r, errTMDBMissing)
 	default:
 		a.fail(w, r, errTMDBDown)
@@ -111,7 +114,12 @@ func (a *App) ensureFollowing(userID, showID int64) error {
 		return err
 	}
 	if f == nil {
-		return a.Store.Follow(userID, showID, "watching")
+		if err := a.Store.Follow(userID, showID, "watching"); err != nil {
+			return err
+		}
+	}
+	if _, err := a.Store.CompleteFinished(userID, showID); err != nil {
+		logger.Error("COMPLETE after watch uid=%d show=%d: %v", userID, showID, err)
 	}
 	return nil
 }
@@ -127,7 +135,7 @@ func (a *App) apiWatch(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, errNotFound)
 		return
 	}
-	var in struct{ Watched, UpTo bool }
+	var in struct{ Watched, UpTo, Card, Single bool }
 	if err := decode(r, &in); err != nil {
 		a.fail(w, r, err)
 		return
@@ -140,6 +148,17 @@ func (a *App) apiWatch(w http.ResponseWriter, r *http.Request) {
 			a.fail(w, r, err)
 		}
 		return
+	}
+	if in.Watched && !in.UpTo && !in.Single {
+		missing, err := a.Store.UnwatchedBefore(u.ID, ep.ShowID, ep.SeasonNumber, ep.EpisodeNumber)
+		if err != nil {
+			a.fail(w, r, err)
+			return
+		}
+		if missing > 0 {
+			a.okJSON(w, map[string]any{"needs_confirm": true, "missing": missing})
+			return
+		}
 	}
 	marked := 0
 	switch {
@@ -169,7 +188,41 @@ func (a *App) apiWatch(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	a.okJSON(w, map[string]any{"marked": marked, "watched": p.Watched, "aired": p.Aired})
+	if in.Watched || in.UpTo {
+		n := 1
+		if in.UpTo && marked > 1 {
+			n = marked
+		}
+		a.emitWatch(u, ep, n)
+	}
+	out := map[string]any{"marked": marked, "watched": p.Watched, "aired": p.Aired}
+	if in.Card {
+		out["next_html"] = a.upNextHTML(w, r, u, ep.ShowID)
+	}
+	a.okJSON(w, out)
+}
+
+// upNextHTML renders the show's card for the home page, or "" when the person
+// has nothing left to watch of it, so the page can swap it in place.
+func (a *App) upNextHTML(w http.ResponseWriter, r *http.Request, u *store.User, showID int64) string {
+	it, err := a.Store.UpNextFor(u.ID, showID)
+	if err != nil {
+		logger.Error("API up next card uid=%d show=%d: %v", u.ID, showID, err)
+		return ""
+	}
+	if it == nil {
+		return ""
+	}
+	lang := a.lang(w, r, u)
+	items := []store.UpNextItem{*it}
+	a.localizeUpNext(lang, items)
+	var buf strings.Builder
+	v := &View{App: a, Lang: lang, User: u}
+	if err := a.tmpl["home"].ExecuteTemplate(&buf, "upnext_card", map[string]any{"It": items[0], "V": v}); err != nil {
+		logger.Error("API up next card render show=%d: %v", showID, err)
+		return ""
+	}
+	return buf.String()
 }
 
 func (a *App) apiWatchSeason(w http.ResponseWriter, r *http.Request) {
@@ -203,6 +256,9 @@ func (a *App) apiWatchSeason(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if in.Watched {
+		a.emitSeason(u, sh, n, marked)
+	}
 	a.okJSON(w, map[string]any{"marked": marked})
 }
 
@@ -217,12 +273,16 @@ func (a *App) apiRate(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, errNotFound)
 		return
 	}
-	var in struct{ Rating int }
+	var in struct {
+		Rating int
+		Card   bool
+	}
 	if err := decode(r, &in); err != nil || in.Rating < 0 || in.Rating > 10 {
 		a.fail(w, r, errBadRequest)
 		return
 	}
-	if err := a.Store.Rate(u.ID, id, in.Rating); err != nil {
+	ep, err := a.Store.Episode(id, 0)
+	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
 			a.fail(w, r, errNotFound)
 		} else {
@@ -230,5 +290,26 @@ func (a *App) apiRate(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	a.okJSON(w, nil)
+	if err := a.Store.Rate(u.ID, id, in.Rating); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	out := map[string]any{"watched": false}
+	if in.Rating > 0 && aired(ep.AirDate) {
+		if err := a.Store.MarkWatched(u.ID, ep.ID, ""); err != nil {
+			a.fail(w, r, err)
+			return
+		}
+		if err := a.ensureFollowing(u.ID, ep.ShowID); err != nil {
+			a.fail(w, r, err)
+			return
+		}
+		out["watched"] = true
+		a.emitWatch(u, ep, 1)
+	}
+	a.emitRating(u, ep, in.Rating)
+	if in.Card {
+		out["next_html"] = a.upNextHTML(w, r, u, ep.ShowID)
+	}
+	a.okJSON(w, out)
 }

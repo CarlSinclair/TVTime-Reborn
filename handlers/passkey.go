@@ -21,8 +21,8 @@ func (a *App) passkeyFail(w http.ResponseWriter, r *http.Request, err error) {
 		a.fail(w, r, apiErr{http.StatusUnauthorized, "err.passkey_failed"})
 	case errors.Is(err, auth.ErrPasskeyUnavailable):
 		a.fail(w, r, apiErr{http.StatusServiceUnavailable, "err.passkey_failed"})
-	case errors.Is(err, auth.ErrBanned):
-		a.fail(w, r, apiErr{http.StatusForbidden, "err.banned"})
+	case errors.Is(err, auth.ErrDeactivated):
+		a.fail(w, r, apiErr{http.StatusForbidden, "err.deactivated"})
 	default:
 		a.fail(w, r, err)
 	}

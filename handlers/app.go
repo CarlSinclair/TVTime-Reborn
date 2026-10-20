@@ -9,15 +9,19 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"regexp"
 	"runtime/debug"
 	"strings"
 	"time"
 
+	"tvt/appconfig"
 	"tvt/assets"
 	"tvt/auth"
 	"tvt/config"
+	"tvt/federation"
 	"tvt/i18n"
+	"tvt/importer"
 	"tvt/logger"
 	"tvt/mailer"
 	"tvt/media"
@@ -40,6 +44,17 @@ type App struct {
 	Bot   *telegram.Bot
 	Media media.Store
 
+	Importer *importer.Runner
+	Fed      *federation.Service
+	// Settings holds the options an admin may change from the web UI; Restart,
+	// when set, stops the process cleanly with a non-zero status.
+	Settings     *appconfig.Manager
+	logo         logoState
+	pageCache    pageCache
+	contactLimit *auth.Limiter
+	supportLimit *auth.Limiter
+	Restart      func()
+
 	tmpl     map[string]*template.Template
 	mfaLimit *auth.Limiter
 
@@ -55,9 +70,14 @@ type App struct {
 }
 
 func New(cfg *config.Config, st *store.Store, a *auth.Service, sy *syncer.Syncer, tm *tmdb.Client, ml *mailer.Mailer, nt *notify.Service, bot *telegram.Bot, md media.Store) (*App, error) {
-	bundle, err := i18n.Load(assets.FS, "locales", cfg.DefaultLang)
+	bundle, err := i18n.Load(assets.FS, "locales", i18n.Fallback)
 	if err != nil {
 		return nil, err
+	}
+	ml.Record = func(to, subject string, err error) {
+		if lerr := st.LogMail(to, subject, err); lerr != nil {
+			logger.Error("MAIL log subject=%q: %v", subject, lerr)
+		}
 	}
 	app := &App{
 		Cfg: cfg, Store: st, Auth: a, Sync: sy, TMDB: tm, Mail: ml, I18n: bundle, Notif: nt, Bot: bot, Media: md,
@@ -70,6 +90,19 @@ func New(cfg *config.Config, st *store.Store, a *auth.Service, sy *syncer.Syncer
 		imgLimit:     auth.NewLimiter(600, time.Minute),
 		pageLimit:    auth.NewLimiter(600, time.Minute),
 		writeLimit:   auth.NewLimiter(120, time.Minute),
+		contactLimit: auth.NewLimiter(3, time.Hour),
+		supportLimit: auth.NewLimiter(60, time.Hour),
+	}
+	app.logo.set(st.KVGet(logoKV))
+	app.reloadPages()
+	app.Importer = &importer.Runner{Store: st, Sync: sy, TMDB: tm, Notify: nt}
+	if n, err := st.FailInterruptedImports(); err != nil {
+		logger.Error("IMPORT could not clear interrupted jobs: %v", err)
+	} else if n > 0 {
+		logger.Warn("IMPORT marked %d interrupted job(s) as failed", n)
+	}
+	if err := st.PruneImports(180 * 24 * time.Hour); err != nil {
+		logger.Error("IMPORT prune: %v", err)
 	}
 	if err := app.loadTemplates(); err != nil {
 		return nil, err
@@ -78,14 +111,17 @@ func New(cfg *config.Config, st *store.Store, a *auth.Service, sy *syncer.Syncer
 }
 
 type View struct {
-	App    *App
-	Lang   string
-	User   *store.User
-	CSRF   string
-	Title  string
-	Path   string
-	Data   map[string]any
-	Unread int
+	App     *App
+	Lang    string
+	User    *store.User
+	CSRF    string
+	Title   string
+	Path    string
+	Data    map[string]any
+	Unread  int
+	Friends int
+	// AdminOpen is the number of admin items waiting, shown beside the Admin link.
+	AdminOpen int
 }
 
 var LangNames = map[string]string{
@@ -124,6 +160,8 @@ func (v *View) TN(key string, kv ...string) string {
 
 func (v *View) TraktEnabled() bool { return v.App.Sync.Trakt != nil }
 
+func (v *View) TVDBEnabled() bool { return v.App.Sync.TVDBConfigured() }
+
 func (v *View) TelegramBot() string {
 	if v.App.Bot.Configured() {
 		return v.App.Bot.Username
@@ -159,15 +197,15 @@ func (a *App) lang(w http.ResponseWriter, r *http.Request, u *store.User) string
 	if u != nil && a.I18n.Has(u.Locale) {
 		return u.Locale
 	}
-	if c, err := r.Cookie("tt_lang"); err == nil && a.I18n.Has(c.Value) {
-		return c.Value
-	}
 	return a.I18n.Pick(r.Header.Get("Accept-Language"))
 }
 
 func (a *App) loadTemplates() error {
 	funcs := template.FuncMap{
 		"img":      imgURL,
+		"imgset":   imgSet,
+		"loveHref": loveHref,
+		"starsOf":  starsOf,
 		"code":     episodeCode,
 		"add":      func(x, y int) int { return x + y },
 		"seq":      seq,
@@ -184,6 +222,7 @@ func (a *App) loadTemplates() error {
 		"avatar":   func(name string) string { return a.mediaURL("avatars", name) },
 		"banner":   func(name string) string { return a.mediaURL("banners", name) },
 		"assetV":   func() string { return assetVersion },
+		"logoURL":  a.logoURL,
 	}
 	sub, err := fs.Sub(assets.FS, "templates")
 	if err != nil {
@@ -222,6 +261,18 @@ func (a *App) render(w http.ResponseWriter, r *http.Request, name string, status
 			logger.Error("RENDER unread count uid=%d: %v", u.ID, err)
 		} else {
 			v.Unread = n
+		}
+		if n, err := a.Store.PendingFriendCount(u.ID); err != nil {
+			logger.Error("RENDER friend requests uid=%d: %v", u.ID, err)
+		} else {
+			v.Friends = n
+		}
+	}
+	if u != nil && u.IsAdmin {
+		if reports, servers, err := a.adminBadges(); err != nil {
+			logger.Error("RENDER admin badges uid=%d: %v", u.ID, err)
+		} else {
+			v.AdminOpen = reports + servers
 		}
 	}
 	if data == nil {
@@ -269,16 +320,18 @@ type apiErr struct {
 func (e apiErr) Error() string { return e.key }
 
 var (
-	errBadRequest  = apiErr{http.StatusBadRequest, "err.bad_request"}
-	errUnauth      = apiErr{http.StatusUnauthorized, "err.login_required"}
-	errForbidden   = apiErr{http.StatusForbidden, "err.forbidden"}
-	errNotFound    = apiErr{http.StatusNotFound, "err.not_found"}
-	errRate        = apiErr{http.StatusTooManyRequests, "err.rate_limited"}
-	errNeedVerify  = apiErr{http.StatusForbidden, "err.verify_email"}
-	errMailDown    = apiErr{http.StatusServiceUnavailable, "err.mail_unavailable"}
-	errTMDBDown    = apiErr{http.StatusBadGateway, "err.metadata_unavailable"}
-	errInternal    = apiErr{http.StatusInternalServerError, "err.internal"}
-	errTMDBMissing = apiErr{http.StatusServiceUnavailable, "err.metadata_not_configured"}
+	errBadRequest    = apiErr{http.StatusBadRequest, "err.bad_request"}
+	errUnauth        = apiErr{http.StatusUnauthorized, "err.login_required"}
+	errForbidden     = apiErr{http.StatusForbidden, "err.forbidden"}
+	errNotFound      = apiErr{http.StatusNotFound, "err.not_found"}
+	errRate          = apiErr{http.StatusTooManyRequests, "err.rate_limited"}
+	errNeedVerify    = apiErr{http.StatusForbidden, "err.verify_email"}
+	errMailDown      = apiErr{http.StatusServiceUnavailable, "err.mail_unavailable"}
+	errTMDBDown      = apiErr{http.StatusBadGateway, "err.metadata_unavailable"}
+	errInternal      = apiErr{http.StatusInternalServerError, "err.internal"}
+	errTMDBMissing   = apiErr{http.StatusServiceUnavailable, "err.metadata_not_configured"}
+	errSignupsClosed = apiErr{http.StatusForbidden, "err.signups_closed"}
+	errReadOnly      = apiErr{http.StatusForbidden, "err.read_only"}
 )
 
 // fail logs the real cause server-side and returns only an i18n message to the
@@ -315,6 +368,19 @@ func isStatic(p string) bool {
 	return strings.HasPrefix(p, "/static/") || strings.HasPrefix(p, "/media/") || strings.HasPrefix(p, "/img/") || p == "/sw.js" || p == "/manifest.webmanifest" || p == "/healthz"
 }
 
+var publicPages = map[string]bool{
+	"/login": true, "/login/2fa": true, "/register": true, "/forgot": true, "/privacy": true, "/about": true,
+	"/offline": true, "/auth/telegram": true,
+}
+
+// publicRoute lists everything reachable without signing in: the sign-in and
+// recovery pages, the legal pages, static files and the machine endpoints.
+// Everything else needs an account.
+func (a *App) publicRoute(p string) bool {
+	return isStatic(p) || publicPages[p] || p == "/" || p == "/welcome" || p == "/api/contact" || strings.HasPrefix(p, "/api/captcha/") || a.isContactSlug(p) || a.isPageSlug(p) || strings.HasPrefix(p, "/t/") || strings.HasPrefix(p, "/api/auth/") || p == "/api/telegram/webhook" ||
+		p == "/.well-known/tvt" || strings.HasPrefix(p, "/federation/")
+}
+
 // SetMedia swaps the object store (used by tests).
 func (a *App) SetMedia(m media.Store) { a.Media = m }
 
@@ -345,7 +411,7 @@ func (s *statusWriter) WriteHeader(c int) {
 func (a *App) middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		sw := &statusWriter{ResponseWriter: w, status: 200}
+		sw := &statusWriter{ResponseWriter: a.Auth.WrapResponse(w, r), status: 200}
 		defer func() {
 			if rec := recover(); rec != nil {
 				logger.Error("PANIC %s %s: %v\n%s", r.Method, r.URL.Path, rec, debug.Stack())
@@ -364,15 +430,15 @@ func (a *App) middleware(next http.Handler) http.Handler {
 		if a.Cfg.CookieSecure {
 			sw.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		}
-		sw.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:"+a.publicMediaOrigin()+"; style-src 'self'; script-src 'self' https://telegram.org; frame-src https://oauth.telegram.org https://telegram.org; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+		sw.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:"+a.publicMediaOrigin()+a.peerImageOrigins()+"; style-src 'self'; script-src 'self' https://telegram.org; frame-src https://oauth.telegram.org https://telegram.org; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 		ctx := r.Context()
 		if !isStatic(r.URL.Path) {
 			u, err := a.Auth.Authenticate(sw, r)
 			switch {
 			case err == nil:
 				ctx = auth.WithUser(ctx, u)
-			case errors.Is(err, auth.ErrBadToken), errors.Is(err, auth.ErrBanned):
-				if errors.Is(err, auth.ErrBanned) {
+			case errors.Is(err, auth.ErrBadToken), errors.Is(err, auth.ErrDeactivated):
+				if errors.Is(err, auth.ErrDeactivated) {
 					a.Auth.ClearCookies(sw)
 				}
 			default:
@@ -380,7 +446,19 @@ func (a *App) middleware(next http.Handler) http.Handler {
 			}
 		}
 		r = r.WithContext(ctx)
-		if !isStatic(r.URL.Path) && r.URL.Path != "/api/telegram/webhook" {
+		if auth.UserFrom(ctx) == nil && !a.publicRoute(r.URL.Path) {
+			if strings.HasPrefix(r.URL.Path, "/api/") {
+				a.fail(sw, r, errUnauth)
+				return
+			}
+			target := "/login"
+			if r.Method == http.MethodGet && r.URL.Path != "/" {
+				target += "?next=" + url.QueryEscape(r.URL.RequestURI())
+			}
+			http.Redirect(sw, r, target, http.StatusSeeOther)
+			return
+		}
+		if !isStatic(r.URL.Path) && r.URL.Path != "/api/telegram/webhook" && !isFederation(r.URL.Path) {
 			if err := a.allow(a.pageLimit, "g:"+auth.ClientIP(r)); err != nil {
 				logger.Warn("RATE page limit from=%s %s %s", auth.ClientCountry(r), r.Method, r.URL.Path)
 				a.fail(sw, r, err)
@@ -398,7 +476,7 @@ func (a *App) middleware(next http.Handler) http.Handler {
 				}
 			}
 		}
-		if r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions && r.URL.Path != "/api/telegram/webhook" {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions && r.URL.Path != "/api/telegram/webhook" && !isFederation(r.URL.Path) {
 			if !a.Auth.CSRFValid(r) {
 				logger.Warn("CSRF rejected %s %s from=%s", r.Method, r.URL.Path, auth.ClientCountry(r))
 				a.fail(sw, r, errForbidden)
@@ -421,6 +499,9 @@ func (a *App) needVerified(r *http.Request) (*store.User, error) {
 	u, err := a.needUser(r)
 	if err != nil {
 		return nil, err
+	}
+	if u.IsBanned {
+		return nil, errReadOnly
 	}
 	if !u.CanComment() {
 		return nil, errNeedVerify
@@ -451,3 +532,7 @@ func withTimeout(r *http.Request, d time.Duration) (context.Context, context.Can
 }
 
 func (v *View) JSStrings() map[string]string { return v.App.I18n.Prefix(v.Lang, "js.") }
+
+func isFederation(p string) bool {
+	return p == "/.well-known/tvt" || strings.HasPrefix(p, "/federation/")
+}

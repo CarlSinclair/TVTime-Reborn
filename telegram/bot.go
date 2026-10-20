@@ -18,6 +18,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"tvt/logger"
 )
 
 var (
@@ -37,12 +39,22 @@ type Bot struct {
 
 	seenMu sync.Mutex
 	seen   map[string]time.Time
+
+	paceMu   sync.Mutex
+	nextAny  time.Time
+	nextChat map[string]time.Time
 }
+
+const (
+	globalGap     = 500 * time.Millisecond
+	perChatGap    = 1100 * time.Millisecond
+	maxRetryAfter = 30 * time.Second
+)
 
 func New(token, username, webhookSecret string) *Bot {
 	return &Bot{
 		Token: strings.TrimSpace(token), Username: strings.TrimPrefix(strings.TrimSpace(username), "@"), Secret: webhookSecret,
-		API: apiBase, http: &http.Client{Timeout: 15 * time.Second}, seen: map[string]time.Time{},
+		API: apiBase, http: &http.Client{Timeout: 15 * time.Second}, seen: map[string]time.Time{}, nextChat: map[string]time.Time{},
 	}
 }
 
@@ -56,7 +68,7 @@ func (b *Bot) BotID() string {
 }
 
 func (b *Bot) DeepLink(startToken string) string {
-	return "https://t.me/" + b.Username + "?start=" + url.QueryEscape(startToken)
+	return "tg://resolve?domain=" + url.QueryEscape(b.Username) + "&start=" + url.QueryEscape(startToken)
 }
 
 type LoginData struct {
@@ -139,41 +151,93 @@ func (b *Bot) VerifyWebhook(r *http.Request) bool {
 }
 
 type apiResponse struct {
-	OK          bool   `json:"ok"`
-	ErrorCode   int    `json:"error_code"`
-	Description string `json:"description"`
+	OK          bool            `json:"ok"`
+	Result      json.RawMessage `json:"result"`
+	ErrorCode   int             `json:"error_code"`
+	Description string          `json:"description"`
+	Parameters  struct {
+		RetryAfter int `json:"retry_after"`
+	} `json:"parameters"`
+}
+
+type rateLimitedError struct{ wait time.Duration }
+
+func (e rateLimitedError) Error() string {
+	return fmt.Sprintf("telegram rate limited, retry after %s", e.wait)
 }
 
 func (b *Bot) call(ctx context.Context, method string, payload any) error {
+	_, err := b.callResult(ctx, method, payload)
+	return err
+}
+
+// callResult makes one Bot API call and returns the raw "result" on success.
+func (b *Bot) callResult(ctx context.Context, method string, payload any) (json.RawMessage, error) {
 	if !b.Configured() {
-		return ErrNotConfigured
+		return nil, ErrNotConfigured
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("telegram %s marshal: %w", method, err)
+		return nil, fmt.Errorf("telegram %s marshal: %w", method, err)
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, b.API+"/bot"+b.Token+"/"+method, bytes.NewReader(body))
 	if err != nil {
-		return fmt.Errorf("telegram %s request: %w", method, err)
+		return nil, fmt.Errorf("telegram %s request: %w", method, err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := b.http.Do(req)
 	if err != nil {
-		return fmt.Errorf("telegram %s: %w", method, scrub(err, b.Token))
+		return nil, fmt.Errorf("telegram %s: %w", method, scrub(err, b.Token))
 	}
 	defer resp.Body.Close()
 	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	var out apiResponse
 	if err := json.Unmarshal(raw, &out); err != nil {
-		return fmt.Errorf("telegram %s: bad response status %d", method, resp.StatusCode)
+		return nil, fmt.Errorf("telegram %s: bad response status %d", method, resp.StatusCode)
 	}
 	if !out.OK {
 		if out.ErrorCode == http.StatusForbidden || (out.ErrorCode == http.StatusBadRequest && strings.Contains(out.Description, "chat not found")) {
-			return fmt.Errorf("%w: %s", ErrBotBlocked, out.Description)
+			return nil, fmt.Errorf("%w: %s", ErrBotBlocked, out.Description)
 		}
-		return fmt.Errorf("telegram %s: %d %s", method, out.ErrorCode, out.Description)
+		if out.ErrorCode == http.StatusTooManyRequests {
+			return nil, rateLimitedError{wait: time.Duration(out.Parameters.RetryAfter) * time.Second}
+		}
+		return nil, fmt.Errorf("telegram %s: %d %s", method, out.ErrorCode, out.Description)
 	}
-	return nil
+	return out.Result, nil
+}
+
+// pace blocks until a message to chat may be sent: at most two messages a
+// second overall and one a second per chat, which keeps clear of Telegram's
+// limits.
+func (b *Bot) pace(ctx context.Context, chat string) error {
+	b.paceMu.Lock()
+	now := time.Now()
+	at := b.nextAny
+	if c := b.nextChat[chat]; c.After(at) {
+		at = c
+	}
+	if at.Before(now) {
+		at = now
+	}
+	b.nextAny = at.Add(globalGap)
+	b.nextChat[chat] = at.Add(perChatGap)
+	if len(b.nextChat) > 5000 {
+		for k, v := range b.nextChat {
+			if v.Before(now) {
+				delete(b.nextChat, k)
+			}
+		}
+	}
+	b.paceMu.Unlock()
+	t := time.NewTimer(time.Until(at))
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-t.C:
+		return nil
+	}
 }
 
 func scrub(err error, token string) error {
@@ -184,28 +248,94 @@ func scrub(err error, token string) error {
 }
 
 func (b *Bot) SendMessage(ctx context.Context, chatID, text string) error {
+	_, err := b.SendMessageID(ctx, chatID, text)
+	return err
+}
+
+// Button is one inline keyboard button; pressing it sends Data back as a
+// callback query.
+type Button struct {
+	Text string
+	Data string
+}
+
+// SendMessageID sends a message and returns its id in that chat, so a reply to
+// it can be recognised later.
+func (b *Bot) SendMessageID(ctx context.Context, chatID, text string) (int64, error) {
+	return b.SendMessageButtons(ctx, chatID, text, nil)
+}
+
+// SendMessageButtons is SendMessageID with one inline button per row under the
+// message.
+func (b *Bot) SendMessageButtons(ctx context.Context, chatID, text string, buttons []Button) (int64, error) {
 	if len(text) > 4000 {
 		text = text[:4000]
 	}
-	return b.call(ctx, "sendMessage", map[string]any{"chat_id": chatID, "text": text, "disable_web_page_preview": true})
+	payload := map[string]any{"chat_id": chatID, "text": text, "disable_web_page_preview": true}
+	if len(buttons) > 0 {
+		rows := make([][]map[string]string, 0, len(buttons))
+		for _, bt := range buttons {
+			rows = append(rows, []map[string]string{{"text": bt.Text, "callback_data": bt.Data}})
+		}
+		payload["reply_markup"] = map[string]any{"inline_keyboard": rows}
+	}
+	if err := b.pace(ctx, chatID); err != nil {
+		return 0, err
+	}
+	res, err := b.callResult(ctx, "sendMessage", payload)
+	var rl rateLimitedError
+	if errors.As(err, &rl) && rl.wait > 0 && rl.wait <= maxRetryAfter {
+		logger.Warn("TELEGRAM rate limited chat=%s, retrying in %s", chatID, rl.wait)
+		select {
+		case <-ctx.Done():
+			return 0, ctx.Err()
+		case <-time.After(rl.wait):
+		}
+		res, err = b.callResult(ctx, "sendMessage", payload)
+	}
+	if err != nil {
+		return 0, err
+	}
+	var sent struct {
+		MessageID int64 `json:"message_id"`
+	}
+	if jerr := json.Unmarshal(res, &sent); jerr != nil {
+		return 0, nil
+	}
+	return sent.MessageID, nil
+}
+
+// AnswerCallback acknowledges a button press so the client stops its spinner.
+func (b *Bot) AnswerCallback(ctx context.Context, callbackID string) error {
+	_, err := b.callResult(ctx, "answerCallbackQuery", map[string]any{"callback_query_id": callbackID})
+	return err
 }
 
 func (b *Bot) SetWebhook(ctx context.Context, webhookURL string) error {
 	return b.call(ctx, "setWebhook", map[string]any{
-		"url": webhookURL, "secret_token": b.Secret, "allowed_updates": []string{"message"}, "drop_pending_updates": false,
+		"url": webhookURL, "secret_token": b.Secret, "allowed_updates": []string{"message", "callback_query"}, "drop_pending_updates": false,
 	})
 }
 
 type Update struct {
-	UpdateID int64    `json:"update_id"`
-	Message  *Message `json:"message"`
+	UpdateID      int64          `json:"update_id"`
+	Message       *Message       `json:"message"`
+	CallbackQuery *CallbackQuery `json:"callback_query"`
+}
+
+type CallbackQuery struct {
+	ID      string   `json:"id"`
+	From    User     `json:"from"`
+	Message *Message `json:"message"`
+	Data    string   `json:"data"`
 }
 
 type Message struct {
-	MessageID int64  `json:"message_id"`
-	Text      string `json:"text"`
-	Chat      Chat   `json:"chat"`
-	From      *User  `json:"from"`
+	MessageID      int64    `json:"message_id"`
+	Text           string   `json:"text"`
+	Chat           Chat     `json:"chat"`
+	From           *User    `json:"from"`
+	ReplyToMessage *Message `json:"reply_to_message"`
 }
 
 type Chat struct {
@@ -216,7 +346,9 @@ type Chat struct {
 type User struct {
 	ID           int64  `json:"id"`
 	Username     string `json:"username"`
+	FirstName    string `json:"first_name"`
 	LanguageCode string `json:"language_code"`
+	IsBot        bool   `json:"is_bot"`
 }
 
 // ParseCommand splits "/start abc" or "/start@MyBot abc" into command and arg.
@@ -233,4 +365,36 @@ func ParseCommand(text string) (cmd, arg string) {
 		arg = fields[1]
 	}
 	return strings.ToLower(cmd), arg
+}
+
+// Check asks Telegram who the token belongs to, so an admin can test the
+// settings before relying on them. It returns the bot's username.
+func (b *Bot) Check(ctx context.Context) (string, error) {
+	if b == nil || b.Token == "" {
+		return "", ErrNotConfigured
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, b.API+"/bot"+b.Token+"/getMe", nil)
+	if err != nil {
+		return "", fmt.Errorf("telegram getMe request: %w", err)
+	}
+	resp, err := b.http.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("telegram getMe: %w", scrub(err, b.Token))
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	var out struct {
+		OK          bool   `json:"ok"`
+		Description string `json:"description"`
+		Result      struct {
+			Username string `json:"username"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return "", fmt.Errorf("telegram getMe: bad response status %d", resp.StatusCode)
+	}
+	if !out.OK {
+		return "", fmt.Errorf("telegram getMe: %s", out.Description)
+	}
+	return out.Result.Username, nil
 }

@@ -22,7 +22,7 @@ func (a *App) finishLogin(w http.ResponseWriter, r *http.Request, u *store.User)
 		a.okJSON(w, map[string]any{"mfa": true, "redirect": "/login/2fa"})
 		return
 	}
-	if err := a.Auth.StartSession(w, u.ID); err != nil {
+	if err := a.Auth.StartSessionFor(w, r, u.ID); err != nil {
 		a.fail(w, r, err)
 		return
 	}
@@ -39,7 +39,7 @@ func (a *App) finishLoginRedirect(w http.ResponseWriter, r *http.Request, u *sto
 		http.Redirect(w, r, "/login/2fa", http.StatusSeeOther)
 		return
 	}
-	if err := a.Auth.StartSession(w, u.ID); err != nil {
+	if err := a.Auth.StartSessionFor(w, r, u.ID); err != nil {
 		logger.Error("AUTH start session uid=%d: %v", u.ID, err)
 		http.Redirect(w, r, "/login?error=internal", http.StatusSeeOther)
 		return
@@ -75,8 +75,8 @@ func (a *App) apiMFAVerify(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	if u.IsBanned {
-		a.fail(w, r, apiErr{http.StatusForbidden, "err.banned"})
+	if u.IsDeactivated && !u.SelfDeactivated {
+		a.fail(w, r, apiErr{http.StatusForbidden, "err.deactivated"})
 		return
 	}
 	if err := a.Auth.VerifySecondFactor(u, in.Code); err != nil {
@@ -89,7 +89,7 @@ func (a *App) apiMFAVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.Auth.ClearMFA(w)
-	if err := a.Auth.StartSession(w, uid); err != nil {
+	if err := a.Auth.StartSessionFor(w, r, uid); err != nil {
 		a.fail(w, r, err)
 		return
 	}

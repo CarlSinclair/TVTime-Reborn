@@ -14,11 +14,14 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	_ "time/tzdata"
 
+	"tvt/appconfig"
 	"tvt/assets"
 	"tvt/auth"
 	"tvt/config"
 	"tvt/db"
+	"tvt/federation"
 	"tvt/handlers"
 	"tvt/i18n"
 	"tvt/logger"
@@ -30,6 +33,7 @@ import (
 	"tvt/telegram"
 	"tvt/tmdb"
 	"tvt/trakt"
+	"tvt/tvdb"
 	"tvt/tvmaze"
 )
 
@@ -38,9 +42,6 @@ func main() {
 	if err != nil {
 		logger.Fatal("config: %v", err)
 	}
-	if cfg.OperatorName == "" || cfg.PrivacyContact == "" {
-		logger.Warn("TVT_OPERATOR_NAME and TVT_PRIVACY_CONTACT are not both set: the privacy page will not say who runs this site or how to reach them")
-	}
 	d, err := db.Open(cfg.DBPath)
 	if err != nil {
 		logger.Fatal("database: %v", err)
@@ -48,6 +49,18 @@ func main() {
 	defer d.Close()
 	auth.ClientIPHeader = cfg.ClientIPHeader
 	st := store.New(d)
+	settings := appconfig.New(st, cfg.JWTSecret, cfg)
+	if keys, err := settings.ImportEnv(); err != nil {
+		logger.Error("could not import the settings from the environment: %v", err)
+	} else if len(keys) > 0 {
+		logger.Info("imported %d settings from the environment into Admin > Config (%s); the environment is no longer read for them, so those lines can be removed from the env file", len(keys), strings.Join(keys, ", "))
+	}
+	if err := settings.Apply(cfg); err != nil {
+		logger.Error("settings saved in the admin UI were ignored, using the environment: %v", err)
+	}
+	if cfg.OperatorName == "" || cfg.PrivacyContact == "" {
+		logger.Warn("The operator name and privacy contact are not both set (TVT_OPERATOR_NAME, TVT_PRIVACY_CONTACT or Admin > Config): the privacy page will not say who runs this site or how to reach them")
+	}
 	if cfg.AdminEmail != "" {
 		if _, err := d.Exec(`UPDATE users SET is_admin = 1 WHERE email = ? AND email_verified = 1`, cfg.AdminEmail); err != nil {
 			logger.Error("admin promotion for %s: %v", cfg.AdminEmail, err)
@@ -55,13 +68,14 @@ func main() {
 	}
 	tm := tmdb.New(cfg.TMDBKey)
 	sy := syncer.New(st, tm)
-	if !cfg.DisableTVmaze {
-		sy.TVmaze = tvmaze.New()
+	sy.TVmaze = tvmaze.New()
+	if cfg.TVDBKey != "" {
+		sy.TVDB = tvdb.New(cfg.TVDBKey)
 	}
 	if cfg.TraktClientID != "" {
 		sy.Trakt = trakt.New(cfg.TraktClientID)
 	}
-	bundle, err := i18n.Load(assets.FS, "locales", cfg.DefaultLang)
+	bundle, err := i18n.Load(assets.FS, "locales", i18n.Fallback)
 	if err != nil {
 		logger.Fatal("locales: %v", err)
 	}
@@ -91,6 +105,7 @@ func main() {
 		mediaStore = s3
 	}
 	logger.Info("media storage: %s", mediaStore.Kind())
+	restart := false
 	app, err := handlers.New(cfg, st, authSvc, sy, tm, ml, nt, bot, mediaStore)
 	if err != nil {
 		logger.Fatal("app: %v", err)
@@ -98,10 +113,29 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	app.Settings = settings
+	app.Restart = func() {
+		restart = true
+		stop()
+	}
+	if cfg.Federation {
+		fed, err := federation.New(st, nt, baseURL.Host, cfg.JWTSecret, cfg.FedInsecure, cfg.FedBlock, cfg.FedAllow)
+		if err != nil {
+			logger.Fatal("federation: %v", err)
+		}
+		app.SetFederation(fed)
+		go fed.Run(ctx)
+		logger.Info("federation on as %s", baseURL.Host)
+	}
+	if err := st.EnsureUpNext(); err != nil {
+		logger.Error("up-next table could not be built; the home page will be empty until it is: %v", err)
+	}
+	go st.RunUpNextMaintenance(ctx)
 	go sy.Run(ctx)
 	nt.Start(ctx)
 	go nt.RunJobs(ctx)
 	go app.SetupTelegram()
+	go app.RunPicJanitor(ctx)
 
 	srv := &http.Server{
 		Addr:              cfg.Addr,
@@ -124,5 +158,10 @@ func main() {
 	defer cancel()
 	if err := srv.Shutdown(shutdown); err != nil {
 		logger.Error("shutdown: %v", err)
+	}
+	if restart {
+		logger.Info("restart requested from the admin UI; exiting non-zero so the service manager starts the new settings")
+		d.Close()
+		os.Exit(1)
 	}
 }

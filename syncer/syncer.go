@@ -12,6 +12,7 @@ import (
 	"tvt/store"
 	"tvt/tmdb"
 	"tvt/trakt"
+	"tvt/tvdb"
 	"tvt/tvmaze"
 )
 
@@ -26,6 +27,7 @@ type Syncer struct {
 	TMDB     *tmdb.Client
 	TVmaze   *tvmaze.Client
 	Trakt    *trakt.Client
+	TVDB     *tvdb.Client
 	Now      func() time.Time
 	mu       sync.Mutex
 	locks    map[string]*sync.Mutex
@@ -78,6 +80,9 @@ func avgRuntime(r []int) int {
 // English) and stores them. A per-show mutex keeps two simultaneous opens of an
 // unsynced show from fetching it twice.
 func (s *Syncer) SyncShow(ctx context.Context, tmdbID int64) (*store.Show, error) {
+	if tmdbID < 0 {
+		return s.SyncTVDBShow(ctx, -tmdbID)
+	}
 	l := s.lockFor(fmt.Sprintf("show:%d", tmdbID))
 	l.Lock()
 	defer l.Unlock()
@@ -116,7 +121,7 @@ func (s *Syncer) SyncShow(ctx context.Context, tmdbID int64) (*store.Show, error
 		inputs = append(inputs, in)
 	}
 	sh := &store.Show{
-		TMDBID: d.ID, TVDBID: d.ExternalIDs.TVDBID, IMDbID: d.ExternalIDs.IMDbID, Name: d.Name, OriginalName: d.OriginalName,
+		TMDBID: d.ID, TVDBID: d.ExternalIDs.TVDBID, IMDbID: d.ExternalIDs.IMDbID, Name: d.DisplayName(), OriginalName: d.OriginalName,
 		Overview: d.Overview, Status: d.Status, FirstAirDate: d.FirstAirDate, LastAirDate: d.LastAirDate,
 		PosterPath: d.PosterPath, BackdropPath: d.BackdropPath, VoteAverage: d.VoteAverage, VoteCount: d.VoteCount,
 		Genres: names(d.Genres), Networks: names(d.Networks), OriginalLanguage: d.OriginalLanguage,
@@ -126,7 +131,12 @@ func (s *Syncer) SyncShow(ctx context.Context, tmdbID int64) (*store.Show, error
 	if err != nil {
 		return nil, err
 	}
-	logger.Info("SYNC show tmdb=%d id=%d name=%q seasons=%d", tmdbID, id, d.Name, len(inputs))
+	logger.Info("SYNC show tmdb=%d id=%d name=%q seasons=%d", tmdbID, id, sh.Name, len(inputs))
+	if n, err := s.Store.CompleteFinished(0, id); err != nil {
+		logger.Error("SYNC complete finished show=%d: %v", id, err)
+	} else if n > 0 {
+		logger.Info("SYNC marked %d follows of show=%d completed", n, id)
+	}
 	saved, err := s.Store.ShowByID(id)
 	if err != nil {
 		return nil, err
@@ -150,7 +160,7 @@ func (s *Syncer) EnsureShow(ctx context.Context, tmdbID int64) (*store.Show, err
 // view waits for it (bounded by ctx); a stale one is refreshed in the
 // background so the page never blocks on a weekly refresh.
 func (s *Syncer) EnsureShowLang(ctx context.Context, sh *store.Show, lang string) {
-	if lang == "en" || !s.TMDB.Configured() {
+	if lang == "en" || !s.TMDB.Configured() || sh.TMDBID < 0 {
 		return
 	}
 	exists, at, err := s.Store.ShowI18nAge(sh.ID, lang)
@@ -197,7 +207,11 @@ func (s *Syncer) syncShowLang(ctx context.Context, sh *store.Show, lang string) 
 			eps = append(eps, store.EpisodeI18nInput{Season: ep.SeasonNumber, Number: ep.EpisodeNumber, Name: ep.Name, Overview: ep.Overview})
 		}
 	}
-	return s.Store.SaveShowI18n(sh.ID, lang, d.Name, d.Overview, eps)
+	name := d.Name
+	if d.Name == d.OriginalName && !strings.EqualFold(d.OriginalLanguage, lang) {
+		name = ""
+	}
+	return s.Store.SaveShowI18n(sh.ID, lang, name, d.Overview, eps)
 }
 
 func (s *Syncer) Run(ctx context.Context) {
@@ -373,6 +387,9 @@ func terminalStatus(status string) bool { return status == "Ended" || status == 
 // (when configured) only fills episodes TVmaze left without a time. A show a
 // provider does not know is not looked up again for a week.
 func (s *Syncer) enrichAirTimes(ctx context.Context, sh *store.Show) {
+	if sh.TMDBID < 0 {
+		return
+	}
 	if terminalStatus(sh.Status) {
 		return
 	}

@@ -1,9 +1,10 @@
 {{define "content"}}
 {{with .Data.Show}}
-<section class="show-head">
-  <img class="poster" src="{{img "w342" .PosterPath}}" alt="">
+<section class="show-head {{if or .BackdropPath .PosterPath}}cover-hero{{end}}">
+  {{if .BackdropPath}}<img class="hero-bg" src="{{img "w1280" .BackdropPath}}" alt="">{{else if .PosterPath}}<img class="hero-bg poster-bg" src="{{img "w780" .PosterPath}}" alt="">{{end}}
   <div class="show-info">
     <h1>{{.Name}} {{if year .FirstAirDate}}<small>({{year .FirstAirDate}})</small>{{end}}</h1>
+    {{if and .OriginalName (ne .OriginalName .Name)}}<p class="original-name muted" lang="{{.OriginalLanguage}}">{{.OriginalName}}</p>{{end}}
     <p class="meta">
       {{if .Status}}<span>{{.Status}}</span>{{end}}
       {{if .Networks}}<span>{{.Networks}}</span>{{end}}
@@ -32,7 +33,7 @@
       {{end}}
     </div>
     {{if and $.User $.Data.Follow}}
-    <p class="progress-line"><progress max="{{$.Data.Progress.Aired}}" value="{{$.Data.Progress.Watched}}"></progress> {{$.T "show.progress" $.Data.Progress.Watched $.Data.Progress.Aired}}</p>
+    <p class="progress-line"><progress {{if $.Data.Progress.Done}}class="done"{{end}} max="{{$.Data.Progress.Aired}}" value="{{$.Data.Progress.Watched}}"></progress> {{$.T "show.progress" $.Data.Progress.Watched $.Data.Progress.Aired}}</p>
     {{end}}
     {{if .SyncError}}<p class="notice error">{{$.T "show.sync_error"}}</p>{{end}}
   </div>
@@ -42,8 +43,28 @@
   <h2>{{.T "show.seasons"}}</h2>
   <div class="season-links">
     {{range .Data.Seasons}}
-    <a class="chip" href="/show/{{$.Data.Show.TMDBID}}/season/{{.SeasonNumber}}">{{if eq .SeasonNumber 0}}{{$.T "show.specials"}}{{else}}{{$.T "show.season" .SeasonNumber}}{{end}} <small>{{.EpisodeCount}}</small></a>
+    <a class="season-card" href="/show/{{$.Data.Show.TMDBID}}/season/{{.SeasonNumber}}">
+      <img loading="lazy" src="{{img "w185" .PosterPath}}" alt="">
+      <span class="season-name">{{if eq .SeasonNumber 0}}{{$.T "show.specials"}}{{else}}{{$.T "show.season" .SeasonNumber}}{{end}}</span>
+      {{$p := index $.Data.SeasonProgress .SeasonNumber}}
+      {{if gt $p.Aired 0}}
+      <progress {{if $p.Done}}class="done"{{end}} max="{{$p.Aired}}" value="{{$p.Watched}}"></progress>
+      <span class="card-sub">{{$.T "show.progress" $p.Watched $p.Aired}}</span>
+      {{else}}
+      <span class="card-sub">{{$.T "show.episodes" .EpisodeCount}}</span>
+      {{end}}
+    </a>
     {{end}}
   </div>
 </section>
+{{if .Data.Chart}}
+<section class="ratings">
+  <h2>{{.T "show.ratings"}}</h2>
+  {{.Data.Chart.SVG}}
+  <ul class="legend">
+    {{if .Data.Chart.HasMembers}}<li><span class="swatch members"></span>{{.T "show.ratings_community" .AppName}}</li>{{end}}
+    {{if .Data.Chart.HasTMDB}}<li><span class="swatch tmdb"></span>{{.T "show.ratings_tmdb"}}</li>{{end}}
+  </ul>
+</section>
+{{end}}
 {{end}}

@@ -55,7 +55,7 @@ func (a *App) pageSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tab := r.URL.Query().Get("tab")
-	if tab != "profile" && tab != "notifications" {
+	if tab != "profile" && tab != "notifications" && tab != "import" {
 		tab = "account"
 	}
 	data := map[string]any{"Tab": tab, "Timezones": timezones, "Flash": r.URL.Query().Get("linked")}
@@ -64,7 +64,15 @@ func (a *App) pageSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	switch tab {
 	case "account":
-		blocked, err := a.Store.Blocked(u.ID)
+		blockedTotal, err := a.Store.CountBlocked(u.ID)
+		if err != nil {
+			logger.Error("PAGE settings blocks count uid=%d: %v", u.ID, err)
+			a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
+			return
+		}
+		blockedOffset, blockedPager := paginate(r, "blocked", 10, blockedTotal, "blocked")
+		data["BlockedPager"] = blockedPager
+		blocked, err := a.Store.Blocked(u.ID, 10, blockedOffset)
 		if err != nil {
 			logger.Error("PAGE settings blocks uid=%d: %v", u.ID, err)
 			a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
@@ -116,6 +124,7 @@ func (a *App) apiUpdateProfile(w http.ResponseWriter, r *http.Request) {
 		DisplayName string `json:"display_name"`
 		Bio         string
 		Public      bool
+		Share       bool `json:"share_activity"`
 	}
 	if err := decode(r, &in); err != nil {
 		a.fail(w, r, err)
@@ -133,7 +142,7 @@ func (a *App) apiUpdateProfile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if err := a.Store.UpdateProfile(u.ID, in.DisplayName, in.Bio, in.Public); err != nil {
+	if err := a.Store.UpdateProfile(u.ID, in.DisplayName, in.Bio, in.Public, in.Share); err != nil {
 		a.fail(w, r, err)
 		return
 	}

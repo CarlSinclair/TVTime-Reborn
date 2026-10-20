@@ -1,0 +1,395 @@
+{{define "pending"}}
+{{if .Data.PendingRestart}}
+<div class="notice" role="status">
+  <p>{{.T "admin.pending"}}</p>
+  {{if .Data.CanRestart}}<p><button class="btn small" type="button" data-restart data-confirm="{{.T "admin.restart_confirm"}}">{{.T "admin.restart"}}</button></p>{{end}}
+</div>
+{{end}}
+{{end}}
+{{define "content"}}
+<h1>{{.T "nav.admin"}}</h1>
+<nav class="tabs centered" role="tablist" aria-label="{{.T "nav.admin"}}">
+  <a class="tab {{if eq .Data.Tab "overview"}}active{{end}}" href="/admin">{{.T "admin.overview"}}</a>
+  <a class="tab {{if eq .Data.Tab "users"}}active{{end}}" href="/admin?tab=users">{{.T "admin.users"}}</a>
+  <a class="tab {{if eq .Data.Tab "config"}}active{{end}}" href="/admin?tab=config">{{.T "admin.config"}}</a>
+  <a class="tab {{if eq .Data.Tab "servers"}}active{{end}}" href="/admin?tab=servers">{{.T "admin.servers"}}{{if gt .Data.ServersBadge 0}}<span class="badge inline">{{.Data.ServersBadge}}</span>{{end}}</a>
+  <a class="tab {{if eq .Data.Tab "pages"}}active{{end}}" href="/admin?tab=pages">{{.T "admin.pages"}}</a>
+  <a class="tab {{if eq .Data.Tab "faq"}}active{{end}}" href="/admin?tab=faq">{{.T "admin.faq"}}</a>
+  <a class="tab {{if eq .Data.Tab "reports"}}active{{end}}" href="/admin?tab=reports">{{.T "admin.reports"}}{{if gt .Data.ReportsBadge 0}}<span class="badge inline">{{.Data.ReportsBadge}}</span>{{end}}</a>
+</nav>
+
+{{if eq .Data.Tab "overview"}}
+<section>
+  <div class="stats four">
+    <div><strong>{{.Data.Stats.Users}}</strong><span>{{.T "admin.stat_users"}}</span></div>
+    <div><strong>{{.Data.Stats.NewUsers7d}}</strong><span>{{.T "admin.stat_new"}}</span></div>
+    <div><strong>{{.Data.Stats.Banned}}</strong><span>{{.T "admin.stat_banned"}}</span></div>
+    <div><strong>{{.Data.Stats.Unverified}}</strong><span>{{.T "admin.stat_unverified"}}</span></div>
+    <div><strong>{{.Data.Stats.Shows}}</strong><span>{{.T "admin.stat_shows"}}</span></div>
+    <div><strong>{{.Data.Stats.Follows}}</strong><span>{{.T "admin.stat_follows"}}</span></div>
+    <div><strong>{{.Data.Stats.Watched}}</strong><span>{{.T "admin.stat_watched"}}</span></div>
+    <div><strong>{{.Data.Stats.Comments}}</strong><span>{{.T "admin.stat_comments"}}</span></div>
+    <div><strong>{{.Data.Stats.OpenReports}}</strong><span>{{.T "admin.stat_reports"}}</span></div>
+    <div><strong>{{.Data.Stats.Peers}}</strong><span>{{.T "admin.stat_servers"}}</span></div>
+    <div><strong>{{.Data.Stats.OutboxPending}}</strong><span>{{.T "admin.stat_outbox"}}</span></div>
+  </div>
+</section>
+<section>
+  <h2>{{.T "admin.system"}}</h2>
+  <table class="data-table">
+    <tbody>
+      <tr><th scope="row">{{.T "admin.version"}}</th><td>{{.Data.Version}}</td></tr>
+      <tr><th scope="row">{{.T "admin.mail"}}</th><td>{{if .Data.MailOn}}{{.T "admin.on"}}{{else}}{{.T "admin.off"}}{{end}}</td></tr>
+      <tr><th scope="row">{{.T "admin.metadata"}}</th><td>{{if .Data.TMDBOn}}{{.T "admin.on"}}{{else}}{{.T "admin.off"}}{{end}}</td></tr>
+      <tr><th scope="row">{{.T "admin.federation"}}</th><td>{{if .Data.FederationOn}}{{.T "admin.on"}}{{else}}{{.T "admin.off"}}{{end}}</td></tr>
+    </tbody>
+  </table>
+</section>
+<section>
+  <h2>{{.T "admin.mail_recent"}}</h2>
+  {{if .Data.Mails}}
+  <table class="data-table wide">
+    <tbody>
+      {{range .Data.Mails}}<tr><td class="start"><time datetime="{{.At}}">{{.At}}</time></td><td class="start">{{.To}}</td><td class="start">{{.Subject}}{{if .Error}}<br><code>{{.Error}}</code>{{end}}</td><td>{{if .OK}}{{$.T "admin.mail_ok"}}{{else}}<span class="tag">{{$.T "admin.mail_failed"}}</span>{{end}}</td></tr>{{end}}
+    </tbody>
+  </table>
+  {{else}}<p class="muted center">{{.T "admin.mail_none"}}</p>{{end}}
+</section>
+<section>
+  <h2>{{.T "admin.errors"}}</h2>
+  {{if .Data.Errors}}
+  <ul class="log-list">
+    {{range .Data.Errors}}<li><span class="tag">{{.Level}}</span> <time datetime="{{.At}}">{{.At}}</time> <code>{{.Msg}}</code></li>{{end}}
+  </ul>
+  {{else}}<p class="muted center">{{.T "admin.errors_none"}}</p>{{end}}
+</section>
+
+{{else if eq .Data.Tab "users"}}
+<div class="toolbar">
+  <form class="admin-search" method="get" action="/admin">
+    <input type="hidden" name="tab" value="users">
+    <input type="search" name="q" value="{{.Data.Query}}" placeholder="{{.T "admin.user_search"}}" aria-label="{{.T "admin.user_search"}}">
+  </form>
+  <button class="icon-btn solid" type="button" data-modal-open="m-user-add" aria-label="{{.T "admin.user_add"}}" title="{{.T "admin.user_add"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-plus"></use></svg></button>
+</div>
+<div class="switch-row"><label class="notify-text" for="signups-switch">{{.T "admin.signups"}}</label><span class="tswitch"><input type="checkbox" class="tswitch-input" id="signups-switch" {{if not .Data.SignupsClosed}}checked{{end}}><label for="signups-switch" class="tswitch-label"><span class="ball"></span></label></span></div>
+{{if .Data.Users}}
+<ul class="reports">
+  {{range .Data.Users}}
+  <li class="panel">
+    <p><strong>{{.Name}}</strong> <span class="muted">@{{.Username}}</span>
+      {{if .IsAdmin}}<span class="tag">{{$.T "admin.user_admin"}}</span>{{end}}
+      {{if .IsDeactivated}}<span class="tag">{{$.T "admin.user_deactivated"}}</span>{{end}}
+      {{if .IsBanned}}<span class="tag">{{$.T "admin.user_banned"}}</span>{{end}}
+      {{if and .Email (not .EmailVerified)}}<span class="tag">{{$.T "admin.user_unverified"}}</span>{{end}}
+    </p>
+    <p class="muted">{{if .Email}}{{.Email}} &middot; {{end}}{{$.T "admin.user_joined" (slice .CreatedAt 0 10)}}</p>
+    <p class="actions">
+      <a class="icon-btn" href="/u/{{.Username}}" aria-label="{{$.T "admin.view"}}" title="{{$.T "admin.view"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-eye"></use></svg></a>
+      <button class="icon-btn" type="button" aria-label="{{$.T "admin.user_edit"}}" title="{{$.T "admin.user_edit"}}"
+        data-user-edit="{{.ID}}" data-username="{{.Username}}" data-display="{{.DisplayName}}" data-email="{{.Email}}" data-verified="{{if .EmailVerified}}1{{else}}0{{end}}"
+        data-banned="{{if .IsBanned}}1{{else}}0{{end}}" data-deactivated="{{if .IsDeactivated}}1{{else}}0{{end}}" data-protected="{{if or .IsAdmin (eq .ID $.User.ID)}}1{{else}}0{{end}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-pen"></use></svg></button>
+    </p>
+  </li>
+  {{end}}
+</ul>
+{{if gt .Data.Pages 1}}
+<p class="pager center">
+  {{if .Data.PrevURL}}<a class="btn ghost small" href="{{.Data.PrevURL}}">{{.T "admin.prev"}}</a>{{end}}
+  <span class="muted">{{.T "admin.page" .Data.Page .Data.Pages}}</span>
+  {{if .Data.NextURL}}<a class="btn ghost small" href="{{.Data.NextURL}}">{{.T "admin.next"}}</a>{{end}}
+</p>
+{{end}}
+{{else}}<p class="muted center">{{.T "admin.user_none"}}</p>{{end}}
+
+<dialog class="modal" id="m-user-add" aria-labelledby="m-user-add-t">
+  <form class="stack" data-api="/api/admin/users" data-reload="1" data-success="{{.T "admin.user_created"}}">
+    <h2 id="m-user-add-t">{{.T "admin.user_add"}}</h2>
+    <label>{{.T "auth.username"}}<input type="text" name="username" autocomplete="off" minlength="3" maxlength="20" required></label>
+    <label>{{.T "profile.display_name"}}<input type="text" name="display" maxlength="40" autocomplete="off"></label>
+    <label>{{.T "auth.email"}}<input type="email" name="email" autocomplete="off"></label>
+    <label>{{.T "auth.password"}}<input type="password" name="password" autocomplete="new-password" minlength="8" maxlength="72" data-pw-rules required></label>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="user-add-verified" name="verified" checked><label for="user-add-verified" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="user-add-verified">{{.T "admin.user_verified"}}</label></div>
+    <p class="form-error" role="alert" hidden></p>
+    <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn" type="submit">{{.T "admin.user_add"}}</button></div>
+  </form>
+</dialog>
+
+<dialog class="modal" id="m-user-edit" aria-labelledby="m-user-edit-t">
+  <form class="stack" id="user-edit-form" data-api="" data-reload="1" data-success="{{.T "js.saved"}}">
+    <h2 id="m-user-edit-t">{{.T "admin.user_edit"}} <span class="muted" id="user-edit-name"></span></h2>
+    <label>{{.T "auth.username"}}<input type="text" name="username" minlength="3" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" required></label>
+    <label>{{.T "profile.display_name"}}<input type="text" name="display" maxlength="40" autocomplete="off"></label>
+    <label>{{.T "auth.email"}}<input type="email" name="email" autocomplete="off"></label>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="user-edit-verified" name="verified"><label for="user-edit-verified" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="user-edit-verified">{{.T "admin.user_verified"}}</label></div>
+    <label>{{.T "admin.user_password"}}<input type="password" name="password" autocomplete="new-password" minlength="8" maxlength="72" data-pw-rules></label>
+    <p class="muted">{{.T "admin.user_password_hint"}}</p>
+    <p><button class="btn ghost small" type="button" data-user-reset>{{.T "admin.user_reset"}}</button></p>
+    <p class="form-error" role="alert" hidden></p>
+    <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn" type="submit">{{.T "settings.save"}}</button></div>
+    <div class="danger-zone" id="user-edit-status">
+      <h3>{{.T "admin.user_status"}}</h3>
+      <p class="muted" id="user-edit-protected" hidden>{{.T "admin.user_protected"}}</p>
+      <div class="danger-row">
+        <p class="muted">{{.T "admin.user_ban_hint"}}</p>
+        <div class="comment-toggles">
+      <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="ban-hide" name="hide_comments" data-default="0" ><label for="ban-hide" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="ban-hide">{{.T "admin.comments_hide"}}</label></div>
+      <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="ban-delete" name="delete_comments" data-default="0" ><label for="ban-delete" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="ban-delete">{{.T "admin.comments_delete"}}</label></div>
+      <p class="muted">{{.T "settings.comments_hint_keep"}}</p>
+    </div>
+        <p><button class="btn ghost small" type="button" data-user-ban data-on="{{.T "admin.user_ban"}}" data-off="{{.T "admin.user_unban"}}" data-confirm="{{.T "js.ban_confirm"}}"></button></p>
+      </div>
+      <div class="danger-row">
+        <p class="muted">{{.T "admin.user_deactivate_hint"}}</p>
+        <div class="comment-toggles">
+      <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="deact-hide" name="hide_comments" data-default="1" checked><label for="deact-hide" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="deact-hide">{{.T "admin.comments_hide"}}</label></div>
+      <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="deact-delete" name="delete_comments" data-default="0" ><label for="deact-delete" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="deact-delete">{{.T "admin.comments_delete"}}</label></div>
+      <p class="muted">{{.T "settings.comments_hint_keep"}}</p>
+    </div>
+        <p><button class="btn ghost small" type="button" data-user-deactivate data-on="{{.T "admin.user_deactivate"}}" data-off="{{.T "admin.user_reactivate"}}" data-confirm="{{.T "admin.user_deactivate_confirm"}}"></button></p>
+      </div>
+      <div class="danger-row">
+        <p class="muted">{{.T "admin.user_delete_hint"}}</p>
+        <div class="comment-toggles">
+      <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="del-hide" name="hide_comments" data-default="0" ><label for="del-hide" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="del-hide">{{.T "admin.comments_hide"}}</label></div>
+      <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="del-delete" name="delete_comments" data-default="1" checked><label for="del-delete" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="del-delete">{{.T "admin.comments_delete"}}</label></div>
+      <p class="muted">{{.T "settings.comments_hint_anon"}}</p>
+    </div>
+        <p><button class="btn danger small" type="button" data-user-delete-modal data-confirm="{{.T "admin.user_delete_confirm"}}">{{.T "admin.user_delete"}}</button></p>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+{{else if eq .Data.Tab "config"}}
+{{template "pending" .}}
+<p class="muted">{{.T "admin.config_hint"}}</p>
+<section class="panel stack">
+  <h2>{{.T "admin.logo"}}</h2>
+  <p><img class="logo-preview" src="{{logoURL}}" alt=""></p>
+  <p class="muted">{{.T "admin.logo_hint"}}</p>
+  <div class="upload-row">
+    <label class="btn ghost small">{{.T "admin.logo_upload"}}<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-upload="logo" hidden></label>
+    <button class="btn ghost small" type="button" data-logo-remove>{{.T "admin.logo_remove"}}</button>
+  </div>
+</section>
+{{range .Data.Groups}}
+<form class="panel stack" data-api="/api/admin/config" data-reload="1" data-success="{{$.T "admin.config_saved"}}">
+  <h2>{{$.T (printf "admin.cfg_group.%s" .Name)}}</h2>
+  <input type="hidden" name="group" value="{{.Name}}">
+  {{range .Values}}
+    {{if .Bool}}
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="cfg-{{.Key}}" name="{{.Key}}" {{if eq .Text "1"}}checked{{end}}><label for="cfg-{{.Key}}" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="cfg-{{.Key}}">{{$.T (printf "admin.cfg.%s" .Key)}}</label></div>
+    {{else if .Secret}}
+    <label>{{$.T (printf "admin.cfg.%s" .Key)}}<input type="password" name="{{.Key}}" value="{{.Text}}" autocomplete="new-password" spellcheck="false"></label>
+    {{else}}
+    <label>{{$.T (printf "admin.cfg.%s" .Key)}}<input type="{{if eq .Key "smtp_port"}}number{{else}}text{{end}}" name="{{.Key}}" value="{{.Text}}" placeholder="{{.Example}}" autocomplete="off" spellcheck="false"></label>
+    {{end}}
+  {{end}}
+  {{if eq .Name "mail"}}<label>{{$.T "admin.cfg_test_to"}}<input type="email" name="to" value="{{$.User.Email}}" autocomplete="off"></label>{{end}}
+  <p class="form-error" role="alert" hidden></p>
+  <div class="modal-actions">
+    {{if or (eq .Name "mail") (eq .Name "storage") (eq .Name "telegram")}}<button class="btn ghost" type="button" data-config-test="{{.Name}}">{{$.T "admin.cfg_test"}}</button>{{end}}
+    <button class="btn" type="submit">{{$.T "settings.save"}}</button>
+  </div>
+</form>
+{{end}}
+
+{{else if eq .Data.Tab "servers"}}
+{{template "pending" .}}
+<div class="toolbar">
+  {{if .Data.HasSettings}}<div class="switch-row" style="margin:0;flex:1"><label class="notify-text" for="federation-switch">{{.T "admin.federation"}}</label><span class="tswitch"><input type="checkbox" class="tswitch-input" id="federation-switch" {{if .Data.FedWant}}checked{{end}}><label for="federation-switch" class="tswitch-label"><span class="ball"></span></label></span></div>{{else}}<span class="muted" style="flex:1">{{if not .Data.FederationOn}}{{.T "admin.federation_off"}}{{end}}</span>{{end}}
+  {{if .Data.FederationOn}}<button class="icon-btn solid" type="button" data-modal-open="m-server-add" aria-label="{{.T "admin.server_add"}}" title="{{.T "admin.server_add"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-plus"></use></svg></button>{{end}}
+</div>
+{{if .Data.Peers}}
+<ul class="reports">
+  {{range .Data.Peers}}
+  <li class="panel">
+    <p><strong>{{.Host}}</strong> {{if .Blocked}}<span class="tag">{{$.T "admin.server_blocked"}}</span>{{end}} {{if .New}}<span class="tag">{{$.T "admin.server_new"}}</span>{{end}} {{if and (not .Share) (not .Blocked)}}<span class="tag">{{$.T "admin.server_pending"}}</span>{{end}}</p>
+    <p class="muted">{{$.T "admin.server_seen" .FirstSeen .LastSeen}}</p>
+    {{if .Media}}<p class="muted">{{$.T "admin.server_media" .Media}}</p>{{end}}
+    {{if and (not .Share) (not .Blocked) .Media}}<p class="muted">{{$.T "admin.server_media_note" .Media}}</p>{{end}}
+    <p class="actions">
+      {{if and (not .Share) (not .Blocked)}}<button class="btn small" type="button" data-server-approve="{{.Host}}">{{$.T "admin.server_approve"}}</button>{{end}}
+      <button class="btn small {{if not .Blocked}}danger{{else}}ghost{{end}}" type="button" data-server-block="{{.Host}}" data-blocked="{{if .Blocked}}0{{else}}1{{end}}">{{if .Blocked}}{{$.T "admin.server_unblock"}}{{else}}{{$.T "admin.server_block"}}{{end}}</button>
+      <button class="btn ghost small" type="button" data-server-forget="{{.Host}}">{{$.T "admin.server_forget"}}</button>
+    </p>
+  </li>
+  {{end}}
+</ul>
+{{template "pager" (dict "Pager" .Data.Pager "V" .)}}
+{{else}}<p class="muted center">{{.T "admin.server_none"}}</p>{{end}}
+{{if .Data.FederationOn}}
+<dialog class="modal" id="m-server-add" aria-labelledby="m-server-add-t">
+  <form class="stack" data-api="/api/admin/servers/add" data-reload="1" data-success="{{.T "admin.server_added"}}">
+    <h2 id="m-server-add-t">{{.T "admin.server_add"}}</h2>
+    <label>{{.T "admin.server_host"}}<input type="text" name="host" placeholder="tvt.example.org" autocomplete="off" autocapitalize="off" spellcheck="false" required></label>
+    <p class="muted">{{.T "admin.server_host_hint"}}</p>
+    <p class="form-error" role="alert" hidden></p>
+    <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn" type="submit">{{.T "admin.server_connect"}}</button></div>
+  </form>
+</dialog>
+{{end}}
+
+{{else if eq .Data.Tab "pages"}}
+<p class="muted">{{.T "admin.pages_intro"}}</p>
+<section class="panel stack">
+  <h2>{{.T "privacy.title"}}</h2>
+  <p class="muted">{{if .Data.PrivacyCustom}}{{.T "admin.pages_privacy_custom"}}{{else}}{{.T "admin.pages_privacy_builtin"}}{{end}}</p>
+  <div>
+    {{if .Data.PrivacyCustom}}
+    <button class="btn ghost small" type="button" data-pages-action="privacy_restore" data-confirm="{{.T "admin.pages_restore_confirm"}}">{{.T "admin.pages_restore"}}</button>
+    {{else}}
+    <button class="btn ghost small" type="button" data-pages-action="privacy_customize">{{.T "admin.pages_customize"}}</button>
+    {{end}}
+  </div>
+</section>
+
+<form class="panel stack" data-api="/api/admin/pages" data-reload="1" data-success="{{.T "js.saved"}}">
+  <h2>{{.T "admin.pages_add"}}</h2>
+  <input type="hidden" name="action" value="add">
+  <label>{{.T "admin.pages_language"}}<select name="lang">{{range .Data.PageLangs}}<option value="{{.}}" {{if eq . $.Lang}}selected{{end}}>{{$.LangName .}}</option>{{end}}</select></label>
+  <label>{{.T "admin.pages_slug"}}<input type="text" name="slug" pattern="[a-z0-9][a-z0-9\-]*" maxlength="64" autocomplete="off" spellcheck="false" required></label>
+  <label>{{.T "admin.pages_title"}}<input type="text" name="title" maxlength="200" autocomplete="off" required></label>
+  <label>{{.T "admin.pages_body"}}<textarea name="body" rows="8"></textarea></label>
+  <div><button class="btn ghost small" type="button" data-modal-open="m-md-help">{{.T "admin.md_help"}}</button></div>
+  <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="add-page-en" name="enabled" checked><label for="add-page-en" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="add-page-en">{{.T "admin.pages_enabled"}}</label></div>
+  <p class="form-error" role="alert" hidden></p>
+  <div><button class="btn" type="submit">{{.T "admin.pages_add"}}</button></div>
+</form>
+
+{{range .Data.PageList}}
+{{$pid := .ID}}
+<details class="panel fold">
+  <summary>#{{.ID}}{{range .Variants}}{{if .Exists}} &middot; {{.Lang}}: /{{.Slug}}{{end}}{{end}} {{if not .Enabled}}<span class="tag">{{$.T "admin.off"}}</span>{{end}}</summary>
+  <form class="stack" data-api="/api/admin/pages" data-reload="1" data-success="{{$.T "js.saved"}}">
+    <input type="hidden" name="action" value="save">
+    <input type="hidden" name="page_id" value="{{.ID}}">
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{.ID}}-on" name="page_enabled" {{if .Enabled}}checked{{end}}><label for="pg-{{.ID}}-on" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{.ID}}-on">{{$.T "admin.pages_page_enabled"}}</label></div>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{.ID}}-upd" name="show_updated" {{if .ShowUpdated}}checked{{end}}><label for="pg-{{.ID}}-upd" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{.ID}}-upd">{{$.T "admin.pages_show_updated"}}</label></div>
+    {{range .Variants}}{{if .Exists}}
+    <fieldset class="lang-fieldset">
+      <legend>{{$.LangName .Lang}}</legend>
+      <label>{{$.T "admin.pages_slug"}}<input type="text" name="slug_{{.Lang}}" value="{{.Slug}}" pattern="[a-z0-9][a-z0-9\-]*" maxlength="64" autocomplete="off" spellcheck="false"></label>
+      <label>{{$.T "admin.pages_title"}}<input type="text" name="title_{{.Lang}}" value="{{.Title}}" maxlength="200" autocomplete="off"></label>
+      <label>{{$.T "admin.pages_body"}}<textarea name="body_{{.Lang}}" rows="10">{{.Body}}</textarea></label>
+      <div><button class="btn ghost small" type="button" data-modal-open="m-md-help">{{$.T "admin.md_help"}}</button></div>
+      <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{$pid}}-{{.Lang}}-en" name="enabled_{{.Lang}}" {{if .Enabled}}checked{{end}}><label for="pg-{{$pid}}-{{.Lang}}-en" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{$pid}}-{{.Lang}}-en">{{$.T "admin.pages_enabled"}}</label></div>
+      <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{$pid}}-{{.Lang}}-del" name="del_{{.Lang}}"><label for="pg-{{$pid}}-{{.Lang}}-del" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{$pid}}-{{.Lang}}-del">{{$.T "admin.pages_delete_lang"}}</label></div>
+    </fieldset>
+    {{end}}{{end}}
+    <p class="form-error" role="alert" hidden></p>
+    <div class="modal-actions">
+      <button class="btn danger" type="button" data-pages-action="delete" data-page-id="{{.ID}}" data-confirm="{{$.T "admin.pages_delete_confirm"}}">{{$.T "admin.pages_delete"}}</button>
+      <button class="btn" type="submit">{{$.T "settings.save"}}</button>
+    </div>
+  </form>
+  {{if gt .Missing 0}}<form class="stack" data-api="/api/admin/pages" data-reload="1" data-success="{{$.T "js.saved"}}">
+    <h3>{{$.T "admin.pages_add_language"}}</h3>
+    <input type="hidden" name="action" value="add_lang">
+    <input type="hidden" name="page_id" value="{{.ID}}">
+    <label>{{$.T "admin.pages_language"}}<select name="lang">{{range .Variants}}{{if not .Exists}}<option value="{{.Lang}}">{{$.LangName .Lang}}</option>{{end}}{{end}}</select></label>
+    <label>{{$.T "admin.pages_slug"}}<input type="text" name="slug" pattern="[a-z0-9][a-z0-9\-]*" maxlength="64" autocomplete="off" spellcheck="false" required></label>
+    <label>{{$.T "admin.pages_title"}}<input type="text" name="title" maxlength="200" autocomplete="off" required></label>
+    <label>{{$.T "admin.pages_body"}}<textarea name="body" rows="6"></textarea></label>
+    <div><button class="btn ghost small" type="button" data-modal-open="m-md-help">{{$.T "admin.md_help"}}</button></div>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{$pid}}-newlang" name="enabled" checked><label for="pg-{{$pid}}-newlang" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{$pid}}-newlang">{{$.T "admin.pages_enabled"}}</label></div>
+    <p class="form-error" role="alert" hidden></p>
+    <div><button class="btn ghost" type="submit">{{$.T "admin.pages_add_language"}}</button></div>
+  </form>{{end}}
+</details>
+{{else}}<p class="muted center">{{$.T "admin.pages_none"}}</p>{{end}}
+{{template "pager" (dict "Pager" .Data.Pager "V" .)}}
+
+<dialog class="modal" id="m-md-help" aria-labelledby="m-md-help-t">
+  <h2 id="m-md-help-t">{{.T "admin.md_title"}}</h2>
+  <table class="md-help-table">
+    <tbody>
+      <tr><td><code># Heading</code></td><td>{{.T "admin.md_heading"}}</td></tr>
+      <tr><td><code>**bold**</code></td><td><strong>{{.T "admin.md_bold"}}</strong></td></tr>
+      <tr><td><code>_italic_</code></td><td><em>{{.T "admin.md_italic"}}</em></td></tr>
+      <tr><td><code>~~strike~~</code></td><td><del>{{.T "admin.md_strike"}}</del></td></tr>
+      <tr><td><code>- item</code></td><td>{{.T "admin.md_list"}}</td></tr>
+      <tr><td><code>1. item</code></td><td>{{.T "admin.md_numbered"}}</td></tr>
+      <tr><td><code>[text](https://example.com)</code></td><td>{{.T "admin.md_link"}}</td></tr>
+      <tr><td><code>![alt](https://example.com/img.png)</code></td><td>{{.T "admin.md_image"}}</td></tr>
+      <tr><td><code>&gt; quote</code></td><td>{{.T "admin.md_quote"}}</td></tr>
+      <tr><td><code>`code`</code></td><td>{{.T "admin.md_code"}}</td></tr>
+      <tr><td><code>```<br>code block<br>```</code></td><td>{{.T "admin.md_codeblock"}}</td></tr>
+      <tr><td><code>---</code></td><td>{{.T "admin.md_hr"}}</td></tr>
+      <tr><td><code>| a | b |<br>|---|---|<br>| 1 | 2 |</code></td><td>{{.T "admin.md_table"}}</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">{{.T "admin.md_note"}}</p>
+  <div class="modal-actions"><button class="btn" type="button" data-modal-close>{{.T "js.close"}}</button></div>
+</dialog>
+
+{{else if eq .Data.Tab "faq"}}
+<p class="muted">{{.T "admin.faq_intro"}}</p>
+<form class="panel stack" data-api="/api/admin/faq" data-reload="1" data-success="{{.T "js.saved"}}">
+  <h2>{{.T "admin.faq_add"}}</h2>
+  <input type="hidden" name="action" value="add">
+  <label>{{.T "admin.pages_language"}}<select name="lang">{{range .Data.PageLangs}}<option value="{{.}}" {{if eq . $.Lang}}selected{{end}}>{{$.LangName .}}</option>{{end}}</select></label>
+  <label>{{.T "admin.faq_question"}}<input type="text" name="question" maxlength="200" autocomplete="off" required></label>
+  <label>{{.T "admin.faq_answer"}}<textarea name="answer" rows="5" maxlength="3500" required></textarea></label>
+  <label>{{.T "admin.faq_position"}}<input type="number" name="position" value="0"></label>
+  <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="faq-add-en" name="enabled" checked><label for="faq-add-en" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="faq-add-en">{{.T "admin.faq_enabled"}}</label></div>
+  <p class="form-error" role="alert" hidden></p>
+  <div><button class="btn" type="submit">{{.T "admin.faq_add"}}</button></div>
+</form>
+{{range .Data.FAQ}}
+<details class="panel fold">
+  <summary>{{.Lang}} &middot; {{.Question}} {{if not .Enabled}}<span class="tag">{{$.T "admin.off"}}</span>{{end}}</summary>
+  <form class="stack" data-api="/api/admin/faq" data-reload="1" data-success="{{$.T "js.saved"}}">
+    <input type="hidden" name="action" value="save">
+    <input type="hidden" name="id" value="{{.ID}}">
+    <label>{{$.T "admin.faq_question"}}<input type="text" name="question" value="{{.Question}}" maxlength="200" autocomplete="off" required></label>
+    <label>{{$.T "admin.faq_answer"}}<textarea name="answer" rows="5" maxlength="3500" required>{{.Answer}}</textarea></label>
+    <label>{{$.T "admin.faq_position"}}<input type="number" name="position" value="{{.Position}}"></label>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="faq-{{.ID}}-en" name="enabled" {{if .Enabled}}checked{{end}}><label for="faq-{{.ID}}-en" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="faq-{{.ID}}-en">{{$.T "admin.faq_enabled"}}</label></div>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="faq-{{.ID}}-del" name="delete"><label for="faq-{{.ID}}-del" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="faq-{{.ID}}-del">{{$.T "admin.faq_delete"}}</label></div>
+    <p class="form-error" role="alert" hidden></p>
+    <div><button class="btn" type="submit">{{$.T "settings.save"}}</button></div>
+  </form>
+</details>
+{{else}}<p class="muted center">{{$.T "admin.faq_none"}}</p>{{end}}
+
+{{else}}
+{{if .Data.Reports}}
+<ul class="reports">
+  {{range .Data.Reports}}
+  <li class="panel">
+    <p><strong>{{.Author}}</strong> <small class="muted">{{$.T "admin.reporters" .Reporters}}</small></p>
+    <blockquote>{{.Body}}{{if .Image}}<a href="/media/pics/{{.Image}}" target="_blank" rel="noopener"><img class="comment-img" loading="lazy" alt="" src="/media/pics/{{.Image}}"></a>{{end}}</blockquote>
+    {{if .Reasons}}<p class="muted">{{.Reasons}}</p>{{end}}
+    <p class="actions">
+      <a class="btn ghost small" href="{{if eq .Target.Kind "profile"}}/u/{{.ProfileName}}{{else}}/episode/{{.Target.ID}}{{end}}">{{$.T "admin.view"}}</a>
+      <button class="btn small" type="button" data-admin-resolve="{{.CommentID}}">{{$.T "admin.dismiss"}}</button>
+      <button class="btn danger small" type="button" data-admin-delete="{{.CommentID}}">{{$.T "admin.delete"}}</button>
+      <button class="btn danger small" type="button" data-admin-ban="{{.AuthorID}}">{{$.T "admin.ban"}}</button>
+    </p>
+  </li>
+  {{end}}
+</ul>
+{{end}}
+{{template "pager" (dict "Pager" .Data.Pager "V" .)}}
+{{if .Data.PeopleReports}}
+<h2 id="people">{{.T "admin.reported_people"}}</h2>
+<ul class="reports">
+  {{range .Data.PeopleReports}}
+  <li class="panel">
+    <p><strong>{{.Username}}</strong> <small class="muted">{{$.T "admin.reporters" .Reporters}}</small></p>
+    {{if .Reasons}}<p class="muted">{{.Reasons}}</p>{{end}}
+    <p class="actions">
+      <a class="btn ghost small" href="/u/{{.Username}}">{{$.T "admin.view"}}</a>
+      <button class="btn small" type="button" data-admin-dismiss-user="{{.ReportedID}}">{{$.T "admin.dismiss"}}</button>
+      <button class="btn danger small" type="button" data-admin-ban="{{.ReportedID}}">{{$.T "admin.ban"}}</button>
+    </p>
+  </li>
+  {{end}}
+</ul>
+{{end}}
+{{template "pager" (dict "Pager" .Data.PeoplePager "V" .)}}
+{{if and (not .Data.Reports) (not .Data.PeopleReports)}}<p class="muted center">{{.T "admin.none"}}</p>{{end}}
+{{end}}
+{{end}}

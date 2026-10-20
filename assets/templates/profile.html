@@ -6,17 +6,18 @@
     {{if .AvatarPath}}<img class="avatar xl" src="{{avatar .AvatarPath}}" alt="">{{else}}<span class="avatar xl fallback">{{initial .Name}}</span>{{end}}
     <div>
       <h1>{{.Name}}</h1>
-      <p class="muted">@{{.Username}} &middot; {{$.T "profile.joined" (slice .CreatedAt 0 10)}}</p>
+      <p class="muted">@{{$.Data.Handle}}{{if $.Data.Remote}} &middot; <a href="{{$.Data.RemoteURL}}" rel="noopener noreferrer" target="_blank">{{$.T "profile.view_remote"}}</a>{{else}} &middot; {{$.T "profile.joined" (slice .CreatedAt 0 10)}}{{end}}</p>
     </div>
-    {{if $.Data.IsOwn}}<a class="btn ghost small push-end" href="/settings?tab=profile">{{$.T "profile.edit"}}</a>{{end}}
+    {{if $.Data.IsOwn}}<a class="btn ghost small push-end" href="/settings?tab=profile">{{$.T "profile.edit"}}</a>{{else if $.User}}<span class="push-end profile-actions"><span data-friend-box>{{template "friend_button" (dict "Username" .Username "State" $.Data.Friend "V" $)}}</span><button class="icon-btn no" type="button" data-block-user="{{.Username}}" aria-label="{{$.T "js.block"}}" title="{{$.T "js.block"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-block"></use></svg></button><button class="icon-btn no" type="button" data-report-user="{{.Username}}" aria-label="{{$.T "js.report_abuse"}}" title="{{$.T "js.report_abuse"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-flag"></use></svg></button></span>{{end}}
   </div>
-  {{if $.Data.Private}}
+  {{if $.Data.Remote}}
+  {{else if $.Data.Private}}
   <p class="notice">{{$.T "profile.private"}}</p>
   {{else}}
   {{if .Bio}}<p class="bio">{{.Bio}}</p>{{end}}
   {{end}}
 </section>
-{{if not $.Data.Private}}
+{{if and (not $.Data.Private) (not $.Data.Remote)}}
 <section>
   <h2>{{$.T "profile.watch_time"}}</h2>
   <div class="stats four">
@@ -30,22 +31,25 @@
 {{if $.Data.Genres}}
 <section>
   <h2>{{$.T "profile.genres"}}</h2>
-  <div class="season-links">
-    {{range $.Data.Genres}}<span class="chip">{{$.Genre .Name}} <small>{{hours .Minutes}}</small></span>{{end}}
-  </div>
+  <table class="data-table">
+    <tbody>
+      {{range $.Data.Genres}}<tr><th scope="row">{{$.Genre .Name}}</th><td>{{hours .Minutes}}</td></tr>{{end}}
+    </tbody>
+  </table>
 </section>
 {{end}}
 {{if $.Data.FavShows}}
-<section>
-  <h2>{{$.T "profile.fav_shows"}}</h2>
+<details class="fold" id="favorites" {{if gt $.Data.FavPager.Page 1}}open{{end}}>
+  <summary>{{$.T "profile.fav_shows"}} <span class="count">{{$.Data.FavTotal}}</span></summary>
   <div class="grid">
     {{range $.Data.FavShows}}{{template "card" (dict "Href" (printf "/show/%d" .TMDBID) "Poster" .PosterPath "Title" .Name "Sub" (year .FirstAirDate))}}{{end}}
   </div>
-</section>
+  {{template "pager" (dict "Pager" $.Data.FavPager "V" $)}}
+</details>
 {{end}}
 {{if $.Data.Recent}}
-<section>
-  <h2>{{$.T "profile.recent"}}</h2>
+<details class="fold" id="recent" {{if gt $.Data.RecentPager.Page 1}}open{{end}}>
+  <summary>{{$.T "profile.recent"}} <span class="count">{{$.Data.RecentTotal}}</span></summary>
   <ul class="cal-list">
     {{range $.Data.Recent}}
     <li>
@@ -54,8 +58,26 @@
     </li>
     {{end}}
   </ul>
-</section>
+  {{template "pager" (dict "Pager" $.Data.RecentPager "V" $)}}
+</details>
 {{end}}
+{{end}}
+{{if $.Data.Posts}}
+{{$canPost := and $.Data.IsOwn $.User.CanComment}}
+<section id="comments" class="comments" {{if not $canPost}}hidden{{end}} data-kind="profile" data-target="{{.ID}}" data-logged="1" data-verified="{{if and $.User $.User.CanComment}}1{{else}}0{{end}}" data-admin="{{if and $.User $.User.IsAdmin}}1{{else}}0{{end}}">
+  <h2>{{$.T "profile.posts"}} <small id="comments-count"></small></h2>
+  {{if $canPost}}
+  <form class="comment-form" id="comment-form">
+    <textarea name="body" maxlength="2000" rows="3" placeholder="{{$.T "profile.post_placeholder"}}" required></textarea>
+    <div class="comment-form-row">
+      <span class="notify-row spoiler-row"><span class="tswitch sm"><input type="checkbox" class="tswitch-input" id="prof-spoiler" name="spoiler"><label for="prof-spoiler" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="prof-spoiler">{{$.T "comments.mark_spoiler"}}</label></span>
+      <button class="btn" type="submit">{{$.T "comments.post"}}</button>
+    </div>
+  </form>
+  {{end}}
+  <ul class="comment-list" id="comment-list"></ul>
+  <p class="center"><button class="btn ghost" type="button" id="comments-more" hidden>{{$.T "comments.load_more"}}</button></p>
+</section>
 {{end}}
 {{end}}
 {{end}}

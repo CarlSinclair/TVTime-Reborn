@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"tvt/logger"
 )
@@ -215,11 +216,66 @@ type ShowDetails struct {
 	EpisodeRunTime   []int        `json:"episode_run_time"`
 	Seasons          []SeasonStub `json:"seasons"`
 	ExternalIDs      ExternalIDs  `json:"external_ids"`
+	AltTitles        struct {
+		Results []AltTitle `json:"results"`
+	} `json:"alternative_titles"`
+}
+
+type AltTitle struct {
+	Country string `json:"iso_3166_1"`
+	Title   string `json:"title"`
+	Type    string `json:"type"`
+}
+
+func isLatinText(s string) bool {
+	letters := 0
+	for _, r := range s {
+		if !unicode.IsLetter(r) {
+			continue
+		}
+		letters++
+		if !unicode.In(r, unicode.Latin) {
+			return false
+		}
+	}
+	return letters > 0
+}
+
+var englishRegions = map[string]int{"US": 0, "GB": 1, "CA": 2, "AU": 3, "IE": 4, "NZ": 5}
+
+// DisplayName is the name to show people who do not read the original
+// language. TMDB falls back to the original-language title when a show has no
+// English translation (common for anime), so a title in another script is
+// replaced by the best Latin-script alternative title: an English-speaking
+// region first, then a romanisation, then any Latin title.
+func (d *ShowDetails) DisplayName() string {
+	if isLatinText(d.Name) || d.Name == "" {
+		return d.Name
+	}
+	best, bestRank := "", 1<<30
+	for _, a := range d.AltTitles.Results {
+		if !isLatinText(a.Title) {
+			continue
+		}
+		rank := 100
+		if r, ok := englishRegions[strings.ToUpper(a.Country)]; ok {
+			rank = r
+		} else if strings.EqualFold(a.Type, "romaji") || strings.EqualFold(a.Type, "romanization") {
+			rank = 50
+		}
+		if rank < bestRank {
+			best, bestRank = a.Title, rank
+		}
+	}
+	if best == "" {
+		return d.Name
+	}
+	return best
 }
 
 func (c *Client) ShowDetails(ctx context.Context, id int64, lang string) (*ShowDetails, error) {
 	var out ShowDetails
-	q := url.Values{"language": {lang}, "append_to_response": {"external_ids"}}
+	q := url.Values{"language": {lang}, "append_to_response": {"external_ids,alternative_titles"}}
 	if err := c.get(ctx, "/tv/"+strconv.FormatInt(id, 10), q, &out); err != nil {
 		return nil, err
 	}
@@ -317,7 +373,28 @@ func (c *Client) changed(ctx context.Context, path string, start, end time.Time)
 }
 
 type FindResponse struct {
-	TVResults []SearchItem `json:"tv_results"`
+	TVResults        []SearchItem  `json:"tv_results"`
+	TVEpisodeResults []EpisodeFind `json:"tv_episode_results"`
+}
+
+type EpisodeFind struct {
+	ID            int64 `json:"id"`
+	ShowID        int64 `json:"show_id"`
+	SeasonNumber  int   `json:"season_number"`
+	EpisodeNumber int   `json:"episode_number"`
+}
+
+// FindEpisodeByExternal resolves an external (for example TVDB) episode id to
+// the TMDB episode, which carries its show and numbering.
+func (c *Client) FindEpisodeByExternal(ctx context.Context, id, source string) (*EpisodeFind, error) {
+	var out FindResponse
+	if err := c.get(ctx, "/find/"+url.PathEscape(id), url.Values{"external_source": {source}}, &out); err != nil {
+		return nil, err
+	}
+	if len(out.TVEpisodeResults) == 0 {
+		return nil, ErrNotFound
+	}
+	return &out.TVEpisodeResults[0], nil
 }
 
 // FindByExternal resolves an IMDb or TVDB id to a TMDB show, used by importers.

@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"tvt/i18n"
 
 	"tvt/auth"
 	"tvt/logger"
@@ -26,7 +27,7 @@ func hashLinkToken(t string) string {
 func tgLangFor(a *App, code string) string {
 	code = strings.ToLower(strings.TrimSpace(code))
 	if code == "" {
-		return a.Cfg.DefaultLang
+		return i18n.Fallback
 	}
 	return a.I18n.Pick(code)
 }
@@ -74,6 +75,10 @@ func (a *App) pageTelegramLogin(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case err == nil:
 	case errors.Is(err, store.ErrNotFound):
+		if a.signupsClosed() {
+			fail("signups_closed")
+			return
+		}
 		u, err = a.Store.CreateTelegramUser(data.ID, data.Username, data.DisplayName(), a.lang(w, r, nil))
 		if err != nil {
 			logger.Error("AUTH telegram register tg=%d: %v", data.ID, err)
@@ -86,8 +91,8 @@ func (a *App) pageTelegramLogin(w http.ResponseWriter, r *http.Request) {
 		fail("internal")
 		return
 	}
-	if u.IsBanned {
-		fail("banned")
+	if u.IsDeactivated && !u.SelfDeactivated {
+		fail("deactivated")
 		return
 	}
 	if data.Username != u.TelegramUsername {
@@ -223,14 +228,15 @@ func (a *App) handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+	if upd.CallbackQuery != nil {
+		a.handleTelegramCallback(upd.CallbackQuery)
+		return
+	}
 	msg := upd.Message
 	if msg == nil {
 		return
 	}
 	cmd, arg := telegram.ParseCommand(msg.Text)
-	if cmd == "" {
-		return
-	}
 	chat := strconv.FormatInt(msg.Chat.ID, 10)
 	hint := ""
 	if msg.From != nil {
@@ -239,13 +245,30 @@ func (a *App) handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 	reply := func(lang, key string) {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
-		if err := a.Bot.SendMessage(ctx, chat, a.I18n.T(lang, key)); err != nil {
+		text := a.tgT(lang, "tg."+key, nil)
+		switch key {
+		case "linked", "status_linked", "stopped":
+			text = "✅ " + text
+		case "link_invalid", "error", "private_only", "status_unlinked":
+			text = "❌ " + text
+		}
+		var buttons []telegram.Button
+		if msg.Chat.Type == "private" {
+			buttons = a.helpButtons(lang)
+		}
+		if _, err := a.Bot.SendMessageButtons(ctx, chat, text, buttons); err != nil {
 			logger.Error("TELEGRAM reply chat=%s key=%s: %v", chat, key, err)
 		}
 	}
 	lang := tgLangFor(a, hint)
 	if msg.Chat.Type != "private" {
-		reply(lang, "tg.private_only")
+		if g := a.supportGroup(); g != "" && g == chat {
+			if msg.ReplyToMessage != nil && msg.From != nil && !msg.From.IsBot {
+				a.supportOperatorReply(msg, chat, lang)
+			}
+			return
+		}
+		reply(lang, "private_only")
 		return
 	}
 	existing, lookupErr := a.Store.UserByTelegramChat(chat)
@@ -253,52 +276,87 @@ func (a *App) handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 		lang = existing.Locale
 	} else if !errors.Is(lookupErr, store.ErrNotFound) {
 		logger.Error("TELEGRAM lookup chat=%s: %v", chat, lookupErr)
-		reply(lang, "tg.error")
+		reply(lang, "error")
+		return
+	}
+	if lookupErr == nil && existing.IsAdmin && msg.ReplyToMessage != nil {
+		a.supportOperatorReply(msg, chat, lang)
+		return
+	}
+	var linked *store.User
+	if lookupErr == nil {
+		linked = existing
+	}
+	if cmd == "" {
+		if !a.supportText(msg, chat, lang) {
+			reply(lang, "help")
+		}
+		return
+	}
+	if cmd == "/support" || (cmd == "/start" && strings.EqualFold(arg, "support")) {
+		a.supportBegin(msg, chat, lang, linked)
 		return
 	}
 	switch cmd {
+	case "/faq", "/help":
+		a.faqMenu(chat, lang)
+	case "/close":
+		a.supportClose(chat, lang)
 	case "/start":
 		if arg == "" {
 			if lookupErr == nil {
-				reply(lang, "tg.status_linked")
+				reply(lang, "status_linked")
 			} else {
-				reply(lang, "tg.status_unlinked")
+				reply(lang, "status_unlinked")
 			}
 			return
 		}
 		uid, err := a.Store.ConsumeTelegramLinkToken(hashLinkToken(arg))
 		if err != nil {
 			if errors.Is(err, store.ErrNotFound) {
-				reply(lang, "tg.link_invalid")
+				reply(lang, "link_invalid")
 			} else {
 				logger.Error("TELEGRAM consume link token chat=%s: %v", chat, err)
-				reply(lang, "tg.error")
+				reply(lang, "error")
 			}
 			return
 		}
 		if err := a.Store.SetTelegramChatClearOthers(uid, chat); err != nil {
 			logger.Error("TELEGRAM link uid=%d chat=%s: %v", uid, chat, err)
-			reply(lang, "tg.error")
+			reply(lang, "error")
 			return
 		}
 		if u, err := a.Store.UserByID(uid); err == nil {
 			lang = u.Locale
+			if err := a.Store.SetNotifyFlags(uid, u.NotifyInApp, u.NotifyPush, u.NotifyEmail, true); err != nil {
+				logger.Error("TELEGRAM could not turn on Telegram notifications uid=%d: %v", uid, err)
+			}
+			if u.TelegramID == 0 && msg.From != nil && msg.From.ID != 0 {
+				switch err := a.Store.LinkTelegram(uid, msg.From.ID, msg.From.Username); {
+				case err == nil:
+					logger.Info("TELEGRAM sign-in identity linked with the chat uid=%d", uid)
+				case errors.Is(err, store.ErrTelegramTaken):
+					logger.Warn("TELEGRAM chat linked but the Telegram account already belongs to another user uid=%d", uid)
+				default:
+					logger.Error("TELEGRAM link sign-in identity uid=%d: %v", uid, err)
+				}
+			}
 		}
 		logger.Info("TELEGRAM linked uid=%d chat=%s", uid, chat)
-		reply(lang, "tg.linked")
+		reply(lang, "linked")
 	case "/stop":
 		if lookupErr == nil {
 			if err := a.Store.SetTelegramChat(existing.ID, ""); err != nil {
 				logger.Error("TELEGRAM stop uid=%d: %v", existing.ID, err)
-				reply(lang, "tg.error")
+				reply(lang, "error")
 				return
 			}
-			reply(lang, "tg.stopped")
+			reply(lang, "stopped")
 		} else {
-			reply(lang, "tg.status_unlinked")
+			reply(lang, "status_unlinked")
 		}
 	default:
-		reply(lang, "tg.help")
+		reply(lang, "help")
 	}
 }
 

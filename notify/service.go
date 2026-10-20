@@ -58,16 +58,22 @@ type Event struct {
 }
 
 var Events = map[string]Event{
-	"episode_aired":    {"episode_aired", "episodes"},
-	"comment_reply":    {"comment_reply", "social"},
-	"password_changed": {"password_changed", "security"},
-	"twofa_enabled":    {"twofa_enabled", "security"},
-	"twofa_disabled":   {"twofa_disabled", "security"},
-	"telegram_linked":  {"telegram_linked", "security"},
-	"passkey_added":    {"passkey_added", "security"},
-	"telegram_dropped": {"telegram_dropped", "system"},
-	"abuse_report":     {"abuse_report", "moderation"},
-	"test":             {"test", "system"},
+	"episode_aired":          {"episode_aired", "episodes"},
+	"comment_reply":          {"comment_reply", "social"},
+	"password_changed":       {"password_changed", "security"},
+	"twofa_enabled":          {"twofa_enabled", "security"},
+	"twofa_disabled":         {"twofa_disabled", "security"},
+	"telegram_linked":        {"telegram_linked", "security"},
+	"passkey_added":          {"passkey_added", "security"},
+	"telegram_dropped":       {"telegram_dropped", "system"},
+	"abuse_report":           {"abuse_report", "moderation"},
+	"import_done":            {"import_done", "system"},
+	"email_change_requested": {"email_change_requested", "security"},
+	"email_changed":          {"email_changed", "security"},
+	"user_report":            {"user_report", "moderation"},
+	"friend_request":         {"friend_request", "social"},
+	"friend_accepted":        {"friend_accepted", "social"},
+	"test":                   {"test", "system"},
 }
 
 var (
@@ -89,6 +95,39 @@ type Service struct {
 
 	mailQ chan mailJob
 	wg    sync.WaitGroup
+
+	dupMu sync.Mutex
+	dups  map[string]time.Time
+}
+
+const duplicateWindow = 10 * time.Minute
+
+// duplicate reports whether the same notification (same user, event and text)
+// was already delivered inside the window, so something that keeps failing and
+// reporting itself cannot flood a person with the same message.
+func (s *Service) duplicate(userID int64, event, title, body, link string) bool {
+	if event == "test" || event == "friend_request" {
+		return false
+	}
+	key := fmt.Sprintf("%d|%s|%s|%s|%s", userID, event, title, body, link)
+	now := time.Now()
+	s.dupMu.Lock()
+	defer s.dupMu.Unlock()
+	if s.dups == nil {
+		s.dups = map[string]time.Time{}
+	}
+	if at, ok := s.dups[key]; ok && now.Sub(at) < duplicateWindow {
+		return true
+	}
+	if len(s.dups) > 5000 {
+		for k, at := range s.dups {
+			if now.Sub(at) >= duplicateWindow {
+				delete(s.dups, k)
+			}
+		}
+	}
+	s.dups[key] = now
+	return false
 }
 
 type mailJob struct {
@@ -238,7 +277,7 @@ func (s *Service) deliver(userID int64, event, link string, data map[string]any)
 		logger.Error("NOTIFY load user uid=%d event=%s: %v", userID, event, err)
 		return
 	}
-	if u.IsBanned {
+	if u.IsDeactivated || u.IsRemote() {
 		return
 	}
 	prefs, err := s.Store.NotificationPrefs(userID)
@@ -254,6 +293,10 @@ func (s *Service) deliver(userID int64, event, link string, data map[string]any)
 		lang = "en"
 	}
 	title, body := s.Text(lang, event, data)
+	if s.duplicate(userID, event, title, body, link) {
+		logger.Warn("NOTIFY duplicate suppressed uid=%d event=%s", userID, event)
+		return
+	}
 	abs := ""
 	if link != "" {
 		abs = s.BaseURL + link
@@ -382,7 +425,7 @@ func (s *Service) SendTest(u *store.User, channel string) error {
 		return nil
 	case ChanPush:
 		unread, _ := s.Store.UnreadCount(u.ID)
-		_, err := s.Push.SendToUser(u.ID, title, body, link, unread)
+		_, err := s.Push.SendTestToUser(u.ID, title, body, link, unread)
 		return err
 	case ChanEmail:
 		if !s.canEmail(u) {

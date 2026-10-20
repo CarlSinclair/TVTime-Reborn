@@ -72,11 +72,11 @@ func TestCommentsReportsAndBlocks(t *testing.T) {
 	_, eps := seedEpisode(t, s)
 	alice, bob, carol := mkUser(t, s, "alice"), mkUser(t, s, "bob"), mkUser(t, s, "carol")
 
-	cid, err := s.AddComment(alice.ID, EpisodeTarget(eps[0]), 0, "hello", false)
+	cid, err := s.AddComment(alice.ID, EpisodeTarget(eps[0]), 0, "hello", false, "")
 	if err != nil {
 		t.Fatalf("add comment: %v", err)
 	}
-	if _, err := s.AddComment(bob.ID, EpisodeTarget(eps[0]), cid, "reply", false); err != nil {
+	if _, err := s.AddComment(bob.ID, EpisodeTarget(eps[0]), cid, "reply", false, ""); err != nil {
 		t.Fatalf("add reply: %v", err)
 	}
 
@@ -158,5 +158,84 @@ func TestTrackingAndUpNext(t *testing.T) {
 	}
 	if err := s.MarkWatched(u.ID, 99999, ""); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("unknown episode: got %v want ErrNotFound", err)
+	}
+}
+
+func TestUpNextTableFollowsEveryChange(t *testing.T) {
+	s := newTestStore(t)
+	showID, eps := seedEpisode(t, s)
+	u := mkUser(t, s, "erin")
+	rows := func() int {
+		var n int
+		if err := s.DB.QueryRow(`SELECT COUNT(*) FROM up_next WHERE user_id = ?`, u.ID).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	if rows() != 0 {
+		t.Fatalf("nothing is followed yet")
+	}
+	if err := s.Follow(u.ID, showID, "plan"); err != nil {
+		t.Fatal(err)
+	}
+	if rows() != 0 {
+		t.Fatalf("a show that is only planned is not up next")
+	}
+	if err := s.Follow(u.ID, showID, "watching"); err != nil {
+		t.Fatal(err)
+	}
+	next, _ := s.UpNext(u.ID, 10)
+	if len(next) != 1 || next[0].Episode.ID != eps[0] || next[0].Remaining != 2 {
+		t.Fatalf("following adds the row: %+v", next)
+	}
+	if err := s.MarkWatched(u.ID, eps[0], ""); err != nil {
+		t.Fatal(err)
+	}
+	next, _ = s.UpNext(u.ID, 10)
+	if len(next) != 1 || next[0].Episode.ID != eps[1] || next[0].Remaining != 1 {
+		t.Fatalf("watching moves the row on: %+v", next)
+	}
+	if err := s.Unwatch(u.ID, eps[0]); err != nil {
+		t.Fatal(err)
+	}
+	next, _ = s.UpNext(u.ID, 10)
+	if len(next) != 1 || next[0].Episode.ID != eps[0] || next[0].Remaining != 2 {
+		t.Fatalf("unwatching moves it back: %+v", next)
+	}
+	if _, err := s.MarkSeason(u.ID, showID, 1, true); err != nil {
+		t.Fatal(err)
+	}
+	if rows() != 0 {
+		t.Fatalf("caught up means no row")
+	}
+	if _, err := s.MarkSeason(u.ID, showID, 1, false); err != nil {
+		t.Fatal(err)
+	}
+	if rows() != 1 {
+		t.Fatalf("unmarking a season brings the row back")
+	}
+	if _, err := s.DB.Exec(`DELETE FROM up_next`); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.EnsureUpNext(); err != nil {
+		t.Fatal(err)
+	}
+	if rows() != 1 {
+		t.Fatalf("the first-run fill builds the table: %d", rows())
+	}
+	if _, err := s.DB.Exec(`UPDATE up_next SET remaining = 99`); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.RebuildUpNext(); err != nil {
+		t.Fatal(err)
+	}
+	if next, _ = s.UpNext(u.ID, 10); len(next) != 1 || next[0].Remaining != 2 {
+		t.Fatalf("the daily pass corrects drift: %+v", next)
+	}
+	if err := s.Unfollow(u.ID, showID); err != nil {
+		t.Fatal(err)
+	}
+	if rows() != 0 {
+		t.Fatalf("unfollowing removes the row")
 	}
 }

@@ -4,13 +4,13 @@
   {{if .Data.ErrorKey}}<p class="form-error" role="alert">{{.T .Data.ErrorKey}}</p>{{end}}
   <form class="stack" id="login-form" data-api="/api/auth/login">
     <label>{{.T "auth.email"}}<input type="email" name="email" autocomplete="email" required></label>
-    <label>{{.T "auth.password"}}<input type="password" name="password" autocomplete="current-password" required></label>
+    <label><span class="label-row">{{.T "auth.password"}}<a class="small-link" href="/forgot">{{.T "auth.forgot"}}</a></span><input type="password" name="password" autocomplete="current-password" required></label>
     <p class="form-error" role="alert" hidden></p>
     <button class="btn" type="submit">{{.T "auth.login"}}</button>
     <button class="btn ghost" type="button" data-magic data-success="{{.T "auth.magic_sent"}}">{{.T "auth.magic_link"}}</button>
   </form>
   {{if .PasskeysEnabled}}<p><button class="btn ghost wide" type="button" id="passkey-login">{{.T "auth.passkey_login"}}</button></p>{{end}}
   {{if .TelegramBot}}{{template "telegram_widget" (dict "BotID" .TelegramBotID "Label" (.T "auth.telegram_login") "Action" "login")}}{{end}}
-  <p class="muted"><a href="/forgot">{{.T "auth.forgot"}}</a> &middot; <a href="/register">{{.T "auth.register"}}</a></p>
+  <p class="center"><a href="/register">{{.T "auth.register"}}</a></p>
 </section>
 {{end}}

@@ -29,8 +29,8 @@ func UserFrom(ctx context.Context) *store.User {
 }
 
 func (s *Service) CSRFToken(w http.ResponseWriter, r *http.Request) string {
-	if c, err := r.Cookie(CookieCSRF); err == nil && len(c.Value) == 64 {
-		return c.Value
+	if v := s.field(r, fieldCSRF); len(v) == 64 {
+		return v
 	}
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
@@ -38,20 +38,20 @@ func (s *Service) CSRFToken(w http.ResponseWriter, r *http.Request) string {
 		return ""
 	}
 	tok := hex.EncodeToString(b)
-	s.setCookie(w, CookieCSRF, tok, 60*60*24*365)
+	s.setField(w, fieldCSRF, tok)
 	return tok
 }
 
 func (s *Service) CSRFValid(r *http.Request) bool {
-	c, err := r.Cookie(CookieCSRF)
-	if err != nil || len(c.Value) != 64 {
+	cookie := s.field(r, fieldCSRF)
+	if len(cookie) != 64 {
 		return false
 	}
 	sent := r.Header.Get("X-CSRF-Token")
 	if sent == "" {
 		sent = r.PostFormValue("csrf")
 	}
-	return subtle.ConstantTimeCompare([]byte(sent), []byte(c.Value)) == 1
+	return subtle.ConstantTimeCompare([]byte(sent), []byte(cookie)) == 1
 }
 
 // ClientIPHeader names the header a trusted reverse proxy uses to pass the

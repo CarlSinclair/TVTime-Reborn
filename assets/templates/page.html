@@ -1,0 +1,7 @@
+{{define "content"}}
+<article class="legal-page">
+  <h1>{{.Data.Title}}</h1>
+  <div class="legal-body">{{.Data.Body}}</div>
+  {{if .Data.ShowUpdated}}<p class="muted">{{.T "privacy.updated" .Data.UpdatedAt}}</p>{{end}}
+</article>
+{{end}}

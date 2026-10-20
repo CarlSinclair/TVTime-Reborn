@@ -1,6 +1,6 @@
 {{define "card"}}
 <a class="card" href="{{.Href}}">
-  <img loading="lazy" src="{{img "w342" .Poster}}" alt="">
+  <img loading="lazy" src="{{img "w342" .Poster}}" {{with imgset .Poster "w342" "w500" "w780"}}srcset="{{.}}" sizes="(max-width: 720px) 45vw, 220px"{{end}} alt="">
   <span class="card-title">{{.Title}}</span>
   {{if .Sub}}<span class="card-sub">{{.Sub}}</span>{{end}}
 </a>

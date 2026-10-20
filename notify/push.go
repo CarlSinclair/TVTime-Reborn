@@ -107,11 +107,22 @@ type pushPayload struct {
 	Body        string `json:"body"`
 	Link        string `json:"link,omitempty"`
 	UnreadCount int    `json:"unread_count"`
+	Force       bool   `json:"force,omitempty"`
 }
 
 // SendToUser delivers to every device and returns how many accepted it. Dead
 // subscriptions (404/410) are pruned as discovered.
 func (p *Pusher) SendToUser(userID int64, title, body, link string, unread int) (int, error) {
+	return p.sendToUser(userID, title, body, link, unread, false)
+}
+
+// SendTestToUser is for the Test button: the notification is always shown, even
+// when the page is open in front, so the person can see it work.
+func (p *Pusher) SendTestToUser(userID int64, title, body, link string, unread int) (int, error) {
+	return p.sendToUser(userID, title, body, link, unread, true)
+}
+
+func (p *Pusher) sendToUser(userID int64, title, body, link string, unread int, force bool) (int, error) {
 	subs, err := p.Store.PushSubs(userID)
 	if err != nil {
 		return 0, err
@@ -119,7 +130,7 @@ func (p *Pusher) SendToUser(userID int64, title, body, link string, unread int) 
 	if len(subs) == 0 {
 		return 0, ErrNoPushDevices
 	}
-	payload, err := json.Marshal(pushPayload{Title: title, Body: body, Link: link, UnreadCount: unread})
+	payload, err := json.Marshal(pushPayload{Title: title, Body: body, Link: link, UnreadCount: unread, Force: force})
 	if err != nil {
 		return 0, fmt.Errorf("marshal push payload uid=%d: %w", userID, err)
 	}

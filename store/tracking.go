@@ -40,6 +40,7 @@ func (s *Store) Follow(userID, showID int64, status string) error {
 	  ON CONFLICT(user_id, show_id) DO UPDATE SET status = excluded.status`, userID, showID, status, Now()); err != nil {
 		return fmt.Errorf("follow uid=%d show=%d: %w", userID, showID, err)
 	}
+	s.refreshUpNext(userID, showID)
 	return nil
 }
 
@@ -47,6 +48,7 @@ func (s *Store) Unfollow(userID, showID int64) error {
 	if _, err := s.DB.Exec(`DELETE FROM follows WHERE user_id = ? AND show_id = ?`, userID, showID); err != nil {
 		return fmt.Errorf("unfollow uid=%d show=%d: %w", userID, showID, err)
 	}
+	s.refreshUpNext(userID, showID)
 	return nil
 }
 
@@ -75,6 +77,7 @@ func (s *Store) MarkWatched(userID, episodeID int64, at string) error {
 	if err != nil {
 		return fmt.Errorf("mark watched uid=%d ep=%d: %w", userID, episodeID, err)
 	}
+	s.refreshUpNextOf(userID, episodeID)
 	if n, _ := res.RowsAffected(); n == 0 {
 		var one int
 		if err := s.DB.QueryRow(`SELECT 1 FROM episodes WHERE id = ?`, episodeID).Scan(&one); err != nil {
@@ -91,6 +94,7 @@ func (s *Store) Unwatch(userID, episodeID int64) error {
 	if _, err := s.DB.Exec(`DELETE FROM watched WHERE user_id = ? AND episode_id = ?`, userID, episodeID); err != nil {
 		return fmt.Errorf("unwatch uid=%d ep=%d: %w", userID, episodeID, err)
 	}
+	s.refreshUpNextOf(userID, episodeID)
 	return nil
 }
 
@@ -105,8 +109,27 @@ func (s *Store) MarkUpTo(userID, showID int64, season, episode int) (int, error)
 	if err != nil {
 		return 0, fmt.Errorf("mark up to uid=%d show=%d s%de%d: %w", userID, showID, season, episode, err)
 	}
+	s.refreshUpNext(userID, showID)
 	n, _ := res.RowsAffected()
 	return int(n), nil
+}
+
+// UnwatchedBefore counts the aired episodes before the given one (specials
+// never count) that the person has not marked as watched.
+func (s *Store) UnwatchedBefore(userID, showID int64, season, episode int) (int, error) {
+	if season <= 0 {
+		return 0, nil
+	}
+	var n int
+	err := s.DB.QueryRow(`SELECT COUNT(*) FROM episodes e
+	  WHERE e.show_id = ? AND e.season_number > 0 AND e.air_date IS NOT NULL AND e.air_date <= ?
+	    AND (e.season_number < ? OR (e.season_number = ? AND e.episode_number < ?))
+	    AND NOT EXISTS (SELECT 1 FROM watched w WHERE w.user_id = ? AND w.episode_id = e.id)`,
+		showID, today(), season, season, episode, userID).Scan(&n)
+	if err != nil {
+		return 0, fmt.Errorf("unwatched before uid=%d show=%d s%de%d: %w", userID, showID, season, episode, err)
+	}
+	return n, nil
 }
 
 func (s *Store) MarkSeason(userID, showID int64, season int, watched bool) (int, error) {
@@ -116,6 +139,7 @@ func (s *Store) MarkSeason(userID, showID int64, season int, watched bool) (int,
 		if err != nil {
 			return 0, fmt.Errorf("unmark season uid=%d show=%d season=%d: %w", userID, showID, season, err)
 		}
+		s.refreshUpNext(userID, showID)
 		n, _ := res.RowsAffected()
 		return int(n), nil
 	}
@@ -126,6 +150,7 @@ func (s *Store) MarkSeason(userID, showID int64, season int, watched bool) (int,
 	if err != nil {
 		return 0, fmt.Errorf("mark season uid=%d show=%d season=%d: %w", userID, showID, season, err)
 	}
+	s.refreshUpNext(userID, showID)
 	n, _ := res.RowsAffected()
 	return int(n), nil
 }
@@ -166,13 +191,77 @@ func (s *Store) Progress(userID, showID int64) (Progress, error) {
 	return p, nil
 }
 
+// CompleteFinished moves shows from "watching" to "completed" once the show has
+// ended and every aired regular episode is watched. userID or showID of 0 means
+// all users or all shows. It returns how many follows changed.
+func (s *Store) CompleteFinished(userID, showID int64) (int64, error) {
+	res, err := s.DB.Exec(`UPDATE follows SET status = 'completed'
+	  WHERE status = 'watching' AND (? = 0 OR user_id = ?) AND (? = 0 OR show_id = ?)
+	    AND show_id IN (SELECT id FROM shows WHERE LOWER(status) IN ('ended', 'canceled', 'cancelled'))
+	    AND EXISTS (SELECT 1 FROM episodes e WHERE e.show_id = follows.show_id AND e.season_number > 0 AND e.air_date IS NOT NULL AND e.air_date <= ?)
+	    AND NOT EXISTS (SELECT 1 FROM episodes e WHERE e.show_id = follows.show_id AND e.season_number > 0 AND e.air_date IS NOT NULL AND e.air_date <= ?
+	      AND NOT EXISTS (SELECT 1 FROM watched w WHERE w.user_id = follows.user_id AND w.episode_id = e.id))`,
+		userID, userID, showID, showID, today(), today())
+	if err != nil {
+		return 0, fmt.Errorf("complete finished uid=%d show=%d: %w", userID, showID, err)
+	}
+	s.dropUpNextOfInactive(userID, showID)
+	n, _ := res.RowsAffected()
+	return n, nil
+}
+
+// SeasonProgress counts, per season number, the aired episodes and how many of
+// the season's episodes the user has watched.
+func (s *Store) SeasonProgress(userID, showID int64) (map[int]Progress, error) {
+	rows, err := s.DB.Query(`SELECT e.season_number,
+	  COALESCE(SUM(CASE WHEN e.air_date IS NOT NULL AND e.air_date <= ? THEN 1 ELSE 0 END), 0), COUNT(w.episode_id)
+	  FROM episodes e LEFT JOIN watched w ON w.episode_id = e.id AND w.user_id = ?
+	  WHERE e.show_id = ? GROUP BY e.season_number`, today(), userID, showID)
+	if err != nil {
+		return nil, fmt.Errorf("season progress uid=%d show=%d: %w", userID, showID, err)
+	}
+	defer rows.Close()
+	out := map[int]Progress{}
+	for rows.Next() {
+		var n int
+		var p Progress
+		if err := rows.Scan(&n, &p.Aired, &p.Watched); err != nil {
+			return nil, fmt.Errorf("season progress scan uid=%d show=%d: %w", userID, showID, err)
+		}
+		out[n] = p
+	}
+	return out, rows.Err()
+}
+
+func (p Progress) Done() bool { return p.Aired > 0 && p.Watched >= p.Aired }
+
+// StatusCounts says how many shows someone has under each status.
+func (s *Store) StatusCounts(userID int64) (map[string]int, error) {
+	rows, err := s.DB.Query(`SELECT status, COUNT(*) FROM follows WHERE user_id = ? GROUP BY status`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("status counts uid=%d: %w", userID, err)
+	}
+	defer rows.Close()
+	out := map[string]int{}
+	for rows.Next() {
+		var st string
+		var n int
+		if err := rows.Scan(&st, &n); err != nil {
+			return nil, err
+		}
+		out[st] = n
+		out["all"] += n
+	}
+	return out, rows.Err()
+}
+
 type ShowEntry struct {
 	Show     Show
 	Follow   Follow
 	Progress Progress
 }
 
-func (s *Store) UserShows(userID int64, status string) ([]ShowEntry, error) {
+func (s *Store) UserShows(userID int64, status string, limit, offset int) ([]ShowEntry, error) {
 	q := `SELECT shows.id, shows.tmdb_id, COALESCE(shows.tvdb_id,0), COALESCE(shows.imdb_id,''), shows.name, shows.original_name, shows.overview, shows.status,
 	  COALESCE(shows.first_air_date,''), COALESCE(shows.last_air_date,''), shows.poster_path, shows.backdrop_path, shows.vote_average, shows.vote_count,
 	  shows.genres, shows.networks, shows.original_language, shows.number_of_seasons, shows.number_of_episodes, shows.runtime, shows.needs_sync,
@@ -183,7 +272,8 @@ func (s *Store) UserShows(userID int64, status string) ([]ShowEntry, error) {
 		q += ` AND f.status = ?`
 		args = append(args, status)
 	}
-	q += ` ORDER BY f.favorite DESC, shows.name COLLATE NOCASE`
+	q += ` ORDER BY f.favorite DESC, shows.name COLLATE NOCASE LIMIT ? OFFSET ?`
+	args = append(args, limit, offset)
 	rows, err := s.DB.Query(q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list user shows uid=%d: %w", userID, err)
@@ -218,27 +308,68 @@ func (s *Store) UserShows(userID int64, status string) ([]ShowEntry, error) {
 	return out, nil
 }
 
+type EpisodeRating struct {
+	Season, Episode int
+	TMDBAvg         float64
+	TMDBVotes       int
+	MemberAvg       float64
+	MemberVotes     int
+}
+
+// ShowRatings lists every regular episode with TMDB's rating and the average of
+// the ratings TVT members gave it (members rate in whole stars, stored x2).
+func (s *Store) ShowRatings(showID int64) ([]EpisodeRating, error) {
+	rows, err := s.DB.Query(`SELECT e.season_number, e.episode_number, e.vote_average, e.vote_count, COALESCE(AVG(r.rating),0), COUNT(r.rating)
+	  FROM episodes e LEFT JOIN episode_ratings r ON r.episode_id = e.id
+	  WHERE e.show_id = ? AND e.season_number > 0
+	  GROUP BY e.id ORDER BY e.season_number, e.episode_number`, showID)
+	if err != nil {
+		return nil, fmt.Errorf("show ratings show=%d: %w", showID, err)
+	}
+	defer rows.Close()
+	var out []EpisodeRating
+	for rows.Next() {
+		var r EpisodeRating
+		if err := rows.Scan(&r.Season, &r.Episode, &r.TMDBAvg, &r.TMDBVotes, &r.MemberAvg, &r.MemberVotes); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
 type UpNextItem struct {
 	Show      Show
 	Episode   Episode
 	Remaining int
 }
 
+// UpNext is the person's home-page list, newest activity first. It reads the
+// up_next table, which is kept current by the functions that change what a
+// person watches or follows (see upnext.go).
 func (s *Store) UpNext(userID int64, limit int) ([]UpNextItem, error) {
+	return s.upNext(userID, 0, limit)
+}
+
+// UpNextFor is the card for one show: its first unwatched aired episode, or nil
+// when the person is caught up (or not watching it).
+func (s *Store) UpNextFor(userID, showID int64) (*UpNextItem, error) {
+	list, err := s.upNext(userID, showID, 1)
+	if err != nil || len(list) == 0 {
+		return nil, err
+	}
+	return &list[0], nil
+}
+
+func (s *Store) upNext(userID, showID int64, limit int) ([]UpNextItem, error) {
 	rows, err := s.DB.Query(`SELECT s.id, s.tmdb_id, s.name, s.poster_path, s.backdrop_path,
-	    `+episodeCols+`,
-	    (SELECT COUNT(*) FROM episodes e3 WHERE e3.show_id = s.id AND e3.season_number > 0 AND e3.air_date IS NOT NULL AND e3.air_date <= ?
-	      AND NOT EXISTS (SELECT 1 FROM watched w3 WHERE w3.user_id = f.user_id AND w3.episode_id = e3.id))
-	  FROM follows f
-	  JOIN shows s ON s.id = f.show_id
-	  JOIN episodes e ON e.id = (
-	    SELECT e2.id FROM episodes e2
-	    WHERE e2.show_id = f.show_id AND e2.season_number > 0 AND e2.air_date IS NOT NULL AND e2.air_date <= ?
-	      AND NOT EXISTS (SELECT 1 FROM watched w WHERE w.user_id = f.user_id AND w.episode_id = e2.id)
-	    ORDER BY e2.season_number, e2.episode_number LIMIT 1)
-	  WHERE f.user_id = ? AND f.status = 'watching'
-	  ORDER BY COALESCE((SELECT MAX(w4.watched_at) FROM watched w4 WHERE w4.user_id = f.user_id AND w4.show_id = s.id), f.created_at) DESC
-	  LIMIT ?`, today(), today(), userID, limit)
+	    `+episodeCols+`, u.remaining
+	  FROM up_next u
+	  JOIN shows s ON s.id = u.show_id
+	  JOIN episodes e ON e.id = u.next_episode_id
+	  WHERE u.user_id = ? AND (? = 0 OR u.show_id = ?)
+	  ORDER BY u.sort_at DESC, u.show_id
+	  LIMIT ?`, userID, showID, showID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("up next uid=%d: %w", userID, err)
 	}

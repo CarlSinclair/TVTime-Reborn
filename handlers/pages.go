@@ -15,6 +15,7 @@ import (
 	"tvt/logger"
 	"tvt/store"
 	"tvt/tmdb"
+	"tvt/tvdb"
 )
 
 var assetVersion = strconv.FormatInt(time.Now().Unix(), 10)
@@ -38,6 +39,19 @@ func (a *App) routes(mux *http.ServeMux) {
 	})
 
 	mux.HandleFunc("GET /{$}", a.pageHome)
+	mux.HandleFunc("GET /welcome", a.pageLanding)
+	mux.HandleFunc("GET /{slug}", a.pagePublic)
+	mux.HandleFunc("POST /api/contact", a.apiContact)
+	mux.HandleFunc("GET /api/captcha/new", a.apiCaptchaNew)
+	mux.HandleFunc("POST /api/captcha/verify", a.apiCaptchaVerify)
+	mux.HandleFunc("POST /api/admin/pages", a.apiAdminPages)
+	mux.HandleFunc("POST /api/admin/faq", a.apiAdminFAQ)
+	mux.HandleFunc("POST /api/pics", a.apiUploadPic)
+	mux.HandleFunc("POST /api/pics/still", a.apiPicFromStill)
+	mux.HandleFunc("POST /api/pics/discard", a.apiDiscardPic)
+	mux.HandleFunc("GET /api/pics/source/{name}", a.apiPicSource)
+	mux.HandleFunc("GET /api/episode/{id}/still", a.apiStillBytes)
+	mux.HandleFunc("GET /api/episode/{id}/stills", a.apiEpisodeStills)
 	mux.HandleFunc("GET /search", a.pageSearch)
 	mux.HandleFunc("GET /show/{tmdb}", a.pageShow)
 	mux.HandleFunc("GET /show/{tmdb}/season/{n}", a.pageSeason)
@@ -51,15 +65,35 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /profile", a.pageOwnProfile)
 	mux.HandleFunc("GET /media/{kind}/{file}", a.serveMedia)
 	mux.HandleFunc("GET /img/{size}/{file}", a.serveImage)
+	mux.HandleFunc("GET /tvdbimg/{file}", a.serveTVDBImage)
 	mux.HandleFunc("GET /auth/telegram", a.pageTelegramLogin)
 	mux.HandleFunc("GET /login/2fa", a.pageMFA)
 	mux.HandleFunc("GET /login", a.pageSimple("login", "auth.login"))
 	mux.HandleFunc("GET /register", a.pageSimple("register", "auth.register"))
 	mux.HandleFunc("GET /forgot", a.pageSimple("forgot", "auth.forgot"))
 	mux.HandleFunc("GET /privacy", a.pagePrivacy)
+	mux.HandleFunc("GET /about", a.pageSimple("about", "about.title"))
 	mux.HandleFunc("GET /offline", a.pageSimple("offline", "offline.title"))
 	mux.HandleFunc("GET /t/{purpose}", a.pageToken)
-	mux.HandleFunc("GET /admin/reports", a.pageAdminReports)
+	mux.HandleFunc("GET /admin", a.pageAdmin)
+	mux.HandleFunc("GET /admin/reports", a.adminRedirect("reports"))
+	mux.HandleFunc("GET /admin/servers", a.adminRedirect("servers"))
+	mux.HandleFunc("POST /api/admin/servers/add", a.apiAdminServerAdd)
+	mux.HandleFunc("POST /api/admin/users", a.apiAdminUserCreate)
+	mux.HandleFunc("POST /api/admin/users/{id}/update", a.apiAdminUserUpdate)
+	mux.HandleFunc("POST /api/admin/users/{id}/delete", a.apiAdminUserDelete)
+	mux.HandleFunc("POST /api/admin/users/{id}/deactivate", a.apiAdminDeactivate)
+	mux.HandleFunc("POST /api/admin/users/{id}/reset-password", a.apiAdminResetLink)
+	mux.HandleFunc("POST /api/admin/signups", a.apiAdminSignups)
+	mux.HandleFunc("POST /api/admin/logo", a.apiAdminLogoUpload)
+	mux.HandleFunc("POST /api/admin/logo/remove", a.apiAdminLogoRemove)
+	mux.HandleFunc("POST /api/admin/config", a.apiAdminConfigSave)
+	mux.HandleFunc("POST /api/admin/config/test", a.apiAdminConfigTest)
+	mux.HandleFunc("POST /api/admin/restart", a.apiAdminRestart)
+	mux.HandleFunc("POST /api/admin/servers/share", a.apiAdminServerShare)
+	mux.HandleFunc("POST /api/remote-comments/{id}/report", a.apiReportRemoteComment)
+	mux.HandleFunc("POST /api/admin/servers/block", a.apiAdminServer(false))
+	mux.HandleFunc("POST /api/admin/servers/forget", a.apiAdminServer(true))
 
 	mux.HandleFunc("POST /api/auth/register", a.apiRegister)
 	mux.HandleFunc("POST /api/auth/login", a.apiLogin)
@@ -80,6 +114,8 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/account/locale", a.apiSetLocale)
 	mux.HandleFunc("POST /api/account/password", a.apiChangePassword)
 	mux.HandleFunc("POST /api/account/email", a.apiAddEmail)
+	mux.HandleFunc("POST /api/account/email/change", a.apiChangeEmail)
+	mux.HandleFunc("POST /api/auth/emailchange/consume", a.apiEmailChangeConsume)
 	mux.HandleFunc("POST /api/account/timezone", a.apiSetTimezone)
 	mux.HandleFunc("POST /api/account/logout-everywhere", a.apiLogoutEverywhere)
 	mux.HandleFunc("POST /api/account/2fa/setup", a.apiTOTPSetup)
@@ -101,6 +137,8 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/notifications/stream", a.apiNotificationsStream)
 	mux.HandleFunc("POST /api/notifications/read-all", a.apiNotificationsReadAll)
 	mux.HandleFunc("POST /api/notifications/settings", a.apiNotificationSettings)
+	mux.HandleFunc("POST /api/import/tvtime", a.apiImportTVTime)
+	mux.HandleFunc("GET /api/import/status", a.apiImportStatus)
 	mux.HandleFunc("POST /api/notifications/test", a.apiNotificationTest)
 	mux.HandleFunc("POST /api/notifications/timing", a.apiNotificationTiming)
 	mux.HandleFunc("POST /api/notifications/{id}/read", a.apiNotificationRead)
@@ -108,9 +146,26 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/push/subscribe", a.apiPushSubscribe)
 	mux.HandleFunc("POST /api/push/unsubscribe", a.apiPushUnsubscribe)
 	mux.HandleFunc("POST /api/account/delete", a.apiDeleteAccount)
+	mux.HandleFunc("POST /api/account/deactivate", a.apiDeactivateAccount)
+	mux.HandleFunc("POST /api/account/username", a.apiChangeUsername)
 	mux.HandleFunc("GET /api/account/export", a.apiExport)
 
 	mux.HandleFunc("GET /api/search", a.apiSearch)
+	if a.Fed != nil {
+		mux.HandleFunc("GET /.well-known/tvt", a.Fed.WellKnown)
+		mux.HandleFunc("GET /federation/user/{name}", a.Fed.UserInfo)
+		mux.HandleFunc("POST /federation/inbox", a.Fed.Inbox)
+		mux.HandleFunc("POST /federation/renew", a.Fed.Renew)
+	}
+	mux.HandleFunc("GET /api/people", a.apiPeople)
+	mux.HandleFunc("GET /api/friends", a.apiFriendsList)
+	mux.HandleFunc("POST /api/friends/request", a.apiFriendRequest)
+	mux.HandleFunc("POST /api/friends/respond", a.apiFriendRespond)
+	mux.HandleFunc("POST /api/friends/remove", a.apiFriendRemove)
+	mux.HandleFunc("GET /api/feed", a.apiFeed)
+	mux.HandleFunc("POST /api/users/block", a.apiBlockUser)
+	mux.HandleFunc("POST /api/users/report", a.apiReportUser)
+	mux.HandleFunc("POST /api/admin/users/{id}/dismiss-reports", a.apiAdminDismissUser)
 	mux.HandleFunc("POST /api/show/{tmdb}/follow", a.apiFollow)
 	mux.HandleFunc("POST /api/show/{tmdb}/unfollow", a.apiUnfollow)
 	mux.HandleFunc("POST /api/show/{tmdb}/favorite", a.apiFavorite)
@@ -120,6 +175,8 @@ func (a *App) routes(mux *http.ServeMux) {
 
 	mux.HandleFunc("GET /api/episode/{id}/comments", a.apiListComments())
 	mux.HandleFunc("POST /api/episode/{id}/comments", a.apiAddComment())
+	mux.HandleFunc("GET /api/profile/{id}/comments", a.apiListComments())
+	mux.HandleFunc("POST /api/profile/{id}/comments", a.apiAddComment())
 	mux.HandleFunc("POST /api/comments/{id}/edit", a.apiEditComment)
 	mux.HandleFunc("POST /api/comments/{id}/delete", a.apiDeleteComment)
 	mux.HandleFunc("POST /api/comments/{id}/report", a.apiReportComment)
@@ -141,7 +198,11 @@ func cacheControl(h http.Handler) http.Handler {
 			http.NotFound(w, r)
 			return
 		}
-		w.Header().Set("Cache-Control", "public, max-age=3600")
+		if r.URL.Query().Get("v") != "" {
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		} else {
+			w.Header().Set("Cache-Control", "public, max-age=3600")
+		}
 		h.ServeHTTP(w, r)
 	})
 }
@@ -162,10 +223,14 @@ func (a *App) serviceWorker(w http.ResponseWriter, r *http.Request) {
 func (a *App) manifest(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/manifest+json")
 	m := map[string]any{
-		"name": a.Cfg.AppName, "short_name": a.Cfg.AppName, "start_url": "/", "display": "standalone",
+		"id": "/", "name": a.Cfg.AppName, "short_name": a.Cfg.AppName, "start_url": "/", "scope": "/", "display": "standalone",
+		"description": "Track the shows you watch, see what is next and talk about each episode.", "categories": []string{"entertainment"},
 		"background_color": "#0f1117", "theme_color": "#7c5cff",
 		"icons": []map[string]string{
-			{"src": "/static/img/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"},
+			{"src": "/static/img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+			{"src": "/static/img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+			{"src": "/static/img/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+			{"src": "/static/img/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"},
 		},
 	}
 	if err := json.NewEncoder(w).Encode(m); err != nil {
@@ -182,7 +247,7 @@ func (a *App) pageSimple(name, titleKey string) http.HandlerFunc {
 		data := map[string]any{}
 		if code := r.URL.Query().Get("error"); code != "" {
 			switch code {
-			case "telegram_failed", "telegram_unavailable", "banned", "rate_limited", "internal":
+			case "telegram_failed", "telegram_unavailable", "deactivated", "rate_limited", "internal", "signups_closed":
 				data["ErrorKey"] = "err." + code
 			}
 		}
@@ -192,7 +257,7 @@ func (a *App) pageSimple(name, titleKey string) http.HandlerFunc {
 
 func (a *App) pageToken(w http.ResponseWriter, r *http.Request) {
 	purpose := r.PathValue("purpose")
-	if purpose != auth.PurposeLogin && purpose != auth.PurposeReset && purpose != auth.PurposeVerify {
+	if purpose != auth.PurposeLogin && purpose != auth.PurposeReset && purpose != auth.PurposeVerify && purpose != auth.PurposeEmail {
 		a.errorPage(w, r, http.StatusNotFound, "err.not_found")
 		return
 	}
@@ -203,28 +268,28 @@ func (a *App) langOf(w http.ResponseWriter, r *http.Request) string {
 	return a.lang(w, r, auth.UserFrom(r.Context()))
 }
 
+// pageLanding is the public front page: what TVT is and how to join. Visitors
+// see it at the root; everyone can open it at /welcome.
+func (a *App) pageLanding(w http.ResponseWriter, r *http.Request) {
+	a.page(w, r, "landing", "home.hero_title", map[string]any{})
+}
+
 func (a *App) pageHome(w http.ResponseWriter, r *http.Request) {
+	if auth.UserFrom(r.Context()) == nil {
+		a.pageLanding(w, r)
+		return
+	}
 	lang := a.langOf(w, r)
 	data := map[string]any{"NoMetadata": !a.TMDB.Configured()}
-	ctx, cancel := withTimeout(r, 15*time.Second)
-	defer cancel()
-	data["Trending"] = a.trendingShows(ctx, lang)
 	if u := auth.UserFrom(r.Context()); u != nil {
-		next, err := a.Store.UpNext(u.ID, 24)
+		next, err := a.Store.UpNext(u.ID, 60)
 		if err != nil {
 			logger.Error("PAGE home up next uid=%d: %v", u.ID, err)
 			a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
 			return
 		}
 		a.localizeUpNext(lang, next)
-		stats, err := a.Store.UserStats(u.ID)
-		if err != nil {
-			logger.Error("PAGE home stats uid=%d: %v", u.ID, err)
-			a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
-			return
-		}
 		data["UpNext"] = next
-		data["Stats"] = stats
 	}
 	a.page(w, r, "home", "nav.home", data)
 }
@@ -233,6 +298,40 @@ func (a *App) pageSearch(w http.ResponseWriter, r *http.Request) {
 	lang := a.langOf(w, r)
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	data := map[string]any{"Query": q}
+	kind := r.URL.Query().Get("kind")
+	if strings.HasPrefix(q, "@") {
+		kind = "people"
+	}
+	data["Kind"] = kind
+	if kind == "people" {
+		if viewer := auth.UserFrom(r.Context()); viewer != nil && q != "" {
+			if err := a.allow(a.searchLimit, "p:"+itoa(viewer.ID)); err != nil {
+				a.errorPage(w, r, http.StatusTooManyRequests, "err.rate_limited")
+				return
+			}
+			u, remote, err := a.findPerson(viewer, q)
+			if err != nil {
+				logger.Error("PAGE search people q=%q: %v", q, err)
+				a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
+				return
+			}
+			data["Remote"] = remote
+			if u != nil {
+				pv := a.personJSON(store.Person{ID: u.ID, Username: u.Username, DisplayName: u.DisplayName, AvatarPath: u.AvatarPath})
+				pv.Self = u.ID == viewer.ID
+				if !pv.Self {
+					if pv.State, err = a.Store.FriendState(viewer.ID, u.ID); err != nil {
+						logger.Error("PAGE search people state: %v", err)
+						a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
+						return
+					}
+				}
+				data["Person"] = pv
+			}
+		}
+		a.page(w, r, "search", "nav.search", data)
+		return
+	}
 	if q != "" {
 		if err := a.allow(a.searchLimit, "s:"+auth.ClientIP(r)); err != nil {
 			a.errorPage(w, r, http.StatusTooManyRequests, "err.rate_limited")
@@ -292,7 +391,7 @@ func (a *App) apiSearch(w http.ResponseWriter, r *http.Request) {
 func (a *App) loadShow(w http.ResponseWriter, r *http.Request) (*store.Show, string, bool) {
 	lang := a.langOf(w, r)
 	tid, err := strconv.ParseInt(r.PathValue("tmdb"), 10, 64)
-	if err != nil || tid <= 0 {
+	if err != nil || tid == 0 {
 		a.errorPage(w, r, http.StatusNotFound, "err.not_found")
 		return nil, lang, false
 	}
@@ -306,9 +405,9 @@ func (a *App) loadShow(w http.ResponseWriter, r *http.Request) (*store.Show, str
 			logger.Error("PAGE localize show=%d lang=%s: %v", sh.ID, lang, lerr)
 		}
 		return sh, lang, true
-	case errors.Is(err, tmdb.ErrNotFound):
+	case errors.Is(err, tmdb.ErrNotFound), errors.Is(err, tvdb.ErrNotFound):
 		a.errorPage(w, r, http.StatusNotFound, "err.not_found")
-	case errors.Is(err, tmdb.ErrNoKey):
+	case errors.Is(err, tmdb.ErrNoKey), errors.Is(err, tvdb.ErrNoKey):
 		a.errorPage(w, r, http.StatusServiceUnavailable, "err.metadata_not_configured")
 	default:
 		logger.Error("PAGE load show tmdb=%d: %v", tid, err)
@@ -328,7 +427,12 @@ func (a *App) pageShow(w http.ResponseWriter, r *http.Request) {
 		a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
 		return
 	}
-	data := map[string]any{"Show": sh, "Seasons": seasons}
+	data := map[string]any{"Show": sh, "Seasons": seasons, "SeasonProgress": map[int]store.Progress{}}
+	if list, err := a.Store.ShowRatings(sh.ID); err != nil {
+		logger.Error("PAGE show ratings show=%d: %v", sh.ID, err)
+	} else {
+		data["Chart"] = buildRatingChart(list)
+	}
 	if u := auth.UserFrom(r.Context()); u != nil {
 		f, err := a.Store.FollowOf(u.ID, sh.ID)
 		if err != nil {
@@ -342,8 +446,15 @@ func (a *App) pageShow(w http.ResponseWriter, r *http.Request) {
 			a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
 			return
 		}
+		sp, err := a.Store.SeasonProgress(u.ID, sh.ID)
+		if err != nil {
+			logger.Error("PAGE show season progress: %v", err)
+			a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
+			return
+		}
 		data["Follow"] = f
 		data["Progress"] = p
+		data["SeasonProgress"] = sp
 	}
 	a.render(w, r, "show", http.StatusOK, sh.Name, data)
 }
@@ -391,7 +502,13 @@ func (a *App) pageSeason(w http.ResponseWriter, r *http.Request) {
 			watched++
 		}
 	}
-	a.render(w, r, "season", http.StatusOK, sh.Name, map[string]any{"Show": sh, "Season": n, "Episodes": eps, "Seasons": seasons, "WatchedCount": watched})
+	data := map[string]any{"Show": sh, "Season": n, "Episodes": eps, "Seasons": seasons, "WatchedCount": watched}
+	if list, err := a.Store.ShowRatings(sh.ID); err != nil {
+		logger.Error("PAGE season ratings show=%d: %v", sh.ID, err)
+	} else if n > 0 {
+		data["Chart"] = seasonRatingChart(list, n)
+	}
+	a.render(w, r, "season", http.StatusOK, sh.Name, data)
 }
 
 func (a *App) pageEpisode(w http.ResponseWriter, r *http.Request) {
@@ -443,8 +560,29 @@ func (a *App) pageEpisode(w http.ResponseWriter, r *http.Request) {
 	if err := a.Store.LocalizeEpisodes(lang, group...); err != nil {
 		logger.Error("PAGE localize episode id=%d lang=%s: %v", ep.ID, lang, err)
 	}
-	a.render(w, r, "episode", http.StatusOK, sh.Name+" "+episodeCode(ep.SeasonNumber, ep.EpisodeNumber),
-		map[string]any{"Show": sh, "Episode": ep, "Prev": prev, "Next": next})
+	data := map[string]any{"Show": sh, "Episode": ep, "Prev": prev, "Next": next}
+	if ep.SeasonNumber > 0 {
+		if list, err := a.Store.ShowRatings(sh.ID); err != nil {
+			logger.Error("PAGE episode ratings show=%d: %v", sh.ID, err)
+		} else {
+			data["Chart"] = episodeRatingChart(list, ep.SeasonNumber, ep.EpisodeNumber)
+		}
+		if stars, err := a.Store.StarCounts(ep.ID); err != nil {
+			logger.Error("PAGE episode star counts id=%d: %v", ep.ID, err)
+		} else {
+			type starRow struct{ Stars, Count int }
+			var rows []starRow
+			total := 0
+			for i := 4; i >= 0; i-- {
+				rows = append(rows, starRow{Stars: i + 1, Count: stars[i]})
+				total += stars[i]
+			}
+			if total > 0 {
+				data["Stars"], data["StarTotal"] = rows, total
+			}
+		}
+	}
+	a.render(w, r, "episode", http.StatusOK, sh.Name+" "+episodeCode(ep.SeasonNumber, ep.EpisodeNumber), data)
 }
 
 func (a *App) pageMyShows(w http.ResponseWriter, r *http.Request) {
@@ -454,17 +592,28 @@ func (a *App) pageMyShows(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	status := r.URL.Query().Get("status")
-	if status != "" && status != "all" && !store.ValidStatus(status) {
-		status = ""
+	explicit := status != ""
+	if status != "all" && !store.ValidStatus(status) {
+		status, explicit = "watching", false
 	}
-	list, err := a.Store.UserShows(u.ID, status)
+	counts, err := a.Store.StatusCounts(u.ID)
+	if err != nil {
+		logger.Error("PAGE my shows counts uid=%d: %v", u.ID, err)
+		a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
+		return
+	}
+	if !explicit && counts["watching"] == 0 {
+		status = "all"
+	}
+	offset, pg := paginate(r, "page", 36, counts[status], "")
+	list, err := a.Store.UserShows(u.ID, status, 36, offset)
 	if err != nil {
 		logger.Error("PAGE my shows uid=%d: %v", u.ID, err)
 		a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
 		return
 	}
 	a.localizeEntries(a.langOf(w, r), list)
-	a.page(w, r, "myshows", "nav.shows", map[string]any{"Entries": list, "Status": status, "Statuses": []string{"watching", "plan", "completed", "paused", "dropped"}})
+	a.page(w, r, "myshows", "nav.shows", map[string]any{"Pager": pg, "Counts": counts, "Entries": list, "Status": status, "Statuses": []string{"watching", "plan", "completed", "paused", "dropped"}})
 }
 
 func (a *App) pageCalendar(w http.ResponseWriter, r *http.Request) {
@@ -474,8 +623,13 @@ func (a *App) pageCalendar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	now := time.Now().UTC()
-	from := now.AddDate(0, 0, -7).Format("2006-01-02")
-	to := now.AddDate(0, 0, 45).Format("2006-01-02")
+	past := r.URL.Query().Get("past") == "1"
+	from := now.Format("2006-01-02")
+	to := now.AddDate(0, 0, 60).Format("2006-01-02")
+	if past {
+		from = now.AddDate(0, 0, -45).Format("2006-01-02")
+		to = now.AddDate(0, 0, -1).Format("2006-01-02")
+	}
 	items, err := a.Store.Calendar(u.ID, from, to)
 	if err != nil {
 		logger.Error("PAGE calendar uid=%d: %v", u.ID, err)
@@ -504,33 +658,26 @@ func (a *App) pageCalendar(w http.ResponseWriter, r *http.Request) {
 		d.Items = append(d.Items, it)
 	}
 	sort.Strings(dates)
+	if past {
+		sort.Sort(sort.Reverse(sort.StringSlice(dates)))
+	}
 	days := make([]*day, 0, len(dates))
 	for _, d := range dates {
 		days = append(days, byDate[d])
 	}
-	a.page(w, r, "calendar", "nav.calendar", map[string]any{"Days": days, "Today": now.Format("2006-01-02")})
-}
-
-func (a *App) pageAdminReports(w http.ResponseWriter, r *http.Request) {
-	if _, err := a.needAdmin(r); err != nil {
-		a.errorPage(w, r, http.StatusForbidden, "err.forbidden")
-		return
-	}
-	reports, err := a.Store.OpenAbuseReports(100)
-	if err != nil {
-		logger.Error("PAGE admin reports: %v", err)
-		a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
-		return
-	}
-	a.page(w, r, "admin_reports", "admin.reports", map[string]any{"Reports": reports})
+	a.page(w, r, "calendar", "nav.calendar", map[string]any{"Days": days, "Today": now.Format("2006-01-02"), "Past": past})
 }
 
 const privacyUpdated = "2026-10-13"
 
-var privacySections = []string{"data", "signin", "cookies", "third", "public", "use", "retention", "rights", "children", "changes", "contact"}
+var privacySections = []string{"data", "signin", "cookies", "third", "public", "admintools", "use", "retention", "rights", "children", "changes", "contact"}
 
 func (a *App) pagePrivacy(w http.ResponseWriter, r *http.Request) {
 	lang := a.langOf(w, r)
+	if p, ok := a.resolvePage("privacy", lang); ok {
+		a.renderPage(w, r, p)
+		return
+	}
 	operator := a.Cfg.OperatorName
 	if operator == "" {
 		operator = a.I18n.T(lang, "privacy.operator_default")

@@ -24,13 +24,24 @@ type notifView struct {
 	Read      bool   `json:"read"`
 	CreatedAt string `json:"created_at"`
 	Open      string `json:"open"`
+	Friend    string `json:"friend,omitempty"`
 }
 
-func (a *App) notifViews(lang string, list []store.Notification) []notifView {
+func (a *App) notifViews(viewer *store.User, lang string, list []store.Notification) []notifView {
 	out := make([]notifView, 0, len(list))
 	for _, n := range list {
 		title, body := a.Notif.Text(lang, n.Event, n.Data)
-		out = append(out, notifView{ID: n.ID, Title: title, Body: body, Link: n.Link, Read: n.Read, CreatedAt: n.CreatedAt, Open: "/notifications/" + itoa(n.ID) + "/open"})
+		v := notifView{ID: n.ID, Title: title, Body: body, Link: n.Link, Read: n.Read, CreatedAt: n.CreatedAt, Open: "/notifications/" + itoa(n.ID) + "/open"}
+		if n.Event == "friend_request" {
+			if name, _ := n.Data["username"].(string); name != "" && viewer != nil {
+				if p, err := a.Store.UserByUsername(name); err == nil {
+					if state, err := a.Store.FriendState(viewer.ID, p.ID); err == nil && state == "incoming" {
+						v.Friend = p.Username
+					}
+				}
+			}
+		}
+		out = append(out, v)
 	}
 	return out
 }
@@ -51,7 +62,7 @@ func (a *App) apiNotificationsRecent(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	a.okJSON(w, map[string]any{"unread": unread, "items": a.notifViews(a.lang(w, r, u), list)})
+	a.okJSON(w, map[string]any{"unread": unread, "items": a.notifViews(u, a.lang(w, r, u), list)})
 }
 
 func (a *App) pageNotifications(w http.ResponseWriter, r *http.Request) {
@@ -77,7 +88,7 @@ func (a *App) pageNotifications(w http.ResponseWriter, r *http.Request) {
 		a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
 		return
 	}
-	views := a.notifViews(a.lang(w, r, u), list)
+	views := a.notifViews(u, a.lang(w, r, u), list)
 	if err := a.Store.MarkAllNotificationsRead(u.ID); err != nil {
 		logger.Error("PAGE notifications mark read uid=%d: %v", u.ID, err)
 	}
@@ -222,6 +233,25 @@ func (a *App) apiNotificationSettings(w http.ResponseWriter, r *http.Request) {
 	if err := decode(r, &in); err != nil {
 		a.fail(w, r, err)
 		return
+	}
+	if in.Master[notify.ChanTelegram] && u.TelegramChatID == "" {
+		a.fail(w, r, apiErr{http.StatusBadRequest, "err.telegram_not_linked"})
+		return
+	}
+	if in.Master[notify.ChanEmail] && !(u.Email != "" && u.EmailVerified) {
+		a.fail(w, r, apiErr{http.StatusBadRequest, "err.email_not_verified"})
+		return
+	}
+	if in.Master[notify.ChanPush] {
+		subs, err := a.Store.PushSubs(u.ID)
+		if err != nil {
+			a.fail(w, r, err)
+			return
+		}
+		if len(subs) == 0 {
+			a.fail(w, r, apiErr{http.StatusBadRequest, "err.push_not_enabled"})
+			return
+		}
 	}
 	if err := a.Store.SetNotifyFlags(u.ID, in.Master[notify.ChanInApp], in.Master[notify.ChanPush], in.Master[notify.ChanEmail], in.Master[notify.ChanTelegram]); err != nil {
 		a.fail(w, r, err)
