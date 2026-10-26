@@ -1,6 +1,8 @@
 module tvt
 
-go 1.26.10
+go 1.26.0
+
+toolchain go1.26.10
 
 require (
 	github.com/dop251/goja v0.0.0-20261012212121-0c308c5ed11b
