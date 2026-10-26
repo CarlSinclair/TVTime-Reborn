@@ -375,6 +375,9 @@ type message struct {
 	// Comment is an episode comment shared with every allow-listed server.
 	Comment *CommentMsg `json:"comment,omitempty"`
 	Reason  string      `json:"reason,omitempty"`
+	// Ratings is a batch of one person's ratings, shared with every allow-listed
+	// server and kept there for good.
+	Ratings []RatingMsg `json:"ratings,omitempty"`
 }
 
 // CommentMsg is an episode comment as it travels between servers. Ref names it

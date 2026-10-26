@@ -108,6 +108,8 @@
     "unmark_all": "시즌 시청 표시 해제"
   },
   "ep": {
+    "comments_n": "댓글 %d개",
+    "comments_one": "댓글 1개",
     "tba": "미정",
     "mark_watched": "시청 완료로 표시",
     "watched": "시청함",
@@ -398,6 +400,11 @@
     "user_deactivate_hint": "비활성화된 계정은 로그인할 수 없으며 다른 사람에게 보이지 않습니다.",
     "user_deactivate_confirm": "이 계정을 비활성화할까요? 로그아웃되며 로그인할 수 없게 됩니다.",
     "user_delete_hint": "삭제하면 계정과 모든 데이터가 영구적으로 제거됩니다.",
+    "ratings_remove": "평점 삭제",
+    "server_remove_title": "이 서버와 공유 중지",
+    "server_block_confirm": "이 서버는 더 이상 아무것도 교환하지 않습니다.",
+    "server_drop_ratings": "이 서버에서 받은 모든 평점도 삭제",
+    "server_drop_comments": "이 서버에서 받은 모든 댓글도 삭제",
     "comments_hide": "댓글 숨기기",
     "comments_delete": "댓글 삭제",
     "config": "설정",
@@ -545,6 +552,7 @@
     "network_error": "네트워크 오류입니다. 다시 시도해 주세요.",
     "mail_failed": "인증 이메일을 보내지 못했습니다. 메일이 정상화되면 다시 보내기 버튼을 사용하세요.",
     "verify_sent": "인증 이메일을 보냈습니다.",
+    "progress": "%d / %d 시청",
     "marked_many": "시청 완료로 표시됨: %d",
     "close": "닫기",
     "upto_title": "여기까지 시청한 것으로 표시할까요?",
@@ -745,6 +753,14 @@
     "episode_aired": {
       "body": "{code} {name}이(가) 공개되었습니다.",
       "title": "새 에피소드: {show}"
+    },
+    "episodes_aired": {
+      "body": "시즌 {season}의 에피소드 {count}개가 공개되었습니다.",
+      "title": "새 에피소드: {show}"
+    },
+    "season_aired": {
+      "body": "시즌 {season}이(가) 공개되었습니다 (에피소드 {count}개).",
+      "title": "새 시즌: {show}"
     },
     "mark_all": "모두 읽음으로 표시",
     "newer": "최신",

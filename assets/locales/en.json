@@ -108,6 +108,8 @@
     "unmark_all": "Unmark season"
   },
   "ep": {
+    "comments_n": "%d comments",
+    "comments_one": "1 comment",
     "tba": "TBA",
     "mark_watched": "Mark as watched",
     "watched": "Watched",
@@ -398,6 +400,11 @@
     "user_deactivate_hint": "A deactivated account cannot sign in and is hidden from everyone else.",
     "user_deactivate_confirm": "Deactivate this account? The person will be signed out and cannot sign in.",
     "user_delete_hint": "Deleting removes the account and everything it owns for good.",
+    "ratings_remove": "Remove their ratings",
+    "server_remove_title": "Stop sharing with this server",
+    "server_block_confirm": "This server will no longer exchange anything with you.",
+    "server_drop_ratings": "Also remove all ratings received from this server",
+    "server_drop_comments": "Also remove all comments received from this server",
     "comments_hide": "Hide their comments",
     "comments_delete": "Delete their comments",
     "config": "Config",
@@ -545,6 +552,7 @@
     "network_error": "Network error. Please try again.",
     "mail_failed": "We could not send the verification email. Use the resend button once mail is working.",
     "verify_sent": "Verification email sent.",
+    "progress": "%d of %d watched",
     "marked_many": "Marked as watched: %d",
     "close": "Close",
     "upto_title": "Mark watched until here?",
@@ -745,6 +753,14 @@
     "episode_aired": {
       "body": "{code} {name} is out now.",
       "title": "New episode: {show}"
+    },
+    "episodes_aired": {
+      "body": "{count} episodes of season {season} are out now.",
+      "title": "New episodes: {show}"
+    },
+    "season_aired": {
+      "body": "Season {season} is out now ({count} episodes).",
+      "title": "New season: {show}"
     },
     "mark_all": "Mark all read",
     "newer": "Newer",

@@ -146,3 +146,16 @@ func buildChart(list []store.EpisodeRating, markSeason, markEpisode int, episode
 
 // starsOf converts a stored 1 to 10 rating into whole stars.
 func starsOf(rating int) int { return (rating + 1) / 2 }
+
+type starRow struct{ Stars, Count int }
+
+// starRows lists whole-star counts from five stars down, with their total.
+func starRows(counts [5]int) ([]starRow, int) {
+	var rows []starRow
+	total := 0
+	for i := 4; i >= 0; i-- {
+		rows = append(rows, starRow{Stars: i + 1, Count: counts[i]})
+		total += counts[i]
+	}
+	return rows, total
+}

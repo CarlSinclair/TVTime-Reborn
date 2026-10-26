@@ -262,6 +262,70 @@ func (a *App) apiWatchSeason(w http.ResponseWriter, r *http.Request) {
 	a.okJSON(w, map[string]any{"marked": marked})
 }
 
+func (a *App) apiRateSeason(w http.ResponseWriter, r *http.Request) {
+	u, err := a.needUser(r)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	n, err := strconv.Atoi(r.PathValue("n"))
+	if err != nil || n < 0 {
+		a.fail(w, r, errNotFound)
+		return
+	}
+	var in struct{ Rating int }
+	if err := decode(r, &in); err != nil || in.Rating < 0 || in.Rating > 10 {
+		a.fail(w, r, errBadRequest)
+		return
+	}
+	sh, ok := a.showForAPI(w, r)
+	if !ok {
+		return
+	}
+	seasons, err := a.Store.Seasons(sh.ID)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	found := false
+	for _, se := range seasons {
+		found = found || se.SeasonNumber == n
+	}
+	if !found {
+		a.fail(w, r, errNotFound)
+		return
+	}
+	if err := a.Store.RateSeason(u.ID, sh.ID, n, in.Rating); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	a.shareRating(u, store.Rating{Kind: "season", ShowTMDB: sh.TMDBID, Season: n, Rating: in.Rating})
+	a.okJSON(w, nil)
+}
+
+func (a *App) apiRateShow(w http.ResponseWriter, r *http.Request) {
+	u, err := a.needUser(r)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	var in struct{ Rating int }
+	if err := decode(r, &in); err != nil || in.Rating < 0 || in.Rating > 10 {
+		a.fail(w, r, errBadRequest)
+		return
+	}
+	sh, ok := a.showForAPI(w, r)
+	if !ok {
+		return
+	}
+	if err := a.Store.RateShow(u.ID, sh.ID, in.Rating); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	a.shareRating(u, store.Rating{Kind: "show", ShowTMDB: sh.TMDBID, Rating: in.Rating})
+	a.okJSON(w, nil)
+}
+
 func (a *App) apiRate(w http.ResponseWriter, r *http.Request) {
 	u, err := a.needUser(r)
 	if err != nil {

@@ -108,6 +108,8 @@
     "unmark_all": "Deseleziona stagione"
   },
   "ep": {
+    "comments_n": "%d commenti",
+    "comments_one": "1 commento",
     "tba": "Da definire",
     "mark_watched": "Segna come visto",
     "watched": "Visto",
@@ -398,6 +400,11 @@
     "user_deactivate_hint": "Un account disattivato non può accedere ed è nascosto agli altri.",
     "user_deactivate_confirm": "Disattivare questo account? La persona verrà disconnessa e non potrà accedere.",
     "user_delete_hint": "L'eliminazione rimuove definitivamente l'account e tutto ciò che possiede.",
+    "ratings_remove": "Rimuovi le sue valutazioni",
+    "server_remove_title": "Smetti di condividere con questo server",
+    "server_block_confirm": "Questo server non scambierà più nulla con te.",
+    "server_drop_ratings": "Rimuovi anche tutte le valutazioni ricevute da questo server",
+    "server_drop_comments": "Rimuovi anche tutti i commenti ricevuti da questo server",
     "comments_hide": "Nascondi i commenti",
     "comments_delete": "Elimina i commenti",
     "config": "Configurazione",
@@ -545,6 +552,7 @@
     "network_error": "Errore di rete. Riprova.",
     "mail_failed": "Non siamo riusciti a inviare l'e-mail di verifica. Usa il pulsante di reinvio quando la posta funziona.",
     "verify_sent": "E-mail di verifica inviata.",
+    "progress": "%d di %d visti",
     "marked_many": "Segnati come visti: %d",
     "close": "Chiudi",
     "upto_title": "Segnare come visto fino a qui?",
@@ -745,6 +753,14 @@
     "episode_aired": {
       "body": "{code} {name} è disponibile.",
       "title": "Nuovo episodio: {show}"
+    },
+    "episodes_aired": {
+      "body": "{count} episodi della stagione {season} sono disponibili.",
+      "title": "Nuovi episodi: {show}"
+    },
+    "season_aired": {
+      "body": "La stagione {season} è disponibile ({count} episodi).",
+      "title": "Nuova stagione: {show}"
     },
     "mark_all": "Segna tutto come letto",
     "newer": "Più recenti",

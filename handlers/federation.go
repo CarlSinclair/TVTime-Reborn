@@ -45,16 +45,28 @@ func (a *App) emitRating(u *store.User, ep *store.Episode, rating int) {
 		return
 	}
 	ref := "r:" + itoa(ep.ID)
+	sh := a.showOfEpisode(ep)
+	if sh != nil {
+		a.shareRating(u, store.Rating{Kind: "episode", ShowTMDB: sh.TMDBID, Season: ep.SeasonNumber, Episode: ep.EpisodeNumber, Rating: rating})
+	}
 	if rating <= 0 {
 		a.Fed.Retract(u, ref)
 		return
 	}
-	sh := a.showOfEpisode(ep)
 	if sh == nil {
 		return
 	}
 	a.Fed.Emit(u, federation.Event{Ref: ref, Kind: "rating", ShowTMDB: sh.TMDBID, Show: sh.Name, Poster: sh.PosterPath,
 		Season: ep.SeasonNumber, Episode: ep.EpisodeNumber, Stars: starsOf(rating)})
+}
+
+// shareRating sends one rating (or, at 0, its withdrawal) to every allow-listed
+// server, where it is kept as if it were a local member's.
+func (a *App) shareRating(u *store.User, r store.Rating) {
+	if a.Fed == nil || r.Season < 0 || r.Season > 5000 {
+		return
+	}
+	a.Fed.ShareRatings(u, []store.Rating{r})
 }
 
 // emitComment shares an open comment on an episode, or a person's own post,
@@ -113,6 +125,17 @@ func (a *App) withdrawAll(u *store.User) {
 	}
 }
 
+// removeRatings erases everything a person has rated, here and, for a local
+// person, on the servers it was shared with. Ratings otherwise outlive the
+// account's moderation, since they are rarely sensitive; this is for abuse such
+// as review bombing.
+func (a *App) removeRatings(u *store.User) error {
+	if a.Fed != nil {
+		a.Fed.WithdrawRatings(u)
+	}
+	return a.Store.DeleteUserRatings(u.ID)
+}
+
 func (a *App) apiAdminServerShare(w http.ResponseWriter, r *http.Request) {
 	admin, err := a.needAdmin(r)
 	if err != nil {
@@ -137,6 +160,9 @@ func (a *App) apiAdminServerShare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	invalidateCSP()
+	if in.Share && a.Fed != nil {
+		go a.Fed.BackfillRatings(host)
+	}
 	logger.Info("ADMIN uid=%d set sharing with %s to %v", admin.ID, host, in.Share)
 	a.okJSON(w, nil)
 }

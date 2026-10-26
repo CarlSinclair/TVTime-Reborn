@@ -108,6 +108,8 @@
     "unmark_all": "取消标记本季"
   },
   "ep": {
+    "comments_n": "%d 条评论",
+    "comments_one": "1 条评论",
     "tba": "待定",
     "mark_watched": "标记为已看",
     "watched": "已看",
@@ -398,6 +400,11 @@
     "user_deactivate_hint": "被停用的账户无法登录，对其他人不可见。",
     "user_deactivate_confirm": "停用此账户？该用户将被登出且无法登录。",
     "user_delete_hint": "删除会永久移除该账户及其所有内容。",
+    "ratings_remove": "删除其评分",
+    "server_remove_title": "停止与此服务器共享",
+    "server_block_confirm": "此服务器将不再与你交换任何内容。",
+    "server_drop_ratings": "同时删除从此服务器收到的所有评分",
+    "server_drop_comments": "同时删除从此服务器收到的所有评论",
     "comments_hide": "隐藏其评论",
     "comments_delete": "删除其评论",
     "config": "配置",
@@ -545,6 +552,7 @@
     "network_error": "网络错误，请重试。",
     "mail_failed": "无法发送验证邮件。邮件服务恢复后请使用重新发送按钮。",
     "verify_sent": "验证邮件已发送。",
+    "progress": "已看 %d / %d",
     "marked_many": "已标记为已看：%d",
     "close": "关闭",
     "upto_title": "标记看到这里为止吗？",
@@ -745,6 +753,14 @@
     "episode_aired": {
       "body": "{code} {name} 已上线。",
       "title": "新剧集：{show}"
+    },
+    "episodes_aired": {
+      "body": "第 {season} 季的 {count} 集已上线。",
+      "title": "新剧集：{show}"
+    },
+    "season_aired": {
+      "body": "第 {season} 季已上线（共 {count} 集）。",
+      "title": "新一季：{show}"
     },
     "mark_all": "全部标为已读",
     "newer": "较新",

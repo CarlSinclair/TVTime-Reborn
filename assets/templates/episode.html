@@ -27,38 +27,13 @@
     {{if $.Data.Chart.HasTMDB}}<li><span class="swatch tmdb"></span>{{$.T "show.ratings_tmdb"}}</li>{{end}}
   </ul>
   {{end}}
-  {{if $.Data.Stars}}
-  <ul class="star-dist" aria-label="{{$.T "ep.star_votes" $.Data.StarTotal}}">
-    {{range $.Data.Stars}}<li><span class="star-label">{{.Stars}} &#9733;</span><progress max="{{$.Data.StarTotal}}" value="{{.Count}}"></progress><span class="star-count">{{.Count}}</span></li>{{end}}
-  </ul>
-  {{end}}
+  {{template "rate_block" (dict "V" $ "Stars" $.Data.Stars "Total" $.Data.StarTotal)}}
 </section>
 {{end}}
 <nav class="pager">
   {{if $.Data.Prev}}<a class="chip" href="/episode/{{$.Data.Prev.ID}}"><span class="arr-l" aria-hidden="true"></span> {{code $.Data.Prev.SeasonNumber $.Data.Prev.EpisodeNumber}}</a>{{else}}<span></span>{{end}}
   {{if $.Data.Next}}<a class="chip" href="/episode/{{$.Data.Next.ID}}">{{code $.Data.Next.SeasonNumber $.Data.Next.EpisodeNumber}} <span class="arr-r" aria-hidden="true"></span></a>{{end}}
 </nav>
-<section id="comments" class="comments" data-kind="episode" data-target="{{.ID}}" data-logged="{{if $.User}}1{{else}}0{{end}}" data-verified="{{if and $.User $.User.CanComment}}1{{else}}0{{end}}" data-admin="{{if and $.User $.User.IsAdmin}}1{{else}}0{{end}}">
-  <h2>{{$.T "comments.title"}} <small id="comments-count"></small></h2>
-  {{if $.User}}
-    {{if $.User.CanComment}}
-    <form class="comment-form" id="comment-form">
-      <textarea name="body" maxlength="2000" rows="3" placeholder="{{$.T "comments.placeholder"}}" required></textarea>
-      <div class="comment-form-row">
-        <span class="notify-row spoiler-row"><span class="tswitch sm"><input type="checkbox" class="tswitch-input" id="ep-spoiler" name="spoiler"><label for="ep-spoiler" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="ep-spoiler">{{$.T "comments.mark_spoiler"}}</label></span>
-        <button class="btn" type="submit">{{$.T "comments.post"}}</button>
-      </div>
-    </form>
-    {{else if $.User.IsBanned}}
-    <p class="notice">{{$.T "err.read_only"}}</p>
-    {{else}}
-    <p class="notice">{{$.T "comments.verify_needed"}}</p>
-    {{end}}
-  {{else}}
-  <p class="muted"><a href="/login">{{$.T "comments.login_needed"}}</a></p>
-  {{end}}
-  <ul class="comment-list" id="comment-list"></ul>
-  <p class="center"><button class="btn ghost" type="button" id="comments-more" hidden>{{$.T "comments.load_more"}}</button></p>
-</section>
+{{template "comments_section" (dict "V" $ "Kind" "episode" "Target" .ID)}}
 {{end}}
 {{end}}

@@ -172,9 +172,15 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/show/{tmdb}/season/{n}/watch", a.apiWatchSeason)
 	mux.HandleFunc("POST /api/episode/{id}/watch", a.apiWatch)
 	mux.HandleFunc("POST /api/episode/{id}/rate", a.apiRate)
+	mux.HandleFunc("POST /api/show/{tmdb}/rate", a.apiRateShow)
+	mux.HandleFunc("POST /api/show/{tmdb}/season/{n}/rate", a.apiRateSeason)
 
 	mux.HandleFunc("GET /api/episode/{id}/comments", a.apiListComments())
 	mux.HandleFunc("POST /api/episode/{id}/comments", a.apiAddComment())
+	mux.HandleFunc("GET /api/season/{id}/comments", a.apiListComments())
+	mux.HandleFunc("POST /api/season/{id}/comments", a.apiAddComment())
+	mux.HandleFunc("GET /api/show/{id}/comments", a.apiListComments())
+	mux.HandleFunc("POST /api/show/{id}/comments", a.apiAddComment())
 	mux.HandleFunc("GET /api/profile/{id}/comments", a.apiListComments())
 	mux.HandleFunc("POST /api/profile/{id}/comments", a.apiAddComment())
 	mux.HandleFunc("POST /api/comments/{id}/edit", a.apiEditComment)
@@ -433,7 +439,17 @@ func (a *App) pageShow(w http.ResponseWriter, r *http.Request) {
 	} else {
 		data["Chart"] = buildRatingChart(list)
 	}
+	if counts, err := a.Store.ShowStarCounts(sh.ID); err != nil {
+		logger.Error("PAGE show star counts show=%d: %v", sh.ID, err)
+	} else if rows, total := starRows(counts); total > 0 {
+		data["Stars"], data["StarTotal"] = rows, total
+	}
 	if u := auth.UserFrom(r.Context()); u != nil {
+		if mine, err := a.Store.UserShowRating(u.ID, sh.ID); err != nil {
+			logger.Error("PAGE show own rating show=%d uid=%d: %v", sh.ID, u.ID, err)
+		} else {
+			data["UserRating"] = mine
+		}
 		f, err := a.Store.FollowOf(u.ID, sh.ID)
 		if err != nil {
 			logger.Error("PAGE show follow: %v", err)
@@ -502,11 +518,33 @@ func (a *App) pageSeason(w http.ResponseWriter, r *http.Request) {
 			watched++
 		}
 	}
-	data := map[string]any{"Show": sh, "Season": n, "Episodes": eps, "Seasons": seasons, "WatchedCount": watched}
+	data := map[string]any{"Show": sh, "Season": n, "Episodes": eps, "Seasons": seasons, "WatchedCount": watched, "CommentCounts": map[int64]int{}}
+	for _, se := range seasons {
+		if se.SeasonNumber == n {
+			data["SeasonID"] = se.ID
+		}
+	}
+	if counts, err := a.Store.SeasonCommentCounts(sh.ID, n); err != nil {
+		logger.Error("PAGE season comment counts show=%d season=%d: %v", sh.ID, n, err)
+	} else {
+		data["CommentCounts"] = counts
+	}
 	if list, err := a.Store.ShowRatings(sh.ID); err != nil {
 		logger.Error("PAGE season ratings show=%d: %v", sh.ID, err)
 	} else if n > 0 {
 		data["Chart"] = seasonRatingChart(list, n)
+	}
+	if counts, err := a.Store.SeasonStarCounts(sh.ID, n); err != nil {
+		logger.Error("PAGE season star counts show=%d season=%d: %v", sh.ID, n, err)
+	} else if rows, total := starRows(counts); total > 0 {
+		data["Stars"], data["StarTotal"] = rows, total
+	}
+	if uid != 0 {
+		if mine, err := a.Store.UserSeasonRating(uid, sh.ID, n); err != nil {
+			logger.Error("PAGE season own rating show=%d season=%d uid=%d: %v", sh.ID, n, uid, err)
+		} else {
+			data["UserRating"] = mine
+		}
 	}
 	a.render(w, r, "season", http.StatusOK, sh.Name, data)
 }
@@ -570,13 +608,7 @@ func (a *App) pageEpisode(w http.ResponseWriter, r *http.Request) {
 		if stars, err := a.Store.StarCounts(ep.ID); err != nil {
 			logger.Error("PAGE episode star counts id=%d: %v", ep.ID, err)
 		} else {
-			type starRow struct{ Stars, Count int }
-			var rows []starRow
-			total := 0
-			for i := 4; i >= 0; i-- {
-				rows = append(rows, starRow{Stars: i + 1, Count: stars[i]})
-				total += stars[i]
-			}
+			rows, total := starRows(stars)
 			if total > 0 {
 				data["Stars"], data["StarTotal"] = rows, total
 			}

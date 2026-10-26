@@ -111,7 +111,7 @@ var Fields = []Field{
 }
 
 // defaults and examples by key. Anything not listed defaults to blank.
-var defaults = map[string]string{"smtp_port": "587", "app_name": "TVT", "source_url": "https://github.com/CarlSinclair/tvt", "federation": "1"}
+var defaults = map[string]string{"smtp_port": "587", "app_name": "TVT", "source_url": "https://github.com/CarlSinclair/TVTime-Reborn", "federation": "1"}
 
 var examples = map[string]string{
 	"smtp_host": "smtp.example.com", "smtp_port": "587", "smtp_user": "username", "mail_from": "TVT <no-reply@example.com>",

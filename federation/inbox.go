@@ -131,6 +131,8 @@ func (s *Service) dispatch(host string, m message) error {
 		return s.onCommentRetract(host, m)
 	case "report":
 		return s.onReport(host, m)
+	case "ratings":
+		return s.onRatings(host, m)
 	}
 	return errBadMessage
 }

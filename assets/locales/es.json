@@ -108,6 +108,8 @@
     "unmark_all": "Desmarcar temporada"
   },
   "ep": {
+    "comments_n": "%d comentarios",
+    "comments_one": "1 comentario",
     "tba": "Por confirmar",
     "mark_watched": "Marcar como visto",
     "watched": "Visto",
@@ -398,6 +400,11 @@
     "user_deactivate_hint": "Una cuenta desactivada no puede iniciar sesión y queda oculta para los demás.",
     "user_deactivate_confirm": "¿Desactivar esta cuenta? Se cerrará la sesión y no podrá iniciar sesión.",
     "user_delete_hint": "Eliminar borra la cuenta y todo lo que posee de forma definitiva.",
+    "ratings_remove": "Eliminar sus valoraciones",
+    "server_remove_title": "Dejar de compartir con este servidor",
+    "server_block_confirm": "Este servidor dejará de intercambiar cualquier cosa contigo.",
+    "server_drop_ratings": "Eliminar también todas las valoraciones recibidas de este servidor",
+    "server_drop_comments": "Eliminar también todos los comentarios recibidos de este servidor",
     "comments_hide": "Ocultar sus comentarios",
     "comments_delete": "Eliminar sus comentarios",
     "config": "Configuración",
@@ -545,6 +552,7 @@
     "network_error": "Error de red. Inténtalo de nuevo.",
     "mail_failed": "No pudimos enviar el correo de verificación. Usa el botón de reenvío cuando el correo funcione.",
     "verify_sent": "Correo de verificación enviado.",
+    "progress": "%d de %d vistos",
     "marked_many": "Marcados como vistos: %d",
     "close": "Cerrar",
     "upto_title": "¿Marcar como visto hasta aquí?",
@@ -745,6 +753,14 @@
     "episode_aired": {
       "body": "{code} {name} ya está disponible.",
       "title": "Nuevo episodio: {show}"
+    },
+    "episodes_aired": {
+      "body": "{count} episodios de la temporada {season} ya están disponibles.",
+      "title": "Nuevos episodios: {show}"
+    },
+    "season_aired": {
+      "body": "La temporada {season} ya está disponible ({count} episodios).",
+      "title": "Nueva temporada: {show}"
     },
     "mark_all": "Marcar todo como leído",
     "newer": "Más recientes",

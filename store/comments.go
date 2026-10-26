@@ -15,9 +15,10 @@ var (
 
 const MaxCommentLen = 2000
 
-// Target identifies what a comment thread hangs off: an episode, or a person's
-// profile, where the person's own top-level comments are their posts and
-// everyone else replies.
+// Target identifies what a comment thread hangs off: an episode, a season, a
+// show, or a person's profile, where the person's own top-level comments are
+// their posts and everyone else replies. Season and show ids are the local row
+// ids.
 type Target struct {
 	Kind string
 	ID   int64
@@ -26,16 +27,50 @@ type Target struct {
 const (
 	KindEpisode = "episode"
 	KindProfile = "profile"
+	KindSeason  = "season"
+	KindShow    = "show"
 )
 
 func EpisodeTarget(id int64) Target { return Target{Kind: KindEpisode, ID: id} }
 func ProfileTarget(id int64) Target { return Target{Kind: KindProfile, ID: id} }
 
+func SeasonTarget(id int64) Target { return Target{Kind: KindSeason, ID: id} }
+func ShowTarget(id int64) Target   { return Target{Kind: KindShow, ID: id} }
+
 func (t Target) col() string {
-	if t.Kind == KindProfile {
+	switch t.Kind {
+	case KindProfile:
 		return "profile_id"
+	case KindSeason:
+		return "season_id"
+	case KindShow:
+		return "show_id"
 	}
 	return "episode_id"
+}
+
+func (t Target) table() string {
+	switch t.Kind {
+	case KindProfile:
+		return "users"
+	case KindSeason:
+		return "seasons"
+	case KindShow:
+		return "shows"
+	}
+	return "episodes"
+}
+
+func targetOfIDs(ep, prof, season, show int64) Target {
+	switch {
+	case prof != 0:
+		return ProfileTarget(prof)
+	case season != 0:
+		return SeasonTarget(season)
+	case show != 0:
+		return ShowTarget(show)
+	}
+	return EpisodeTarget(ep)
 }
 
 type Comment struct {
@@ -94,12 +129,8 @@ func (s *Store) AddComment(userID int64, t Target, parentID int64, body string, 
 	if spoiler {
 		sp = 1
 	}
-	src := "episodes"
-	if t.Kind == KindProfile {
-		src = "users"
-	}
 	res, err := s.DB.Exec(`INSERT INTO comments (`+t.col()+`, user_id, parent_id, body, author_spoiler, created_at, image)
-	  SELECT id, ?, ?, ?, ?, ?, ? FROM `+src+` WHERE id = ?`, userID, parent, body, sp, Now(), image, t.ID)
+	  SELECT id, ?, ?, ?, ?, ?, ? FROM `+t.table()+` WHERE id = ?`, userID, parent, body, sp, Now(), image, t.ID)
 	if err != nil {
 		return 0, fmt.Errorf("add comment uid=%d %s=%d: %w", userID, t.Kind, t.ID, err)
 	}
@@ -109,23 +140,19 @@ func (s *Store) AddComment(userID int64, t Target, parentID int64, body string, 
 	return res.LastInsertId()
 }
 
-const commentSelect = `SELECT c.id, COALESCE(c.episode_id,0), COALESCE(c.profile_id,0), c.user_id, u.username, u.display_name, COALESCE(c.parent_id,0), c.body,
+const commentSelect = `SELECT c.id, COALESCE(c.episode_id,0), COALESCE(c.profile_id,0), COALESCE(c.season_id,0), COALESCE(c.show_id,0), c.user_id, u.username, u.display_name, COALESCE(c.parent_id,0), c.body,
 	    c.author_spoiler, c.spoiler_reports, c.not_spoiler_reports, c.created_at, COALESCE(c.edited_at,''), c.deleted_at IS NOT NULL, c.hidden_at IS NOT NULL, c.parent_host, c.parent_ref, c.image
 	  FROM comments c JOIN users u ON u.id = c.user_id `
 
 func scanComment(row interface{ Scan(...any) error }) (Comment, error) {
 	var c Comment
-	var ep, prof int64
+	var ep, prof, season, show int64
 	var as, del, hid int
-	if err := row.Scan(&c.ID, &ep, &prof, &c.UserID, &c.Username, &c.DisplayName, &c.ParentID, &c.Body, &as, &c.SpoilerReports, &c.NotSpoilerReports,
+	if err := row.Scan(&c.ID, &ep, &prof, &season, &show, &c.UserID, &c.Username, &c.DisplayName, &c.ParentID, &c.Body, &as, &c.SpoilerReports, &c.NotSpoilerReports,
 		&c.CreatedAt, &c.EditedAt, &del, &hid, &c.ParentHost, &c.ParentRef, &c.Image); err != nil {
 		return c, err
 	}
-	if prof != 0 {
-		c.Target = ProfileTarget(prof)
-	} else {
-		c.Target = EpisodeTarget(ep)
-	}
+	c.Target = targetOfIDs(ep, prof, season, show)
 	c.AuthorSpoiler = as == 1
 	c.Deleted = del == 1
 	c.Hidden = hid == 1 && !c.Deleted
@@ -230,6 +257,25 @@ func (s *Store) CountComments(t Target) (int, error) {
 		return 0, fmt.Errorf("count comments %s=%d: %w", t.Kind, t.ID, err)
 	}
 	return n, nil
+}
+
+func (s *Store) SeasonCommentCounts(showID int64, season int) (map[int64]int, error) {
+	rows, err := s.DB.Query(`SELECT c.episode_id, COUNT(*) FROM comments c JOIN episodes e ON e.id = c.episode_id
+	  WHERE e.show_id = ? AND e.season_number = ? AND c.deleted_at IS NULL AND c.hidden_at IS NULL GROUP BY c.episode_id`, showID, season)
+	if err != nil {
+		return nil, fmt.Errorf("season comment counts show=%d season=%d: %w", showID, season, err)
+	}
+	defer rows.Close()
+	out := map[int64]int{}
+	for rows.Next() {
+		var id int64
+		var n int
+		if err := rows.Scan(&id, &n); err != nil {
+			return nil, fmt.Errorf("season comment counts scan show=%d season=%d: %w", showID, season, err)
+		}
+		out[id] = n
+	}
+	return out, rows.Err()
 }
 
 func (s *Store) CommentByID(id int64) (*Comment, error) {
@@ -406,6 +452,8 @@ type AbuseReport struct {
 	Reasons     string
 	Last        string
 	Image       string
+	// Path is where a season or show thread lives.
+	Path string
 }
 
 func (s *Store) CountAbuseReports() (int, error) {
@@ -418,7 +466,8 @@ func (s *Store) CountAbuseReports() (int, error) {
 }
 
 func (s *Store) OpenAbuseReports(limit, offset int) ([]AbuseReport, error) {
-	rows, err := s.DB.Query(`SELECT c.id, COALESCE(c.episode_id,0), COALESCE(c.profile_id,0), COALESCE((SELECT username FROM users WHERE id = c.profile_id),''), c.body, c.image, u.username, u.id, COUNT(*), COALESCE(GROUP_CONCAT(NULLIF(r.reason,''), ' | '),''), MAX(r.created_at)
+	rows, err := s.DB.Query(`SELECT c.id, COALESCE(c.episode_id,0), COALESCE(c.profile_id,0), COALESCE(c.season_id,0), COALESCE(c.show_id,0), COALESCE((SELECT username FROM users WHERE id = c.profile_id),''),
+	  COALESCE((SELECT '/show/' || sh.tmdb_id || '/season/' || se.season_number FROM seasons se JOIN shows sh ON sh.id = se.show_id WHERE se.id = c.season_id), (SELECT '/show/' || tmdb_id FROM shows WHERE id = c.show_id), ''), c.body, c.image, u.username, u.id, COUNT(*), COALESCE(GROUP_CONCAT(NULLIF(r.reason,''), ' | '),''), MAX(r.created_at)
 	  FROM comment_reports r JOIN comments c ON c.id = r.comment_id JOIN users u ON u.id = c.user_id
 	  WHERE r.kind = 'abuse' AND r.resolved_at IS NULL AND c.deleted_at IS NULL AND c.hidden_at IS NULL
 	  GROUP BY c.id ORDER BY COUNT(*) DESC, MAX(r.created_at) DESC LIMIT ? OFFSET ?`, limit, offset)
@@ -429,15 +478,11 @@ func (s *Store) OpenAbuseReports(limit, offset int) ([]AbuseReport, error) {
 	var out []AbuseReport
 	for rows.Next() {
 		var a AbuseReport
-		var ep, prof int64
-		if err := rows.Scan(&a.CommentID, &ep, &prof, &a.ProfileName, &a.Body, &a.Image, &a.Author, &a.AuthorID, &a.Reporters, &a.Reasons, &a.Last); err != nil {
+		var ep, prof, season, show int64
+		if err := rows.Scan(&a.CommentID, &ep, &prof, &season, &show, &a.ProfileName, &a.Path, &a.Body, &a.Image, &a.Author, &a.AuthorID, &a.Reporters, &a.Reasons, &a.Last); err != nil {
 			return nil, err
 		}
-		if prof != 0 {
-			a.Target = ProfileTarget(prof)
-		} else {
-			a.Target = EpisodeTarget(ep)
-		}
+		a.Target = targetOfIDs(ep, prof, season, show)
 		out = append(out, a)
 	}
 	return out, rows.Err()

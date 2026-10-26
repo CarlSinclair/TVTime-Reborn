@@ -89,7 +89,7 @@ func Load() (*Config, error) {
 		FedAllow:       strings.Split(env("TVT_FEDERATION_ALLOW", ""), ","),
 		TVDBImageBase:  strings.TrimRight(env("TVT_TVDB_IMAGE_BASE", "https://artworks.thetvdb.com"), "/"),
 		MediaPublicURL: strings.TrimRight(env("TVT_MEDIA_PUBLIC_URL", ""), "/"),
-		SourceURL:      env("TVT_SOURCE_URL", "https://github.com/CarlSinclair/tvt"),
+		SourceURL:      env("TVT_SOURCE_URL", "https://github.com/CarlSinclair/TVTime-Reborn"),
 		OperatorName:   env("TVT_OPERATOR_NAME", ""),
 		PrivacyContact: env("TVT_PRIVACY_CONTACT", ""),
 		ContactEmail:   env("TVT_CONTACT_EMAIL", ""),

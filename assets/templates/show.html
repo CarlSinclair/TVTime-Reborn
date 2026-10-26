@@ -57,14 +57,18 @@
     {{end}}
   </div>
 </section>
-{{if .Data.Chart}}
+{{if or .Data.Chart .User .Data.Stars}}
 <section class="ratings">
   <h2>{{.T "show.ratings"}}</h2>
+  {{template "rate_block" (dict "V" . "Rate" (printf "/api/show/%d/rate" .Data.Show.TMDBID) "Mine" .Data.UserRating "Stars" .Data.Stars "Total" .Data.StarTotal)}}
+  {{if .Data.Chart}}
   {{.Data.Chart.SVG}}
   <ul class="legend">
     {{if .Data.Chart.HasMembers}}<li><span class="swatch members"></span>{{.T "show.ratings_community" .AppName}}</li>{{end}}
     {{if .Data.Chart.HasTMDB}}<li><span class="swatch tmdb"></span>{{.T "show.ratings_tmdb"}}</li>{{end}}
   </ul>
+  {{end}}
 </section>
 {{end}}
+{{template "comments_section" (dict "V" . "Kind" "show" "Target" .Data.Show.ID)}}
 {{end}}

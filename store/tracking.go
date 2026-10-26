@@ -317,12 +317,16 @@ type EpisodeRating struct {
 }
 
 // ShowRatings lists every regular episode with TMDB's rating and the average of
-// the ratings TVT members gave it (members rate in whole stars, stored x2).
+// the ratings TVT members gave it, here and on federated servers (members rate
+// in whole stars, stored x2).
 func (s *Store) ShowRatings(showID int64) ([]EpisodeRating, error) {
-	rows, err := s.DB.Query(`SELECT e.season_number, e.episode_number, e.vote_average, e.vote_count, COALESCE(AVG(r.rating),0), COUNT(r.rating)
-	  FROM episodes e LEFT JOIN episode_ratings r ON r.episode_id = e.id
+	const remote = `FROM remote_ratings WHERE kind = 'episode' AND show_tmdb = sh.tmdb_id AND season = e.season_number AND episode = e.episode_number`
+	rows, err := s.DB.Query(`SELECT e.season_number, e.episode_number, e.vote_average, e.vote_count,
+	  (SELECT COALESCE(SUM(rating), 0) FROM episode_ratings WHERE episode_id = e.id), (SELECT COUNT(*) FROM episode_ratings WHERE episode_id = e.id),
+	  (SELECT COALESCE(SUM(rating), 0) `+remote+`), (SELECT COUNT(*) `+remote+`)
+	  FROM episodes e JOIN shows sh ON sh.id = e.show_id
 	  WHERE e.show_id = ? AND e.season_number > 0
-	  GROUP BY e.id ORDER BY e.season_number, e.episode_number`, showID)
+	  ORDER BY e.season_number, e.episode_number`, showID)
 	if err != nil {
 		return nil, fmt.Errorf("show ratings show=%d: %w", showID, err)
 	}
@@ -330,8 +334,13 @@ func (s *Store) ShowRatings(showID int64) ([]EpisodeRating, error) {
 	var out []EpisodeRating
 	for rows.Next() {
 		var r EpisodeRating
-		if err := rows.Scan(&r.Season, &r.Episode, &r.TMDBAvg, &r.TMDBVotes, &r.MemberAvg, &r.MemberVotes); err != nil {
-			return nil, err
+		var localSum, remoteSum, remoteVotes int
+		if err := rows.Scan(&r.Season, &r.Episode, &r.TMDBAvg, &r.TMDBVotes, &localSum, &r.MemberVotes, &remoteSum, &remoteVotes); err != nil {
+			return nil, fmt.Errorf("show ratings scan show=%d: %w", showID, err)
+		}
+		r.MemberVotes += remoteVotes
+		if r.MemberVotes > 0 {
+			r.MemberAvg = float64(localSum+remoteSum) / float64(r.MemberVotes)
 		}
 		out = append(out, r)
 	}
@@ -506,6 +515,16 @@ func (s *Store) ExportUser(userID int64) (map[string]any, error) {
 		return nil, fmt.Errorf("export comments uid=%d: %w", userID, err)
 	}
 	out["comments"] = comments
+
+	mine, err := s.LocalRatings(userID)
+	if err != nil {
+		return nil, err
+	}
+	ratings := make([]map[string]any, 0, len(mine))
+	for _, r := range mine {
+		ratings = append(ratings, map[string]any{"kind": r.Kind, "show_tmdb_id": r.ShowTMDB, "season": r.Season, "episode": r.Episode, "rating": r.Rating})
+	}
+	out["ratings"] = ratings
 
 	return out, nil
 }

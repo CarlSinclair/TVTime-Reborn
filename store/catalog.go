@@ -189,6 +189,19 @@ func (s *Store) RecordSyncError(tmdbID int64, msg string) error {
 	return nil
 }
 
+func (s *Store) SeasonByID(id int64) (*Season, error) {
+	var se Season
+	err := s.DB.QueryRow(`SELECT id, show_id, season_number, name, overview, poster_path, COALESCE(air_date,''), episode_count FROM seasons WHERE id = ?`, id).
+		Scan(&se.ID, &se.ShowID, &se.SeasonNumber, &se.Name, &se.Overview, &se.PosterPath, &se.AirDate, &se.EpisodeCount)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("season %d: %w", id, err)
+	}
+	return &se, nil
+}
+
 func (s *Store) Seasons(showID int64) ([]Season, error) {
 	rows, err := s.DB.Query(`SELECT id, show_id, season_number, name, overview, poster_path, COALESCE(air_date,''), episode_count
 	  FROM seasons WHERE show_id = ? ORDER BY season_number`, showID)

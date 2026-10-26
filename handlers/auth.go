@@ -477,7 +477,7 @@ func (a *App) apiDeleteAccount(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, apiErr{http.StatusBadRequest, "err.confirm_username"})
 		return
 	}
-	if err := a.deleteAccount(r.Context(), u, mode); err != nil {
+	if err := a.deleteAccount(r.Context(), u, mode, false); err != nil {
 		a.fail(w, r, err)
 		return
 	}
@@ -532,10 +532,11 @@ func (a *App) apiDeactivateAccount(w http.ResponseWriter, r *http.Request) {
 
 // deleteAccount removes an account and everything it owns. Its comments are
 // first hidden, erased or kept as the mode says and then moved to the anonymous
-// deleted account, so nobody's replies are ever lost with it. Remote friends are
-// told the friendship ended; a failure to remove uploaded images is logged but
+// deleted account, so nobody's replies are ever lost with it, and its ratings go
+// to an anonymous account unless dropRatings is set (an admin's choice). Remote
+// friends are told the friendship ended; a failure to remove uploaded images is logged but
 // does not undo the deletion.
-func (a *App) deleteAccount(ctx context.Context, u *store.User, mode string) error {
+func (a *App) deleteAccount(ctx context.Context, u *store.User, mode string, dropRatings bool) error {
 	a.withdrawAll(u)
 	var images []string
 	if mode == "delete" {
@@ -562,6 +563,13 @@ func (a *App) deleteAccount(ctx context.Context, u *store.User, mode string) err
 				}
 			}
 		}
+	}
+	if dropRatings {
+		if err := a.removeRatings(u); err != nil {
+			return err
+		}
+	} else if err := a.Store.AnonymizeRatings(u.ID); err != nil {
+		return err
 	}
 	if err := a.Store.DeleteUser(u.ID); err != nil {
 		return err

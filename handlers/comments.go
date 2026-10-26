@@ -199,8 +199,13 @@ func (a *App) targetOf(r *http.Request) (store.Target, error) {
 	if err != nil || id <= 0 {
 		return store.Target{}, errNotFound
 	}
-	if strings.HasPrefix(r.URL.Path, "/api/profile/") {
+	switch {
+	case strings.HasPrefix(r.URL.Path, "/api/profile/"):
 		return store.ProfileTarget(id), nil
+	case strings.HasPrefix(r.URL.Path, "/api/season/"):
+		return store.SeasonTarget(id), nil
+	case strings.HasPrefix(r.URL.Path, "/api/show/"):
+		return store.ShowTarget(id), nil
 	}
 	return store.EpisodeTarget(id), nil
 }
@@ -211,6 +216,27 @@ func (a *App) targetLink(t store.Target) string {
 			return "/u/" + u.Username + "#comments"
 		}
 		return "/"
+	}
+	switch t.Kind {
+	case store.KindSeason:
+		se, err := a.Store.SeasonByID(t.ID)
+		if err != nil {
+			logger.Error("COMMENTS link season=%d: %v", t.ID, err)
+			return "/"
+		}
+		sh, err := a.Store.ShowByID(se.ShowID)
+		if err != nil {
+			logger.Error("COMMENTS link season=%d show=%d: %v", t.ID, se.ShowID, err)
+			return "/"
+		}
+		return "/show/" + itoa(sh.TMDBID) + "/season/" + itoa(int64(se.SeasonNumber)) + "#comments"
+	case store.KindShow:
+		sh, err := a.Store.ShowByID(t.ID)
+		if err != nil {
+			logger.Error("COMMENTS link show=%d: %v", t.ID, err)
+			return "/"
+		}
+		return "/show/" + itoa(sh.TMDBID) + "#comments"
 	}
 	return "/episode/" + itoa(t.ID)
 }
@@ -263,6 +289,25 @@ func (a *App) viewerWatched(t store.Target, uid int64) (bool, error) {
 	}
 	if uid == 0 {
 		return false, nil
+	}
+	switch t.Kind {
+	case store.KindSeason:
+		se, err := a.Store.SeasonByID(t.ID)
+		if err != nil {
+			return false, err
+		}
+		sp, err := a.Store.SeasonProgress(uid, se.ShowID)
+		if err != nil {
+			return false, err
+		}
+		p := sp[se.SeasonNumber]
+		return p.Aired > 0 && p.Watched >= p.Aired, nil
+	case store.KindShow:
+		p, err := a.Store.Progress(uid, t.ID)
+		if err != nil {
+			return false, err
+		}
+		return p.Aired > 0 && p.Watched >= p.Aired, nil
 	}
 	ep, err := a.Store.Episode(t.ID, uid)
 	if err != nil {
