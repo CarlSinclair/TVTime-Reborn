@@ -108,6 +108,8 @@
     "unmark_all": "Desmarcar temporada"
   },
   "ep": {
+    "comments_n": "%d comentários",
+    "comments_one": "1 comentário",
     "tba": "A definir",
     "mark_watched": "Marcar como assistido",
     "watched": "Assistido",
@@ -398,6 +400,11 @@
     "user_deactivate_hint": "Uma conta desativada não pode entrar e fica oculta para os demais.",
     "user_deactivate_confirm": "Desativar esta conta? A pessoa será desconectada e não poderá entrar.",
     "user_delete_hint": "Excluir remove a conta e tudo o que ela possui de forma definitiva.",
+    "ratings_remove": "Remover as avaliações",
+    "server_remove_title": "Parar de compartilhar com este servidor",
+    "server_block_confirm": "Este servidor deixará de trocar qualquer coisa com você.",
+    "server_drop_ratings": "Remover também todas as avaliações recebidas deste servidor",
+    "server_drop_comments": "Remover também todos os comentários recebidos deste servidor",
     "comments_hide": "Ocultar os comentários",
     "comments_delete": "Excluir os comentários",
     "config": "Configuração",
@@ -545,6 +552,7 @@
     "network_error": "Erro de rede. Tente novamente.",
     "mail_failed": "Não foi possível enviar o e-mail de confirmação. Use o botão de reenvio quando o e-mail estiver funcionando.",
     "verify_sent": "E-mail de confirmação enviado.",
+    "progress": "%d de %d assistidos",
     "marked_many": "Marcados como assistidos: %d",
     "close": "Fechar",
     "upto_title": "Marcar como assistido até aqui?",
@@ -745,6 +753,14 @@
     "episode_aired": {
       "body": "{code} {name} já está disponível.",
       "title": "Novo episódio: {show}"
+    },
+    "episodes_aired": {
+      "body": "{count} episódios da temporada {season} já estão disponíveis.",
+      "title": "Novos episódios: {show}"
+    },
+    "season_aired": {
+      "body": "A temporada {season} já está disponível ({count} episódios).",
+      "title": "Nova temporada: {show}"
     },
     "mark_all": "Marcar tudo como lido",
     "newer": "Mais recentes",

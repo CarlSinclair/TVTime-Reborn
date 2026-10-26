@@ -252,6 +252,20 @@ func (s *Store) PendingEpisodeAlerts(from, to string) ([]EpisodeAlert, error) {
 	return out, rows.Err()
 }
 
+// SeasonDropSize is the season's episode count when every episode of it shares
+// the given air date (a whole-season release), else 0. A show released in parts
+// has episodes on other dates, so it returns 0.
+func (s *Store) SeasonDropSize(showID int64, season int, airDate string) (int, error) {
+	var total, same int
+	if err := s.DB.QueryRow(`SELECT COUNT(*), COALESCE(SUM(air_date = ?), 0) FROM episodes WHERE show_id = ? AND season_number = ?`, airDate, showID, season).Scan(&total, &same); err != nil {
+		return 0, fmt.Errorf("season drop check show=%d season=%d: %w", showID, season, err)
+	}
+	if total > 1 && total == same {
+		return total, nil
+	}
+	return 0, nil
+}
+
 func (s *Store) MarkEpisodeNotified(userID, episodeID int64) error {
 	if _, err := s.DB.Exec(`INSERT INTO episode_notified (user_id, episode_id, created_at) VALUES (?,?,?) ON CONFLICT DO NOTHING`, userID, episodeID, Now()); err != nil {
 		return fmt.Errorf("mark episode notified uid=%d ep=%d: %w", userID, episodeID, err)

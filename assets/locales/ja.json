@@ -108,6 +108,8 @@
     "unmark_all": "シーズンの視聴済みを解除"
   },
   "ep": {
+    "comments_n": "コメント%d件",
+    "comments_one": "コメント1件",
     "tba": "未定",
     "mark_watched": "視聴済みにする",
     "watched": "視聴済み",
@@ -398,6 +400,11 @@
     "user_deactivate_hint": "無効化されたアカウントはログインできず、他の人からは見えなくなります。",
     "user_deactivate_confirm": "このアカウントを無効化しますか？ログアウトされ、ログインできなくなります。",
     "user_delete_hint": "削除するとアカウントと関連データが完全に消えます。",
+    "ratings_remove": "評価を削除する",
+    "server_remove_title": "このサーバーとの共有を停止",
+    "server_block_confirm": "このサーバーとは今後何もやり取りしなくなります。",
+    "server_drop_ratings": "このサーバーから受信したすべての評価も削除する",
+    "server_drop_comments": "このサーバーから受信したすべてのコメントも削除する",
     "comments_hide": "コメントを非表示",
     "comments_delete": "コメントを削除",
     "config": "設定",
@@ -545,6 +552,7 @@
     "network_error": "ネットワークエラーです。もう一度お試しください。",
     "mail_failed": "確認メールを送信できませんでした。メールが使えるようになったら再送ボタンを使ってください。",
     "verify_sent": "確認メールを送信しました。",
+    "progress": "%d / %d 話視聴済み",
     "marked_many": "視聴済みにしました：%d",
     "close": "閉じる",
     "upto_title": "ここまで視聴済みにしますか？",
@@ -745,6 +753,14 @@
     "episode_aired": {
       "body": "{code} {name} が配信されました。",
       "title": "新エピソード：{show}"
+    },
+    "episodes_aired": {
+      "body": "シーズン{season}の{count}エピソードが配信されました。",
+      "title": "新エピソード：{show}"
+    },
+    "season_aired": {
+      "body": "シーズン{season}が配信されました（全{count}エピソード）。",
+      "title": "新シーズン：{show}"
     },
     "mark_all": "すべて既読にする",
     "newer": "新しい",

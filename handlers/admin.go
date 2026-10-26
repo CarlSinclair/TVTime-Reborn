@@ -119,8 +119,14 @@ func (a *App) apiAdminBan(w http.ResponseWriter, r *http.Request) {
 			a.fail(w, r, err)
 			return
 		}
+		if in.RemoveRatings {
+			if err := a.removeRatings(target); err != nil {
+				a.fail(w, r, err)
+				return
+			}
+		}
 	}
-	logger.Info("ADMIN uid=%d set banned=%v comments=%s target=%d", admin.ID, in.Banned, mode, target.ID)
+	logger.Info("ADMIN uid=%d set banned=%v comments=%s ratings_removed=%v target=%d", admin.ID, in.Banned, mode, in.Banned && in.RemoveRatings, target.ID)
 	a.okJSON(w, nil)
 }
 
@@ -162,8 +168,14 @@ func (a *App) apiAdminDeactivate(w http.ResponseWriter, r *http.Request) {
 			a.fail(w, r, err)
 			return
 		}
+		if in.RemoveRatings {
+			if err := a.removeRatings(target); err != nil {
+				a.fail(w, r, err)
+				return
+			}
+		}
 	}
-	logger.Info("ADMIN uid=%d set deactivated=%v comments=%s target=%d", admin.ID, in.Deactivated, mode, target.ID)
+	logger.Info("ADMIN uid=%d set deactivated=%v comments=%s ratings_removed=%v target=%d", admin.ID, in.Deactivated, mode, in.Deactivated && in.RemoveRatings, target.ID)
 	a.okJSON(w, nil)
 }
 
@@ -220,8 +232,10 @@ func (a *App) apiAdminServer(forget bool) http.HandlerFunc {
 			return
 		}
 		var in struct {
-			Host    string
-			Blocked bool
+			Host         string
+			Blocked      bool
+			DropRatings  bool `json:"drop_ratings"`
+			DropComments bool `json:"drop_comments"`
 		}
 		if err := decode(r, &in); err != nil {
 			a.fail(w, r, err)
@@ -244,6 +258,22 @@ func (a *App) apiAdminServer(forget bool) http.HandlerFunc {
 		case err != nil:
 			a.fail(w, r, err)
 		default:
+			if in.DropRatings {
+				n, err := a.Store.DropRemoteRatingsFrom(host)
+				if err != nil {
+					a.fail(w, r, err)
+					return
+				}
+				logger.Info("ADMIN uid=%d removed %d ratings from server %s", admin.ID, n, host)
+			}
+			if in.DropComments {
+				n, err := a.Store.DropRemoteCommentsFrom(host)
+				if err != nil {
+					a.fail(w, r, err)
+					return
+				}
+				logger.Info("ADMIN uid=%d removed %d comments from server %s", admin.ID, n, host)
+			}
 			logger.Info("ADMIN uid=%d server %s forget=%v blocked=%v", admin.ID, host, forget, in.Blocked)
 			a.okJSON(w, nil)
 		}
@@ -255,12 +285,14 @@ const (
 	signupsFlagKey = "signups_closed"
 )
 
-// commentToggles are the two switches offered whenever an account is banned,
-// deactivated or deleted, by an admin or by the person. They exclude each other;
-// with neither on, the comments are kept.
+// commentToggles are the two comment switches offered whenever an account is
+// banned, deactivated or deleted, by an admin or by the person. They exclude each
+// other; with neither on, the comments are kept. Admins also get a ratings switch.
 type commentToggles struct {
 	HideComments   bool `json:"hide_comments"`
 	DeleteComments bool `json:"delete_comments"`
+	// RemoveRatings is a separate admin-only switch; it is not part of mode.
+	RemoveRatings bool `json:"remove_ratings"`
 }
 
 // mode is "hide", "delete" or "keep".
@@ -505,6 +537,9 @@ func (a *App) apiAdminServerAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	invalidateCSP()
+	if a.Fed != nil {
+		go a.Fed.BackfillRatings(host)
+	}
 	if err := a.Store.AckPeer(host); err != nil {
 		logger.Error("ADMIN uid=%d add server %s: could not mark it seen: %v", admin.ID, host, err)
 	}
@@ -712,11 +747,11 @@ func (a *App) apiAdminUserDelete(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	if err := a.deleteAccount(r.Context(), target, mode); err != nil {
+	if err := a.deleteAccount(r.Context(), target, mode, in.RemoveRatings); err != nil {
 		a.fail(w, r, err)
 		return
 	}
-	logger.Info("ADMIN uid=%d deleted user uid=%d username=%s comments=%s", admin.ID, target.ID, target.Username, mode)
+	logger.Info("ADMIN uid=%d deleted user uid=%d username=%s comments=%s ratings_withdrawn=%v", admin.ID, target.ID, target.Username, mode, in.RemoveRatings)
 	a.okJSON(w, nil)
 }
 

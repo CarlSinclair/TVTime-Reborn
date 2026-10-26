@@ -492,16 +492,23 @@ body[data-user="0"] .topbar { padding-bottom: 10px; }
 .cover-hero .pills { margin: 14px 0 6px; }
 .ep-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; list-style: none; margin: 0 0 28px; padding: 0; }
 .ep-card { position: relative; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.ep-media { position: relative; }
 .ep-card .ep-art { display: block; aspect-ratio: 16 / 9; background: var(--panel-2); }
 .ep-card .ep-art img { width: 100%; height: 100%; object-fit: cover; }
 .ep-art-empty { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 1.6rem; font-weight: 700; color: var(--muted); background: linear-gradient(135deg, var(--panel-2), var(--panel)); }
 .ep-card .ep-body { padding: 10px 12px 14px; }
+.ep-media.rated + .ep-body { padding-top: 22px; }
+.ep-rate { position: absolute; inset-inline-start: 50%; bottom: 0; transform: translate(-50%, 50%); background: var(--panel); border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; }
+[dir="rtl"] .ep-rate { transform: translate(50%, 50%); }
+.ep-rate .star { font-size: 1.2rem; }
+.ep-comments { display: inline-block; margin-top: 6px; font-size: .9rem; }
 .ep-card .watch-btn { position: absolute; top: 8px; inset-inline-end: 8px; width: 38px; height: 38px; background: rgba(0, 0, 0, .55); color: #fff; border-color: rgba(255, 255, 255, .6); }
 .ep-card .watch-btn[aria-pressed="true"] { background: var(--ok); border-color: var(--ok); }
 .chart .mark { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 4 3; }
 .chart .dot.members { fill: var(--accent); }
 .chart .dot.tmdb { fill: #f5c518; }
 .ep-ratings { margin-bottom: 24px; }
+.rate-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: var(--muted); }
 .star-dist { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 6px; max-width: 420px; }
 .star-dist li { display: grid; grid-template-columns: 3.4em 1fr 2.6em; align-items: center; gap: 10px; }
 .star-label, .star-count { color: var(--muted); font-size: .9rem; }

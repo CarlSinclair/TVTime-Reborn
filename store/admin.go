@@ -65,7 +65,7 @@ func (s *Store) AdminStats() (AdminStats, error) {
 		q    string
 		args []any
 	}{
-		{&st.Users, "users", `SELECT COUNT(*) FROM users WHERE remote_host = '' AND username <> 'deleted'`, nil},
+		{&st.Users, "users", `SELECT COUNT(*) FROM users WHERE remote_host = '' AND NOT (username LIKE 'deleted%' AND display_name = 'Anonymous')`, nil},
 		{&st.NewUsers7d, "new users", `SELECT COUNT(*) FROM users WHERE remote_host = '' AND created_at >= ?`, []any{week}},
 		{&st.Banned, "banned", `SELECT COUNT(*) FROM users WHERE remote_host = '' AND is_banned = 1`, nil},
 		{&st.Unverified, "unverified", `SELECT COUNT(*) FROM users WHERE remote_host = '' AND email_verified = 0 AND telegram_id IS NULL`, nil},
@@ -93,7 +93,7 @@ func (s *Store) AdminStats() (AdminStats, error) {
 // AdminUsers lists the people who have an account on this server, newest
 // first, optionally filtered by username, display name or email.
 func (s *Store) AdminUsers(q string, limit, offset int) ([]User, int, error) {
-	where := `remote_host = '' AND username <> 'deleted'`
+	where := `remote_host = '' AND NOT (username LIKE 'deleted%' AND display_name = 'Anonymous')`
 	var args []any
 	if q = strings.TrimSpace(q); q != "" {
 		like := "%" + escapeLike(q) + "%"

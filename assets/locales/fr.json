@@ -108,6 +108,8 @@
     "unmark_all": "Démarquer la saison"
   },
   "ep": {
+    "comments_n": "%d commentaires",
+    "comments_one": "1 commentaire",
     "tba": "À venir",
     "mark_watched": "Marquer comme vu",
     "watched": "Vu",
@@ -398,6 +400,11 @@
     "user_deactivate_hint": "Un compte désactivé ne peut pas se connecter et est masqué pour les autres.",
     "user_deactivate_confirm": "Désactiver ce compte ? La personne sera déconnectée et ne pourra plus se connecter.",
     "user_delete_hint": "La suppression retire définitivement le compte et tout ce qu'il possède.",
+    "ratings_remove": "Supprimer ses notes",
+    "server_remove_title": "Cesser de partager avec ce serveur",
+    "server_block_confirm": "Ce serveur n'échangera plus rien avec vous.",
+    "server_drop_ratings": "Supprimer aussi toutes les notes reçues de ce serveur",
+    "server_drop_comments": "Supprimer aussi tous les commentaires reçus de ce serveur",
     "comments_hide": "Masquer les commentaires",
     "comments_delete": "Supprimer les commentaires",
     "config": "Configuration",
@@ -545,6 +552,7 @@
     "network_error": "Erreur réseau. Réessayez.",
     "mail_failed": "Nous n'avons pas pu envoyer l'e-mail de vérification. Utilisez le bouton de renvoi quand la messagerie fonctionnera.",
     "verify_sent": "E-mail de vérification envoyé.",
+    "progress": "%d sur %d vus",
     "marked_many": "Marqués comme vus : %d",
     "close": "Fermer",
     "upto_title": "Marquer comme vu jusqu'ici ?",
@@ -745,6 +753,14 @@
     "episode_aired": {
       "body": "{code} {name} est disponible.",
       "title": "Nouvel épisode : {show}"
+    },
+    "episodes_aired": {
+      "body": "{count} épisodes de la saison {season} sont disponibles.",
+      "title": "Nouveaux épisodes : {show}"
+    },
+    "season_aired": {
+      "body": "La saison {season} est disponible ({count} épisodes).",
+      "title": "Nouvelle saison : {show}"
     },
     "mark_all": "Tout marquer comme lu",
     "newer": "Plus récentes",

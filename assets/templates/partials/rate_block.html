@@ -1,0 +1,8 @@
+{{define "rate_block"}}
+{{if and .V.User .Rate}}<p class="rate-line"><span>{{.V.T "ep.your_rating"}}</span> {{template "stars" (dict "ID" 0 "Rate" .Rate "Rating" .Mine "V" .V)}}</p>{{end}}
+{{if .Stars}}
+<ul class="star-dist" aria-label="{{.V.T "ep.star_votes" .Total}}">
+  {{range .Stars}}<li><span class="star-label">{{.Stars}} &#9733;</span><progress max="{{$.Total}}" value="{{.Count}}"></progress><span class="star-count">{{.Count}}</span></li>{{end}}
+</ul>
+{{end}}
+{{end}}

@@ -135,6 +135,7 @@
         <div class="comment-toggles">
       <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="ban-hide" name="hide_comments" data-default="0" ><label for="ban-hide" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="ban-hide">{{.T "admin.comments_hide"}}</label></div>
       <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="ban-delete" name="delete_comments" data-default="0" ><label for="ban-delete" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="ban-delete">{{.T "admin.comments_delete"}}</label></div>
+      <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="ban-ratings" name="remove_ratings" data-default="0"><label for="ban-ratings" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="ban-ratings">{{.T "admin.ratings_remove"}}</label></div>
       <p class="muted">{{.T "settings.comments_hint_keep"}}</p>
     </div>
         <p><button class="btn ghost small" type="button" data-user-ban data-on="{{.T "admin.user_ban"}}" data-off="{{.T "admin.user_unban"}}" data-confirm="{{.T "js.ban_confirm"}}"></button></p>
@@ -144,6 +145,7 @@
         <div class="comment-toggles">
       <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="deact-hide" name="hide_comments" data-default="1" checked><label for="deact-hide" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="deact-hide">{{.T "admin.comments_hide"}}</label></div>
       <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="deact-delete" name="delete_comments" data-default="0" ><label for="deact-delete" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="deact-delete">{{.T "admin.comments_delete"}}</label></div>
+      <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="deact-ratings" name="remove_ratings" data-default="0"><label for="deact-ratings" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="deact-ratings">{{.T "admin.ratings_remove"}}</label></div>
       <p class="muted">{{.T "settings.comments_hint_keep"}}</p>
     </div>
         <p><button class="btn ghost small" type="button" data-user-deactivate data-on="{{.T "admin.user_deactivate"}}" data-off="{{.T "admin.user_reactivate"}}" data-confirm="{{.T "admin.user_deactivate_confirm"}}"></button></p>
@@ -153,6 +155,7 @@
         <div class="comment-toggles">
       <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="del-hide" name="hide_comments" data-default="0" ><label for="del-hide" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="del-hide">{{.T "admin.comments_hide"}}</label></div>
       <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="del-delete" name="delete_comments" data-default="1" checked><label for="del-delete" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="del-delete">{{.T "admin.comments_delete"}}</label></div>
+      <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="del-ratings" name="remove_ratings" data-default="0"><label for="del-ratings" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="del-ratings">{{.T "admin.ratings_remove"}}</label></div>
       <p class="muted">{{.T "settings.comments_hint_anon"}}</p>
     </div>
         <p><button class="btn danger small" type="button" data-user-delete-modal data-confirm="{{.T "admin.user_delete_confirm"}}">{{.T "admin.user_delete"}}</button></p>
@@ -211,8 +214,8 @@
     {{if and (not .Share) (not .Blocked) .Media}}<p class="muted">{{$.T "admin.server_media_note" .Media}}</p>{{end}}
     <p class="actions">
       {{if and (not .Share) (not .Blocked)}}<button class="btn small" type="button" data-server-approve="{{.Host}}">{{$.T "admin.server_approve"}}</button>{{end}}
-      <button class="btn small {{if not .Blocked}}danger{{else}}ghost{{end}}" type="button" data-server-block="{{.Host}}" data-blocked="{{if .Blocked}}0{{else}}1{{end}}">{{if .Blocked}}{{$.T "admin.server_unblock"}}{{else}}{{$.T "admin.server_block"}}{{end}}</button>
-      <button class="btn ghost small" type="button" data-server-forget="{{.Host}}">{{$.T "admin.server_forget"}}</button>
+      <button class="btn small {{if not .Blocked}}danger{{else}}ghost{{end}}" type="button" {{if .Blocked}}data-server-block="{{.Host}}" data-blocked="0"{{else}}data-server-remove="{{.Host}}" data-mode="block" data-confirm="{{$.T "admin.server_block_confirm"}}" data-label="{{$.T "admin.server_block"}}"{{end}}>{{if .Blocked}}{{$.T "admin.server_unblock"}}{{else}}{{$.T "admin.server_block"}}{{end}}</button>
+      <button class="btn ghost small" type="button" data-server-remove="{{.Host}}" data-mode="forget" data-confirm="{{$.T "js.server_forget_confirm"}}" data-label="{{$.T "admin.server_forget"}}">{{$.T "admin.server_forget"}}</button>
     </p>
   </li>
   {{end}}
@@ -220,6 +223,18 @@
 {{template "pager" (dict "Pager" .Data.Pager "V" .)}}
 {{else}}<p class="muted center">{{.T "admin.server_none"}}</p>{{end}}
 {{if .Data.FederationOn}}
+<dialog class="modal" id="m-server-remove" aria-labelledby="m-server-remove-t">
+  <div class="stack">
+    <h2 id="m-server-remove-t">{{.T "admin.server_remove_title"}}</h2>
+    <p data-remove-text></p>
+    <div class="comment-toggles">
+      <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="srv-drop-ratings" name="drop_ratings" data-default="0"><label for="srv-drop-ratings" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="srv-drop-ratings">{{.T "admin.server_drop_ratings"}}</label></div>
+      <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="srv-drop-comments" name="drop_comments" data-default="0"><label for="srv-drop-comments" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="srv-drop-comments">{{.T "admin.server_drop_comments"}}</label></div>
+    </div>
+    <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn danger" type="button" data-server-remove-go></button></div>
+  </div>
+</dialog>
+
 <dialog class="modal" id="m-server-add" aria-labelledby="m-server-add-t">
   <form class="stack" data-api="/api/admin/servers/add" data-reload="1" data-success="{{.T "admin.server_added"}}">
     <h2 id="m-server-add-t">{{.T "admin.server_add"}}</h2>
@@ -363,7 +378,7 @@
     <blockquote>{{.Body}}{{if .Image}}<a href="/media/pics/{{.Image}}" target="_blank" rel="noopener"><img class="comment-img" loading="lazy" alt="" src="/media/pics/{{.Image}}"></a>{{end}}</blockquote>
     {{if .Reasons}}<p class="muted">{{.Reasons}}</p>{{end}}
     <p class="actions">
-      <a class="btn ghost small" href="{{if eq .Target.Kind "profile"}}/u/{{.ProfileName}}{{else}}/episode/{{.Target.ID}}{{end}}">{{$.T "admin.view"}}</a>
+      <a class="btn ghost small" href="{{if eq .Target.Kind "profile"}}/u/{{.ProfileName}}{{else if .Path}}{{.Path}}{{else}}/episode/{{.Target.ID}}{{end}}">{{$.T "admin.view"}}</a>
       <button class="btn small" type="button" data-admin-resolve="{{.CommentID}}">{{$.T "admin.dismiss"}}</button>
       <button class="btn danger small" type="button" data-admin-delete="{{.CommentID}}">{{$.T "admin.delete"}}</button>
       <button class="btn danger small" type="button" data-admin-ban="{{.AuthorID}}">{{$.T "admin.ban"}}</button>

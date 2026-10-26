@@ -223,6 +223,16 @@ func (s *Store) SetPeerBlocked(host string, blocked bool) error {
 }
 
 // ForgetPeer removes the pinned key, so the next contact learns it afresh.
+// DropRemoteCommentsFrom deletes every comment copied from a server.
+func (s *Store) DropRemoteCommentsFrom(host string) (int64, error) {
+	res, err := s.DB.Exec(`DELETE FROM remote_comments WHERE host = ?`, strings.ToLower(host))
+	if err != nil {
+		return 0, fmt.Errorf("drop remote comments from %s: %w", host, err)
+	}
+	n, _ := res.RowsAffected()
+	return n, nil
+}
+
 func (s *Store) ForgetPeer(host string) error {
 	if _, err := s.DB.Exec(`DELETE FROM federation_peers WHERE host = ?`, strings.ToLower(host)); err != nil {
 		return fmt.Errorf("forget peer %s: %w", host, err)

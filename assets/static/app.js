@@ -423,6 +423,13 @@
     return { el: wrap, value: () => name, reset: () => set(null) };
   };
 
+  const syncSeasonCount = () => {
+    const counter = document.querySelector("[data-season-count]");
+    if (!counter) return;
+    const done = document.querySelectorAll('.ep-card .watch-btn[data-state="1"]').length;
+    counter.textContent = counter.dataset.tpl.replace("%d", done).replace("%d", counter.dataset.total);
+  };
+
   const setWatchedState = (el, watched) => {
     el.dataset.state = watched ? "1" : "0";
     if (el.classList.contains("watch-btn")) {
@@ -430,6 +437,7 @@
     } else if (el.dataset.labelOn) {
       el.textContent = watched ? el.dataset.labelOn : el.dataset.labelOff;
     }
+    syncSeasonCount();
   };
 
   const paintStars = (wrap, n) => {
@@ -561,6 +569,7 @@
   const commentToggleValues = (row) => ({
     hide_comments: row.querySelector('[name="hide_comments"]').checked,
     delete_comments: row.querySelector('[name="delete_comments"]').checked,
+    remove_ratings: !!(row.querySelector('[name="remove_ratings"]') || {}).checked,
   });
 
   document.addEventListener("click", async (event) => {
@@ -678,9 +687,27 @@
       if (data) window.location.reload();
       return;
     }
-    if ("serverForget" in d) {
-      if (!(await confirmDialog(t("server_forget_confirm")))) return;
-      const data = await run(el, () => api("/api/admin/servers/forget", { host: d.serverForget }));
+    if ("serverRemove" in d) {
+      const dlg = document.getElementById("m-server-remove");
+      dlg.dataset.host = d.serverRemove;
+      dlg.dataset.mode = d.mode;
+      dlg.querySelector("[data-remove-text]").textContent = d.confirm;
+      dlg.querySelector("[data-server-remove-go]").textContent = d.label;
+      dlg.querySelectorAll('input[type="checkbox"]').forEach((box) => {
+        box.checked = false;
+      });
+      dlg.showModal();
+      return;
+    }
+    if ("serverRemoveGo" in d) {
+      const dlg = el.closest("dialog");
+      const body = {
+        host: dlg.dataset.host,
+        drop_ratings: dlg.querySelector('[name="drop_ratings"]').checked,
+        drop_comments: dlg.querySelector('[name="drop_comments"]').checked,
+      };
+      if (dlg.dataset.mode === "block") body.blocked = true;
+      const data = await run(el, () => api(dlg.dataset.mode === "forget" ? "/api/admin/servers/forget" : "/api/admin/servers/block", body));
       if (data) window.location.reload();
       return;
     }
@@ -793,12 +820,17 @@
       const current = parseInt(wrap.dataset.stars, 10) || 0;
       const stars = n === current ? 0 : n;
       paintStars(wrap, stars);
-      const data = await run(null, () => api("/api/episode/" + wrap.dataset.ep + "/rate", { rating: stars * 2, card: !!card }));
+      const rateUrl = wrap.dataset.rateUrl || "/api/episode/" + wrap.dataset.ep + "/rate";
+      const data = await run(null, () => api(rateUrl, { rating: stars * 2, card: !!card }));
       if (!data) {
         paintStars(wrap, current);
         return;
       }
       wrap.dataset.stars = String(stars);
+      if (wrap.dataset.rateUrl) {
+        toast(t("saved"), "ok");
+        return;
+      }
       if (card) {
         setTimeout(() => swapCard(card, data.next_html), 350);
         toast(t("rated"), "ok");

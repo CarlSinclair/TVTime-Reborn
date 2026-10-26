@@ -59,6 +59,8 @@ type Event struct {
 
 var Events = map[string]Event{
 	"episode_aired":          {"episode_aired", "episodes"},
+	"season_aired":           {"season_aired", "episodes"},
+	"episodes_aired":         {"episodes_aired", "episodes"},
 	"comment_reply":          {"comment_reply", "social"},
 	"password_changed":       {"password_changed", "security"},
 	"twofa_enabled":          {"twofa_enabled", "security"},

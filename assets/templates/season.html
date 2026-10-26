@@ -4,7 +4,7 @@
   {{if $show.BackdropPath}}<img class="hero-bg" src="{{img "w1280" $show.BackdropPath}}" alt="">{{else if $show.PosterPath}}<img class="hero-bg poster-bg" src="{{img "w780" $show.PosterPath}}" alt="">{{end}}
   <p class="crumbs"><a href="/show/{{$show.TMDBID}}">{{$show.Name}}</a></p>
   <h1>{{if eq .Data.Season 0}}{{.T "show.specials"}}{{else}}{{.T "show.season" .Data.Season}}{{end}}</h1>
-  <p class="meta"><span>{{.T "show.episodes" (len .Data.Episodes)}}</span>{{if $.User}}<span>{{.T "show.progress" .Data.WatchedCount (len .Data.Episodes)}}</span>{{end}}</p>
+  <p class="meta"><span>{{.T "show.episodes" (len .Data.Episodes)}}</span>{{if $.User}}<span data-season-count data-total="{{len .Data.Episodes}}" data-tpl="{{.T "js.progress"}}">{{.T "show.progress" .Data.WatchedCount (len .Data.Episodes)}}</span>{{end}}</p>
   {{if gt (len .Data.Seasons) 1}}
   <div class="season-links pills">
     {{range .Data.Seasons}}
@@ -19,26 +19,34 @@
   </p>
   {{end}}
 </section>
-{{if .Data.Chart}}
+{{if or .Data.Chart .User .Data.Stars}}
 <section class="ratings">
   <h2>{{.T "show.ratings"}}</h2>
+  {{template "rate_block" (dict "V" . "Rate" (printf "/api/show/%d/season/%d/rate" $show.TMDBID .Data.Season) "Mine" .Data.UserRating "Stars" .Data.Stars "Total" .Data.StarTotal)}}
+  {{if .Data.Chart}}
   {{.Data.Chart.SVG}}
   <ul class="legend">
     {{if .Data.Chart.HasMembers}}<li><span class="swatch members"></span>{{.T "show.ratings_community" .AppName}}</li>{{end}}
     {{if .Data.Chart.HasTMDB}}<li><span class="swatch tmdb"></span>{{.T "show.ratings_tmdb"}}</li>{{end}}
   </ul>
+  {{end}}
 </section>
 {{end}}
 <ol class="episodes ep-cards">
   {{range .Data.Episodes}}
   <li class="ep-card">
-    <a class="ep-art" href="/episode/{{.ID}}">
-      {{if .StillPath}}<img loading="lazy" src="{{img "w500" .StillPath}}" alt="">{{else}}<span class="ep-art-empty">{{code .SeasonNumber .EpisodeNumber}}</span>{{end}}
-    </a>
+    <div class="ep-media{{if and $.User (aired .AirDate)}} rated{{end}}">
+      <a class="ep-art" href="/episode/{{.ID}}">
+        {{if .StillPath}}<img loading="lazy" src="{{img "w500" .StillPath}}" alt="">{{else}}<span class="ep-art-empty">{{code .SeasonNumber .EpisodeNumber}}</span>{{end}}
+      </a>
+      {{if and $.User (aired .AirDate)}}<div class="ep-rate">{{template "stars" (dict "ID" .ID "Rating" .UserRating "V" $)}}</div>{{end}}
+    </div>
     <div class="ep-body">
       <a class="ep-title" href="/episode/{{.ID}}"><span class="code">{{code .SeasonNumber .EpisodeNumber}}</span> {{.Name}}</a>
       <small class="muted">{{if .AirDate}}{{.AirDate}}{{else}}{{$.T "ep.tba"}}{{end}}{{if gt .Runtime 0}} &middot; {{$.T "show.runtime" .Runtime}}{{end}}{{if gt .VoteCount 0}} &middot; &#9733; {{stars .VoteAverage}}{{end}}</small>
       <p class="ep-overview">{{truncate .Overview 180}}</p>
+      {{$n := index $.Data.CommentCounts .ID}}
+      <a class="ep-comments" href="/episode/{{.ID}}#comments">{{if eq $n 1}}{{$.T "ep.comments_one"}}{{else}}{{$.T "ep.comments_n" $n}}{{end}}</a>
     </div>
     {{if $.User}}
       {{if aired .AirDate}}
@@ -48,4 +56,5 @@
   </li>
   {{end}}
 </ol>
+{{if .Data.SeasonID}}{{template "comments_section" (dict "V" . "Kind" "season" "Target" .Data.SeasonID)}}{{end}}
 {{end}}
