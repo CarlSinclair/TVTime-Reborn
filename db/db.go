@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"tvt/logger"
+	"tvt/sqlretry"
 
 	_ "modernc.org/sqlite"
 )
@@ -19,7 +20,9 @@ const TimeFormat = "2006-01-02 15:04:05"
 
 func Open(path string) (*sql.DB, error) {
 	dsn := fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)&_pragma=synchronous(NORMAL)", path)
-	d, err := sql.Open("sqlite", dsn)
+	sqlretry.Logf = logger.Warn
+	sqlretry.ErrorLogf = logger.Error
+	d, err := sqlretry.Open(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite %s: %w", path, err)
 	}

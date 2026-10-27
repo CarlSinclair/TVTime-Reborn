@@ -260,15 +260,15 @@
   </div>
 </section>
 
-<form class="panel stack" data-api="/api/admin/pages" data-reload="1" data-success="{{.T "js.saved"}}">
-  <h2>{{.T "admin.pages_add"}}</h2>
+<div class="pg-add" data-slug-ok="{{.T "admin.pages_slug_ok"}}" data-slug-taken="{{.T "admin.pages_slug_taken"}}" data-slug-bad="{{.T "admin.pages_slug_bad"}}">
+  <select id="pg-lang" aria-label="{{.T "admin.pages_language"}}">{{range .Data.PageLangs}}<option value="{{.}}" {{if eq . $.Lang}}selected{{end}}>{{$.LangName .}}</option>{{end}}</select>
+  <select id="pg-target" aria-label="{{.T "admin.pages_target"}}"><option value="">{{.T "admin.pages_new"}}</option>{{range .Data.PageList}}<option value="{{.ID}}">#{{.ID}}{{range .Variants}}{{if .Exists}} /{{.Slug}}{{end}}{{end}}</option>{{end}}</select>
+  <button class="icon-btn solid" type="button" data-pg-add aria-label="{{.T "admin.pages_add_language"}}" title="{{.T "admin.pages_add_language"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-plus"></use></svg></button>
+</div>
+<form class="panel stack" data-api="/api/admin/pages" data-reload="1" data-success="{{.T "js.saved"}}" hidden>
+  <h2>{{.T "admin.pages_new"}}</h2>
   <input type="hidden" name="action" value="add">
-  <label>{{.T "admin.pages_language"}}<select name="lang">{{range .Data.PageLangs}}<option value="{{.}}" {{if eq . $.Lang}}selected{{end}}>{{$.LangName .}}</option>{{end}}</select></label>
-  <label>{{.T "admin.pages_slug"}}<input type="text" name="slug" pattern="[a-z0-9][a-z0-9\-]*" maxlength="64" autocomplete="off" spellcheck="false" required></label>
-  <label>{{.T "admin.pages_title"}}<input type="text" name="title" maxlength="200" autocomplete="off" required></label>
-  <label>{{.T "admin.pages_body"}}<textarea name="body" rows="8"></textarea></label>
-  <div><button class="btn ghost small" type="button" data-modal-open="m-md-help">{{.T "admin.md_help"}}</button></div>
-  <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="add-page-en" name="enabled" checked><label for="add-page-en" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="add-page-en">{{.T "admin.pages_enabled"}}</label></div>
+  <div data-cards="new"></div>
   <p class="form-error" role="alert" hidden></p>
   <div><button class="btn" type="submit">{{.T "admin.pages_add"}}</button></div>
 </form>
@@ -280,40 +280,33 @@
   <form class="stack" data-api="/api/admin/pages" data-reload="1" data-success="{{$.T "js.saved"}}">
     <input type="hidden" name="action" value="save">
     <input type="hidden" name="page_id" value="{{.ID}}">
-    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{.ID}}-on" name="page_enabled" {{if .Enabled}}checked{{end}}><label for="pg-{{.ID}}-on" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{.ID}}-on">{{$.T "admin.pages_page_enabled"}}</label></div>
-    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{.ID}}-upd" name="show_updated" {{if .ShowUpdated}}checked{{end}}><label for="pg-{{.ID}}-upd" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{.ID}}-upd">{{$.T "admin.pages_show_updated"}}</label></div>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{.ID}}-on" name="page_enabled"{{if .Enabled}} checked{{end}}><label for="pg-{{.ID}}-on" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{.ID}}-on">{{$.T "admin.pages_page_enabled"}}</label></div>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{.ID}}-upd" name="show_updated"{{if .ShowUpdated}} checked{{end}}><label for="pg-{{.ID}}-upd" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{.ID}}-upd">{{$.T "admin.pages_show_updated"}}</label></div>
+    <div data-cards="{{.ID}}">
     {{range .Variants}}{{if .Exists}}
-    <fieldset class="lang-fieldset">
-      <legend>{{$.LangName .Lang}}</legend>
-      <label>{{$.T "admin.pages_slug"}}<input type="text" name="slug_{{.Lang}}" value="{{.Slug}}" pattern="[a-z0-9][a-z0-9\-]*" maxlength="64" autocomplete="off" spellcheck="false"></label>
+    <fieldset class="lang-fieldset" data-card data-card-lang="{{.Lang}}">
+      <legend><span data-card-name>{{$.LangName .Lang}}</span> <span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{$pid}}-{{.Lang}}-en" name="enabled_{{.Lang}}"{{if .Enabled}} checked{{end}}><label for="pg-{{$pid}}-{{.Lang}}-en" class="tswitch-label"><span class="ball"></span></label></span></legend>
+      <label>{{$.T "admin.pages_slug"}}<input type="text" name="slug_{{.Lang}}" value="{{.Slug}}" pattern="[a-z0-9][a-z0-9\-]*" maxlength="64" autocomplete="off" spellcheck="false"><span class="slug-status"></span></label>
       <label>{{$.T "admin.pages_title"}}<input type="text" name="title_{{.Lang}}" value="{{.Title}}" maxlength="200" autocomplete="off"></label>
       <label>{{$.T "admin.pages_body"}}<textarea name="body_{{.Lang}}" rows="10">{{.Body}}</textarea></label>
       <div><button class="btn ghost small" type="button" data-modal-open="m-md-help">{{$.T "admin.md_help"}}</button></div>
-      <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{$pid}}-{{.Lang}}-en" name="enabled_{{.Lang}}" {{if .Enabled}}checked{{end}}><label for="pg-{{$pid}}-{{.Lang}}-en" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{$pid}}-{{.Lang}}-en">{{$.T "admin.pages_enabled"}}</label></div>
-      <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{$pid}}-{{.Lang}}-del" name="del_{{.Lang}}"><label for="pg-{{$pid}}-{{.Lang}}-del" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{$pid}}-{{.Lang}}-del">{{$.T "admin.pages_delete_lang"}}</label></div>
     </fieldset>
     {{end}}{{end}}
+    </div>
     <p class="form-error" role="alert" hidden></p>
     <div class="modal-actions">
-      <button class="btn danger" type="button" data-pages-action="delete" data-page-id="{{.ID}}" data-confirm="{{$.T "admin.pages_delete_confirm"}}">{{$.T "admin.pages_delete"}}</button>
+      <button class="icon-btn danger" type="button" data-pages-action="delete" data-page-id="{{.ID}}" data-confirm="{{$.T "admin.pages_delete_confirm"}}" aria-label="{{$.T "admin.pages_delete"}}" title="{{$.T "admin.pages_delete"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-trash"></use></svg></button>
       <button class="btn" type="submit">{{$.T "settings.save"}}</button>
     </div>
   </form>
-  {{if gt .Missing 0}}<form class="stack" data-api="/api/admin/pages" data-reload="1" data-success="{{$.T "js.saved"}}">
-    <h3>{{$.T "admin.pages_add_language"}}</h3>
-    <input type="hidden" name="action" value="add_lang">
-    <input type="hidden" name="page_id" value="{{.ID}}">
-    <label>{{$.T "admin.pages_language"}}<select name="lang">{{range .Variants}}{{if not .Exists}}<option value="{{.Lang}}">{{$.LangName .Lang}}</option>{{end}}{{end}}</select></label>
-    <label>{{$.T "admin.pages_slug"}}<input type="text" name="slug" pattern="[a-z0-9][a-z0-9\-]*" maxlength="64" autocomplete="off" spellcheck="false" required></label>
-    <label>{{$.T "admin.pages_title"}}<input type="text" name="title" maxlength="200" autocomplete="off" required></label>
-    <label>{{$.T "admin.pages_body"}}<textarea name="body" rows="6"></textarea></label>
-    <div><button class="btn ghost small" type="button" data-modal-open="m-md-help">{{$.T "admin.md_help"}}</button></div>
-    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-{{$pid}}-newlang" name="enabled" checked><label for="pg-{{$pid}}-newlang" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-{{$pid}}-newlang">{{$.T "admin.pages_enabled"}}</label></div>
-    <p class="form-error" role="alert" hidden></p>
-    <div><button class="btn ghost" type="submit">{{$.T "admin.pages_add_language"}}</button></div>
-  </form>{{end}}
 </details>
 {{else}}<p class="muted center">{{$.T "admin.pages_none"}}</p>{{end}}
+<template id="pg-card-tpl"><fieldset class="lang-fieldset" data-card data-card-lang="{L}"><legend><span data-card-name></span> <span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-new-{L}-en" name="enabled_{L}" checked><label for="pg-new-{L}-en" class="tswitch-label"><span class="ball"></span></label></span> <button class="icon-btn" type="button" data-remove-row aria-label="{{.T "admin.pages_remove"}}" title="{{.T "admin.pages_remove"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-x"></use></svg></button></legend>
+      <label>{{.T "admin.pages_slug"}}<input type="text" name="slug_{L}" value="" pattern="[a-z0-9][a-z0-9\-]*" maxlength="64" autocomplete="off" spellcheck="false"><span class="slug-status"></span></label>
+      <label>{{.T "admin.pages_title"}}<input type="text" name="title_{L}" value="" maxlength="200" autocomplete="off"></label>
+      <label>{{.T "admin.pages_body"}}<textarea name="body_{L}" rows="10"></textarea></label>
+      <div><button class="btn ghost small" type="button" data-modal-open="m-md-help">{{.T "admin.md_help"}}</button></div>
+</fieldset></template>
 {{template "pager" (dict "Pager" .Data.Pager "V" .)}}
 
 <dialog class="modal" id="m-md-help" aria-labelledby="m-md-help-t">

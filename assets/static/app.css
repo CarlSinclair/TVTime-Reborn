@@ -547,3 +547,14 @@ body[data-user="0"] .topbar { padding-bottom: 10px; }
 .ed-inline .ed-field input[type="color"] { width: 44px; height: 32px; padding: 2px; }
 .ed-delete { align-self: flex-start; color: var(--danger); border-color: var(--danger); }
 .confirm-text { margin: 0 0 16px; }
+.pg-add { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 12px 0 16px; }
+.pg-add select { min-width: 150px; }
+.icon-btn.danger { background: transparent; border-color: transparent; color: var(--danger); }
+.icon-btn.danger:hover { border-color: var(--danger); }
+.modal-actions .icon-btn.danger { margin-inline-end: auto; }
+fieldset.lang-fieldset legend { display: flex; align-items: center; gap: 8px; }
+fieldset.lang-fieldset legend .icon-btn { width: 26px; height: 26px; }
+fieldset.lang-fieldset:has(> legend .tswitch-input:not(:checked)) > :not(legend) { display: none; }
+.slug-status { display: block; min-height: 1.2em; margin-top: 4px; font-size: .85rem; }
+.slug-status.is-ok { color: var(--ok, #2e9e5b); }
+.slug-status.is-bad { color: var(--danger); }
