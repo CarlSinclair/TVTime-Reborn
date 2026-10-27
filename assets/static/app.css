@@ -558,3 +558,5 @@ fieldset.lang-fieldset:has(> legend .tswitch-input:not(:checked)) > :not(legend)
 .slug-status { display: block; min-height: 1.2em; margin-top: 4px; font-size: .85rem; }
 .slug-status.is-ok { color: var(--ok, #2e9e5b); }
 .slug-status.is-bad { color: var(--danger); }
+
+.faq-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }

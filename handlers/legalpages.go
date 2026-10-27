@@ -170,8 +170,13 @@ func (a *App) pagesAdminData(r *http.Request, data map[string]any) error {
 }
 
 func boolOf(in map[string]any, key string) bool {
-	b, _ := in[key].(bool)
-	return b
+	switch v := in[key].(type) {
+	case bool:
+		return v
+	case string:
+		return v == "1" || v == "on" || v == "true"
+	}
+	return false
 }
 
 func strOf(in map[string]any, key string) string {

@@ -261,9 +261,24 @@ func (s Store) SlugInUse(slug string, exceptPageID int) (bool, error) {
 		return false, nil
 	}
 	var n int
-	err := s.DB.QueryRow(`SELECT COUNT(*) FROM `+s.tbl()+` WHERE slug = ? AND page_id != ?`, slug, exceptPageID).Scan(&n)
-	return n > 0, err
+	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM `+s.tbl()+` WHERE slug = ? AND page_id != ?`, slug, exceptPageID).Scan(&n); err != nil {
+		return false, err
+	}
+	if n > 0 {
+		return true, nil
+	}
+	if Reserved == nil || !Reserved(slug) {
+		return false, nil
+	}
+	var own int
+	err := s.DB.QueryRow(`SELECT COUNT(*) FROM `+s.tbl()+` WHERE slug = ? AND page_id = ?`, slug, exceptPageID).Scan(&own)
+	return own == 0, err
 }
+
+// Reserved reports whether the app already routes /slug to something other
+// than a static page. Each app sets it once its router is built; a slug it
+// matches cannot be given to a page, except one that page already holds.
+var Reserved func(slug string) bool
 
 func (s Store) nextPageID() (int, error) {
 	var n sql.NullInt64
