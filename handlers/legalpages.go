@@ -269,13 +269,19 @@ func (a *App) apiAdminPages(w http.ResponseWriter, r *http.Request) {
 	}
 	switch strOf(in, "action") {
 	case "add":
-		lang := strOf(in, "lang")
-		if !a.I18n.Has(lang) {
+		vars := a.variantsFrom(in)
+		if lang := strOf(in, "lang"); lang != "" {
+			if !a.I18n.Has(lang) {
+				a.fail(w, r, errBadRequest)
+				return
+			}
+			vars = []legalpages.VariantInput{{Lang: lang, Slug: strOf(in, "slug"), Title: strOf(in, "title"), Body: strOf(in, "body"), Enabled: boolOf(in, "enabled")}}
+		}
+		if len(vars) == 0 {
 			a.fail(w, r, errBadRequest)
 			return
 		}
-		v := legalpages.VariantInput{Lang: lang, Slug: strOf(in, "slug"), Title: strOf(in, "title"), Body: strOf(in, "body"), Enabled: boolOf(in, "enabled")}
-		if _, err := store.AddPage([]legalpages.VariantInput{v}, actor); err != nil {
+		if _, err := store.AddPage(vars, actor); err != nil {
 			a.fail(w, r, a.pageErr(err))
 			return
 		}

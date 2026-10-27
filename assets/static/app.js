@@ -572,11 +572,74 @@
     remove_ratings: !!(row.querySelector('[name="remove_ratings"]') || {}).checked,
   });
 
+  document.addEventListener("input", (event) => {
+    const input = event.target.closest('input[name^="slug_"]');
+    if (!input) return;
+    const status = input.parentElement.querySelector(".slug-status");
+    const labels = document.querySelector(".pg-add");
+    if (!status || !labels) return;
+    const v = input.value.trim().toLowerCase();
+    if (input.value !== v) input.value = v;
+    let msg = "";
+    let ok = false;
+    if (v !== "") {
+      if (!/^[a-z0-9][a-z0-9-]*$/.test(v)) {
+        msg = labels.dataset.slugBad;
+      } else {
+        let clash = false;
+        document.querySelectorAll('input[name^="slug_"]').forEach((o) => {
+          if (o !== input && o.value.trim().toLowerCase() === v) clash = true;
+        });
+        msg = clash ? labels.dataset.slugTaken : labels.dataset.slugOk;
+        ok = !clash;
+      }
+    }
+    status.textContent = msg;
+    status.className = "slug-status" + (msg ? (ok ? " is-ok" : " is-bad") : "");
+  });
+
   document.addEventListener("click", async (event) => {
     const el = event.target.closest("button, a");
     if (!el) return;
     const d = el.dataset;
 
+    if ("pgAdd" in d) {
+      const langSel = document.getElementById("pg-lang");
+      const pageSel = document.getElementById("pg-target");
+      if (!langSel || !pageSel || !langSel.value) return;
+      const box = document.querySelector('[data-cards="' + (pageSel.value === "" ? "new" : pageSel.value) + '"]');
+      if (!box) return;
+      const details = box.closest("details");
+      if (details) details.open = true;
+      const have = box.querySelector('[data-card-lang="' + langSel.value + '"]');
+      if (have) {
+        have.scrollIntoView({ block: "center" });
+        const first = have.querySelector('input[name^="slug_"]');
+        if (first) first.focus();
+        return;
+      }
+      const tpl = document.getElementById("pg-card-tpl");
+      const holder = document.createElement("div");
+      holder.innerHTML = tpl.innerHTML.split("{L}").join(langSel.value).trim();
+      const card = holder.firstElementChild;
+      card.querySelector("[data-card-name]").textContent = langSel.selectedOptions[0].textContent;
+      box.appendChild(card);
+      const form = box.closest("form");
+      if (form) form.hidden = false;
+      card.scrollIntoView({ block: "center" });
+      return;
+    }
+    if ("removeRow" in d) {
+      const card = el.closest("[data-card]");
+      if (!card) return;
+      const parent = card.parentElement;
+      card.remove();
+      if (parent && parent.dataset.cards === "new" && !parent.children.length) {
+        const form = parent.closest("form");
+        if (form) form.hidden = true;
+      }
+      return;
+    }
     if ("logout" in d) {
       const data = await run(el, () => api("/api/auth/logout"));
       if (data) go(data);

@@ -356,22 +356,28 @@ func b2i(b bool) int {
 }
 
 var (
-	reMDLink   = regexp.MustCompile(`\[([^\]]+)\]\(([^)\s]+)\)`)
-	reMDBold   = regexp.MustCompile(`\*\*([^*]+)\*\*`)
-	reMDItalic = regexp.MustCompile(`(^|[^*_])[*_]([^*_]+)[*_]`)
-	reMDCode   = regexp.MustCompile("`([^`]+)`")
+	reMDLink     = regexp.MustCompile(`\[([^\]]+)\]\(([^)\s]+)\)`)
+	reMDImage    = regexp.MustCompile(`!\[([^\]]*)\]\(([^)\s]+)\)`)
+	reMDBold     = regexp.MustCompile(`\*\*([^*]+)\*\*`)
+	reMDStrike   = regexp.MustCompile(`~~([^~]+)~~`)
+	reMDStar     = regexp.MustCompile(`\*([^*\s](?:[^*]*[^*\s])?)\*`)
+	reMDUnder    = regexp.MustCompile(`(^|[^\w])_([^_\s](?:[^_]*[^_\s])?)_($|[^\w])`)
+	reMDCode     = regexp.MustCompile("`([^`]+)`")
+	reMDOrdered  = regexp.MustCompile(`^(\d+)\.\s+(.*)$`)
+	reMDRule     = regexp.MustCompile(`^(?:-{3,}|\*{3,}|_{3,})$`)
+	reMDTableSep = regexp.MustCompile(`^\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?$`)
 )
 
 // SafeHTML renders operator Markdown to sanitised HTML. Every byte of input
-// is HTML-escaped first, then a small whitelist of block and inline
-// constructs is re-introduced - so raw HTML/script in the source can never
-// survive, and only http(s)/mailto links are emitted. Dependency-free on
-// purpose: CBots carries no Markdown library.
+// is HTML-escaped first, then a whitelist of block and inline constructs is
+// re-introduced - so raw HTML/script in the source can never survive, and
+// only http(s)/mailto/relative URLs are emitted. Dependency-free on purpose.
+// This block is identical in every product that renders pages.
 func SafeHTML(body string) template.HTML {
 	body = strings.ReplaceAll(body, "\r\n", "\n")
 	var out strings.Builder
 	lines := strings.Split(body, "\n")
-	inList, inOrdered, inPara := false, false, false
+	inList, inOrdered, inPara, inQuote := false, false, false, false
 
 	closeList := func() {
 		if inList {
@@ -389,27 +395,91 @@ func SafeHTML(body string) template.HTML {
 			inPara = false
 		}
 	}
+	closeQuote := func() {
+		if inQuote {
+			out.WriteString("</blockquote>\n")
+			inQuote = false
+		}
+	}
+	closeAll := func() {
+		closeList()
+		closePara()
+		closeQuote()
+	}
 
-	for _, raw := range lines {
-		line := strings.TrimRight(raw, " \t")
+	for i := 0; i < len(lines); i++ {
+		line := strings.TrimRight(lines[i], " \t")
 		trimmed := strings.TrimSpace(line)
 
+		if strings.HasPrefix(trimmed, "```") {
+			closeAll()
+			var code []string
+			for i++; i < len(lines); i++ {
+				if strings.HasPrefix(strings.TrimSpace(lines[i]), "```") {
+					break
+				}
+				code = append(code, strings.TrimRight(lines[i], " \t"))
+			}
+			out.WriteString("<pre><code>" + html.EscapeString(strings.Join(code, "\n")) + "</code></pre>\n")
+			continue
+		}
+
 		if trimmed == "" {
-			closeList()
-			closePara()
+			closeAll()
+			continue
+		}
+
+		if reMDRule.MatchString(trimmed) {
+			closeAll()
+			out.WriteString("<hr>\n")
 			continue
 		}
 
 		if h := headingLevel(trimmed); h > 0 {
-			closeList()
-			closePara()
+			closeAll()
 			content := mdInline(strings.TrimSpace(trimmed[h+1:]))
 			fmt.Fprintf(&out, "<h%d>%s</h%d>\n", h, content, h)
 			continue
 		}
 
+		if strings.Contains(trimmed, "|") && i+1 < len(lines) {
+			sep := strings.TrimSpace(lines[i+1])
+			if strings.Contains(sep, "|") && reMDTableSep.MatchString(sep) {
+				head, aligns := mdSplitRow(trimmed), mdSplitRow(sep)
+				if len(head) == len(aligns) {
+					closeAll()
+					out.WriteString("<table>\n<thead><tr>")
+					for c, cell := range head {
+						out.WriteString(mdCell("th", aligns[c], cell))
+					}
+					out.WriteString("</tr></thead>\n<tbody>\n")
+					i++
+					for i+1 < len(lines) {
+						next := strings.TrimSpace(lines[i+1])
+						if next == "" || !strings.Contains(next, "|") {
+							break
+						}
+						i++
+						cells := mdSplitRow(next)
+						out.WriteString("<tr>")
+						for c := range head {
+							cell := ""
+							if c < len(cells) {
+								cell = cells[c]
+							}
+							out.WriteString(mdCell("td", aligns[c], cell))
+						}
+						out.WriteString("</tr>\n")
+					}
+					out.WriteString("</tbody>\n</table>\n")
+					continue
+				}
+			}
+		}
+
 		if strings.HasPrefix(trimmed, "- ") || strings.HasPrefix(trimmed, "* ") {
 			closePara()
+			closeQuote()
 			if inOrdered {
 				out.WriteString("</ol>\n")
 				inOrdered = false
@@ -422,8 +492,9 @@ func SafeHTML(body string) template.HTML {
 			continue
 		}
 
-		if m := regexp.MustCompile(`^(\d+)\.\s+(.*)$`).FindStringSubmatch(trimmed); m != nil {
+		if m := reMDOrdered.FindStringSubmatch(trimmed); m != nil {
 			closePara()
+			closeQuote()
 			if inList {
 				out.WriteString("</ul>\n")
 				inList = false
@@ -439,11 +510,18 @@ func SafeHTML(body string) template.HTML {
 		if strings.HasPrefix(trimmed, "> ") {
 			closeList()
 			closePara()
-			fmt.Fprintf(&out, "<blockquote>%s</blockquote>\n", mdInline(strings.TrimSpace(trimmed[2:])))
+			if !inQuote {
+				out.WriteString("<blockquote>")
+				inQuote = true
+			} else {
+				out.WriteString("<br>\n")
+			}
+			out.WriteString(mdInline(strings.TrimSpace(trimmed[2:])))
 			continue
 		}
 
 		closeList()
+		closeQuote()
 		if !inPara {
 			out.WriteString("<p>")
 			inPara = true
@@ -452,8 +530,7 @@ func SafeHTML(body string) template.HTML {
 		}
 		out.WriteString(mdInline(trimmed))
 	}
-	closeList()
-	closePara()
+	closeAll()
 	return template.HTML(out.String())
 }
 
@@ -468,23 +545,85 @@ func headingLevel(s string) int {
 	return 0
 }
 
+func mdSplitRow(s string) []string {
+	s = strings.TrimSpace(s)
+	s = strings.TrimPrefix(s, "|")
+	s = strings.TrimSuffix(s, "|")
+	cells := strings.Split(s, "|")
+	for i := range cells {
+		cells[i] = strings.TrimSpace(cells[i])
+	}
+	return cells
+}
+
+func mdCell(tag, align, text string) string {
+	attr := ""
+	left, right := strings.HasPrefix(align, ":"), strings.HasSuffix(align, ":")
+	switch {
+	case left && right:
+		attr = ` align="center"`
+	case right:
+		attr = ` align="right"`
+	case left:
+		attr = ` align="left"`
+	}
+	return "<" + tag + attr + ">" + mdInline(text) + "</" + tag + ">"
+}
+
+func mdSafeURL(u string, allowMailto bool) bool {
+	low := strings.ToLower(strings.TrimSpace(u))
+	if strings.HasPrefix(low, "http://") || strings.HasPrefix(low, "https://") {
+		return true
+	}
+	if strings.HasPrefix(low, "/") && !strings.HasPrefix(low, "//") {
+		return true
+	}
+	return allowMailto && strings.HasPrefix(low, "mailto:")
+}
+
+func mdEmphasis(s string) string {
+	s = reMDBold.ReplaceAllString(s, "<strong>$1</strong>")
+	s = reMDStrike.ReplaceAllString(s, "<del>$1</del>")
+	s = reMDStar.ReplaceAllString(s, "<em>$1</em>")
+	for i := 0; i < 2; i++ {
+		s = reMDUnder.ReplaceAllString(s, "$1<em>$2</em>$3")
+	}
+	return s
+}
+
 // mdInline escapes text then re-applies inline formatting on the escaped
 // string. Because the escape runs first, any literal "<" in the source is
-// already "&lt;" and cannot become a tag.
+// already "&lt;" and cannot become a tag. Code spans, images and links are
+// parked behind placeholders so emphasis never reaches inside them.
 func mdInline(s string) string {
-	s = html.EscapeString(s)
-	s = reMDCode.ReplaceAllString(s, "<code>$1</code>")
-	s = reMDBold.ReplaceAllString(s, "<strong>$1</strong>")
-	s = reMDItalic.ReplaceAllString(s, "$1<em>$2</em>")
+	s = html.EscapeString(strings.ReplaceAll(s, "\x00", ""))
+	var held []string
+	hold := func(h string) string {
+		held = append(held, h)
+		return "\x00" + strconv.Itoa(len(held)-1) + "\x00"
+	}
+	s = reMDCode.ReplaceAllStringFunc(s, func(m string) string {
+		return hold("<code>" + m[1:len(m)-1] + "</code>")
+	})
+	s = reMDImage.ReplaceAllStringFunc(s, func(m string) string {
+		sub := reMDImage.FindStringSubmatch(m)
+		if !mdSafeURL(sub[2], false) {
+			return sub[1]
+		}
+		return hold(`<img src="` + sub[2] + `" alt="` + sub[1] + `" loading="lazy">`)
+	})
 	s = reMDLink.ReplaceAllStringFunc(s, func(m string) string {
 		sub := reMDLink.FindStringSubmatch(m)
 		text, href := sub[1], sub[2]
-		low := strings.ToLower(strings.TrimSpace(href))
-		if !strings.HasPrefix(low, "http://") && !strings.HasPrefix(low, "https://") && !strings.HasPrefix(low, "mailto:") && !strings.HasPrefix(low, "/") {
-			return text
+		if !mdSafeURL(href, true) {
+			return mdEmphasis(text)
 		}
-		return `<a href="` + href + `" rel="noopener nofollow">` + text + `</a>`
+		return hold(`<a href="` + href + `" rel="noopener nofollow">` + mdEmphasis(text) + `</a>`)
 	})
+	s = mdEmphasis(s)
+	for i := len(held) - 1; i >= 0; i-- {
+		s = strings.Replace(s, "\x00"+strconv.Itoa(i)+"\x00", held[i], 1)
+	}
 	return s
 }
 
