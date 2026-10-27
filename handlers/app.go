@@ -22,6 +22,7 @@ import (
 	"tvt/federation"
 	"tvt/i18n"
 	"tvt/importer"
+	"tvt/legalpages"
 	"tvt/logger"
 	"tvt/mailer"
 	"tvt/media"
@@ -387,6 +388,13 @@ func (a *App) SetMedia(m media.Store) { a.Media = m }
 func (a *App) Handler() http.Handler {
 	mux := http.NewServeMux()
 	a.routes(mux)
+	legalpages.Reserved = func(slug string) bool {
+		if slug == "privacy" {
+			return false
+		}
+		_, pattern := mux.Handler(&http.Request{Method: http.MethodGet, URL: &url.URL{Path: "/" + slug}})
+		return pattern != "" && pattern != "/" && pattern != "GET /{slug}"
+	}
 	return a.middleware(mux)
 }
 
