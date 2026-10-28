@@ -547,8 +547,8 @@ body[data-user="0"] .topbar { padding-bottom: 10px; }
 .ed-inline .ed-field input[type="color"] { width: 44px; height: 32px; padding: 2px; }
 .ed-delete { align-self: flex-start; color: var(--danger); border-color: var(--danger); }
 .confirm-text { margin: 0 0 16px; }
-.pg-add { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 12px 0 16px; }
-.pg-add select { min-width: 150px; }
+.pg-same-as { display: none; }
+.pg-add-form:has([data-same-toggle]:checked) .pg-same-as { display: block; }
 .icon-btn.danger { background: transparent; border-color: transparent; color: var(--danger); }
 .icon-btn.danger:hover { border-color: var(--danger); }
 .modal-actions .icon-btn.danger { margin-inline-end: auto; }

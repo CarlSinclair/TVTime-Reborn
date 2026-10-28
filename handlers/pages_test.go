@@ -74,7 +74,7 @@ func TestOperatorPagesPrivacyDefaultAndFooter(t *testing.T) {
 	if code, _ := anon.get("/terms"); code == 200 {
 		t.Fatalf("a disabled page is not public")
 	}
-	if code, _ := boss.post("/api/admin/pages", map[string]any{"action": "add_lang", "page_id": id, "lang": "pt", "slug": "termos", "title": "Termos", "body": "x", "enabled": true}); code != 200 {
+	if code, _ := boss.post("/api/admin/pages", map[string]any{"action": "add", "same_as_on": true, "same_as": strconv.Itoa(id), "lang": "pt", "slug": "termos", "title": "Termos", "body": "x", "enabled": true}); code != 200 {
 		t.Fatalf("add a language to an existing page: %d", code)
 	}
 	var langs int

@@ -260,18 +260,22 @@
   </div>
 </section>
 
-<div class="pg-add" data-slug-ok="{{.T "admin.pages_slug_ok"}}" data-slug-taken="{{.T "admin.pages_slug_taken"}}" data-slug-bad="{{.T "admin.pages_slug_bad"}}">
-  <select id="pg-lang" aria-label="{{.T "admin.pages_language"}}">{{range .Data.PageLangs}}<option value="{{.}}" {{if eq . $.Lang}}selected{{end}}>{{$.LangName .}}</option>{{end}}</select>
-  <select id="pg-target" aria-label="{{.T "admin.pages_target"}}"><option value="">{{.T "admin.pages_new"}}</option>{{range .Data.PageList}}<option value="{{.ID}}">#{{.ID}}{{range .Variants}}{{if .Exists}} /{{.Slug}}{{end}}{{end}}</option>{{end}}</select>
-  <button class="icon-btn solid" type="button" data-pg-add aria-label="{{.T "admin.pages_add_language"}}" title="{{.T "admin.pages_add_language"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-plus"></use></svg></button>
-</div>
-<form class="panel stack" data-api="/api/admin/pages" data-reload="1" data-success="{{.T "js.saved"}}" hidden>
-  <h2>{{.T "admin.pages_new"}}</h2>
-  <input type="hidden" name="action" value="add">
-  <div data-cards="new"></div>
-  <p class="form-error" role="alert" hidden></p>
-  <div><button class="btn" type="submit">{{.T "admin.pages_add"}}</button></div>
-</form>
+<details class="panel fold">
+  <summary>{{.T "admin.pages_new"}}</summary>
+  <form class="stack pg-add-form" data-api="/api/admin/pages" data-reload="1" data-success="{{.T "js.saved"}}" data-slug-ok="{{.T "admin.pages_slug_ok"}}" data-slug-taken="{{.T "admin.pages_slug_taken"}}" data-slug-bad="{{.T "admin.pages_slug_bad"}}">
+    <input type="hidden" name="action" value="add">
+    <input type="hidden" name="enabled" value="1">
+    <label>{{.T "admin.pages_language"}}<select name="lang" data-same-lang>{{range .Data.PageLangs}}<option value="{{.}}" {{if eq . $.Lang}}selected{{end}}>{{$.LangName .}}</option>{{end}}</select></label>
+    <label>{{.T "admin.pages_slug"}}<input type="text" name="slug" pattern="[a-z0-9][a-z0-9\-]*" maxlength="64" autocomplete="off" spellcheck="false"><span class="slug-status"></span></label>
+    <label>{{.T "admin.pages_title"}}<input type="text" name="title" maxlength="200" autocomplete="off"></label>
+    <label>{{.T "admin.pages_body"}}<textarea name="body" rows="10"></textarea></label>
+    <div><button class="btn ghost small" type="button" data-modal-open="m-md-help">{{.T "admin.md_help"}}</button></div>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-same-on" name="same_as_on" data-same-toggle><label for="pg-same-on" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="pg-same-on">{{.T "admin.pages_same_as"}}</label></div>
+    <label class="pg-same-as">{{.T "admin.pages_same_as_label"}}<select name="same_as" data-same-select><option value="">{{.T "admin.pages_same_as_pick"}}</option>{{range .Data.PageList}}<option value="{{.ID}}" data-langs="{{.LangList}}">#{{.ID}}{{range .Variants}}{{if .Exists}} /{{.Slug}}{{end}}{{end}}</option>{{end}}</select></label>
+    <p class="form-error" role="alert" hidden></p>
+    <div><button class="btn" type="submit">{{.T "admin.pages_add"}}</button></div>
+  </form>
+</details>
 
 {{range .Data.PageList}}
 {{$pid := .ID}}
@@ -301,12 +305,6 @@
   </form>
 </details>
 {{else}}<p class="muted center">{{$.T "admin.pages_none"}}</p>{{end}}
-<template id="pg-card-tpl"><fieldset class="lang-fieldset" data-card data-card-lang="{L}"><legend><span data-card-name></span> <span class="tswitch"><input type="checkbox" class="tswitch-input" id="pg-new-{L}-en" name="enabled_{L}" checked><label for="pg-new-{L}-en" class="tswitch-label"><span class="ball"></span></label></span> <button class="icon-btn" type="button" data-remove-row aria-label="{{.T "admin.pages_remove"}}" title="{{.T "admin.pages_remove"}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-x"></use></svg></button></legend>
-      <label>{{.T "admin.pages_slug"}}<input type="text" name="slug_{L}" value="" pattern="[a-z0-9][a-z0-9\-]*" maxlength="64" autocomplete="off" spellcheck="false"><span class="slug-status"></span></label>
-      <label>{{.T "admin.pages_title"}}<input type="text" name="title_{L}" value="" maxlength="200" autocomplete="off"></label>
-      <label>{{.T "admin.pages_body"}}<textarea name="body_{L}" rows="10"></textarea></label>
-      <div><button class="btn ghost small" type="button" data-modal-open="m-md-help">{{.T "admin.md_help"}}</button></div>
-</fieldset></template>
 {{template "pager" (dict "Pager" .Data.Pager "V" .)}}
 
 <dialog class="modal" id="m-md-help" aria-labelledby="m-md-help-t">
@@ -319,8 +317,8 @@
       <tr><td><code>~~strike~~</code></td><td><del>{{.T "admin.md_strike"}}</del></td></tr>
       <tr><td><code>- item</code></td><td>{{.T "admin.md_list"}}</td></tr>
       <tr><td><code>1. item</code></td><td>{{.T "admin.md_numbered"}}</td></tr>
-      <tr><td><code>[text](https://example.com)</code></td><td>{{.T "admin.md_link"}}</td></tr>
-      <tr><td><code>![alt](https://example.com/img.png)</code></td><td>{{.T "admin.md_image"}}</td></tr>
+      <tr><td><code>[text](https://x.com)</code></td><td>{{.T "admin.md_link"}}</td></tr>
+      <tr><td><code>![alt](https://x.com/img.png)</code></td><td>{{.T "admin.md_image"}}</td></tr>
       <tr><td><code>&gt; quote</code></td><td>{{.T "admin.md_quote"}}</td></tr>
       <tr><td><code>`code`</code></td><td>{{.T "admin.md_code"}}</td></tr>
       <tr><td><code>```<br>code block<br>```</code></td><td>{{.T "admin.md_codeblock"}}</td></tr>
