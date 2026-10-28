@@ -274,28 +274,20 @@ func (a *App) apiAdminPages(w http.ResponseWriter, r *http.Request) {
 	}
 	switch strOf(in, "action") {
 	case "add":
-		vars := a.variantsFrom(in)
-		if lang := strOf(in, "lang"); lang != "" {
-			if !a.I18n.Has(lang) {
-				a.fail(w, r, errBadRequest)
+		lang := strOf(in, "lang")
+		if !a.I18n.Has(lang) {
+			a.fail(w, r, errBadRequest)
+			return
+		}
+		v := legalpages.VariantInput{Lang: lang, Slug: strOf(in, "slug"), Title: strOf(in, "title"), Body: strOf(in, "body"), Enabled: boolOf(in, "enabled")}
+		if !boolOf(in, "same_as_on") {
+			if _, err := store.AddPage([]legalpages.VariantInput{v}, actor); err != nil {
+				a.fail(w, r, a.pageErr(err))
 				return
 			}
-			vars = []legalpages.VariantInput{{Lang: lang, Slug: strOf(in, "slug"), Title: strOf(in, "title"), Body: strOf(in, "body"), Enabled: boolOf(in, "enabled")}}
+			break
 		}
-		if len(vars) == 0 {
-			a.fail(w, r, errBadRequest)
-			return
-		}
-		if _, err := store.AddPage(vars, actor); err != nil {
-			a.fail(w, r, a.pageErr(err))
-			return
-		}
-	case "add_lang":
-		lang := strOf(in, "lang")
-		if !a.I18n.Has(lang) || pid() == 0 {
-			a.fail(w, r, errBadRequest)
-			return
-		}
+		target, _ := strconv.Atoi(strOf(in, "same_as"))
 		list, err := store.ListPages(a.I18n.Langs())
 		if err != nil {
 			a.fail(w, r, err)
@@ -303,18 +295,23 @@ func (a *App) apiAdminPages(w http.ResponseWriter, r *http.Request) {
 		}
 		found := false
 		for _, p := range list {
-			if p.ID != pid() {
+			if p.ID != target || target <= 0 {
 				continue
 			}
 			found = true
-			v := legalpages.VariantInput{Lang: lang, Slug: strOf(in, "slug"), Title: strOf(in, "title"), Body: strOf(in, "body"), Enabled: boolOf(in, "enabled")}
+			for _, pv := range p.Variants {
+				if pv.Exists && pv.Lang == lang {
+					a.fail(w, r, apiErr{http.StatusBadRequest, "err.page_same_as"})
+					return
+				}
+			}
 			if err := store.SavePage(p.ID, p.Enabled, p.ShowUpdated, []legalpages.VariantInput{v}, actor); err != nil {
 				a.fail(w, r, a.pageErr(err))
 				return
 			}
 		}
 		if !found {
-			a.fail(w, r, errNotFound)
+			a.fail(w, r, apiErr{http.StatusBadRequest, "err.page_same_as"})
 			return
 		}
 	case "save":

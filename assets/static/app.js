@@ -573,10 +573,10 @@
   });
 
   document.addEventListener("input", (event) => {
-    const input = event.target.closest('input[name^="slug_"]');
+    const input = event.target.closest('input[name^="slug_"], input[name="slug"]');
     if (!input) return;
     const status = input.parentElement.querySelector(".slug-status");
-    const labels = document.querySelector(".pg-add");
+    const labels = document.querySelector(".pg-add-form");
     if (!status || !labels) return;
     const v = input.value.trim().toLowerCase();
     if (input.value !== v) input.value = v;
@@ -587,7 +587,7 @@
         msg = labels.dataset.slugBad;
       } else {
         let clash = false;
-        document.querySelectorAll('input[name^="slug_"]').forEach((o) => {
+        document.querySelectorAll('input[name^="slug_"], input[name="slug"]').forEach((o) => {
           if (o !== input && o.value.trim().toLowerCase() === v) clash = true;
         });
         msg = clash ? labels.dataset.slugTaken : labels.dataset.slugOk;
@@ -598,48 +598,28 @@
     status.className = "slug-status" + (msg ? (ok ? " is-ok" : " is-bad") : "");
   });
 
+  document.addEventListener("change", (event) => {
+    const form = event.target.closest(".pg-add-form");
+    if (!form || !event.target.closest("[data-same-lang], [data-same-toggle]")) return;
+    const lang = form.querySelector("[data-same-lang]");
+    const select = form.querySelector("[data-same-select]");
+    const toggle = form.querySelector("[data-same-toggle]");
+    if (!lang || !select) return;
+    Array.from(select.options).forEach((o) => {
+      if (o.value === "") return;
+      const taken = (o.dataset.langs || "").split(" ").includes(lang.value);
+      o.hidden = taken;
+      o.disabled = taken;
+    });
+    if (select.selectedOptions.length && select.selectedOptions[0].disabled) select.value = "";
+    if (toggle) select.required = toggle.checked;
+  });
+
   document.addEventListener("click", async (event) => {
     const el = event.target.closest("button, a");
     if (!el) return;
     const d = el.dataset;
 
-    if ("pgAdd" in d) {
-      const langSel = document.getElementById("pg-lang");
-      const pageSel = document.getElementById("pg-target");
-      if (!langSel || !pageSel || !langSel.value) return;
-      const box = document.querySelector('[data-cards="' + (pageSel.value === "" ? "new" : pageSel.value) + '"]');
-      if (!box) return;
-      const details = box.closest("details");
-      if (details) details.open = true;
-      const have = box.querySelector('[data-card-lang="' + langSel.value + '"]');
-      if (have) {
-        have.scrollIntoView({ block: "center" });
-        const first = have.querySelector('input[name^="slug_"]');
-        if (first) first.focus();
-        return;
-      }
-      const tpl = document.getElementById("pg-card-tpl");
-      const holder = document.createElement("div");
-      holder.innerHTML = tpl.innerHTML.split("{L}").join(langSel.value).trim();
-      const card = holder.firstElementChild;
-      card.querySelector("[data-card-name]").textContent = langSel.selectedOptions[0].textContent;
-      box.appendChild(card);
-      const form = box.closest("form");
-      if (form) form.hidden = false;
-      card.scrollIntoView({ block: "center" });
-      return;
-    }
-    if ("removeRow" in d) {
-      const card = el.closest("[data-card]");
-      if (!card) return;
-      const parent = card.parentElement;
-      card.remove();
-      if (parent && parent.dataset.cards === "new" && !parent.children.length) {
-        const form = parent.closest("form");
-        if (form) form.hidden = true;
-      }
-      return;
-    }
     if ("logout" in d) {
       const data = await run(el, () => api("/api/auth/logout"));
       if (data) go(data);

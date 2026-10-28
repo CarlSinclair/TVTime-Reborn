@@ -50,6 +50,18 @@ type Page struct {
 	Variants    []Variant // one slot per language passed to ListPages, in order
 }
 
+// LangList is the space-separated languages this page already has a version
+// in, for the editor to hide the page from a "same as" list of that language.
+func (p Page) LangList() string {
+	var out []string
+	for _, v := range p.Variants {
+		if v.Exists {
+			out = append(out, v.Lang)
+		}
+	}
+	return strings.Join(out, " ")
+}
+
 // VariantInput is the per-language form data for one SavePage call.
 type VariantInput struct {
 	Lang    string
