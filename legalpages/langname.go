@@ -119,6 +119,9 @@ func buildLangIndex() {
 	}
 	for _, loc := range locales {
 		namer := display.Languages(loc)
+		if namer == nil {
+			continue
+		}
 		for _, t := range nameTargets {
 			put(namer.Name(t), t)
 		}
@@ -135,7 +138,11 @@ func buildLangIndex() {
 				continue
 			}
 			for _, loc := range regionLocales {
-				name := foldName(display.Regions(loc).Name(r))
+				regionNamer := display.Regions(loc)
+				if regionNamer == nil {
+					continue
+				}
+				name := foldName(regionNamer.Name(r))
 				if name != "" {
 					if _, exists := regionIndex[name]; !exists {
 						regionIndex[name] = r
@@ -219,7 +226,11 @@ func LanguageLabel(code, viewer string) string {
 	if err != nil {
 		return code
 	}
-	name := display.Languages(viewerTag(viewer)).Name(t)
+	namer := display.Languages(viewerTag(viewer))
+	if namer == nil {
+		namer = display.Languages(language.English)
+	}
+	name := namer.Name(t)
 	if name == "" || name == t.String() {
 		return code
 	}
@@ -241,6 +252,9 @@ func LanguageSuggestions(viewer string) []string {
 	}
 	langIndexOnce.Do(buildLangIndex)
 	namer := display.Languages(viewerTag(viewer))
+	if namer == nil {
+		namer = display.Languages(language.English)
+	}
 	seen := map[string]bool{}
 	var out []string
 	for _, t := range nameTargets {
