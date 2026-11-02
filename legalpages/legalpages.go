@@ -47,7 +47,18 @@ type Page struct {
 	ShowUpdated bool // show the "last updated" date in the public page footer
 	UpdatedAt   string
 	UpdatedBy   string
-	Variants    []Variant // one slot per language passed to ListPages, in order
+	Variants    []Variant // the language versions this page has, ordered by code
+}
+
+// Langs is the language codes this page has a version in.
+func (p Page) Langs() []string {
+	out := make([]string, 0, len(p.Variants))
+	for _, v := range p.Variants {
+		if v.Exists {
+			out = append(out, v.Lang)
+		}
+	}
+	return out
 }
 
 // LangList is the space-separated languages this page already has a version
@@ -150,9 +161,9 @@ func (s Store) selectCols() string {
 	return `page_id, lang, slug, title, body, enabled, page_enabled, show_updated, updated_at, updated_by`
 }
 
-// ListPages returns every page, each with one Variant slot per lang in
-// langs (blank+Exists=false where unauthored), page_id ascending.
-func (s Store) ListPages(langs []string) ([]Page, error) {
+// ListPages returns every page with the language variants it actually has,
+// ordered by language code, page_id ascending.
+func (s Store) ListPages() ([]Page, error) {
 	rows, err := s.DB.Query(`SELECT ` + s.selectCols() + ` FROM ` + s.tbl())
 	if err != nil {
 		return nil, err
@@ -200,12 +211,13 @@ func (s Store) ListPages(langs []string) ([]Page, error) {
 	out := make([]Page, 0, len(ids))
 	for _, id := range ids {
 		p := *byID[id]
-		for _, l := range langs {
-			if v, ok := varByID[id][l]; ok {
-				p.Variants = append(p.Variants, v)
-			} else {
-				p.Variants = append(p.Variants, Variant{Lang: l})
-			}
+		codes := make([]string, 0, len(varByID[id]))
+		for l := range varByID[id] {
+			codes = append(codes, l)
+		}
+		sort.Strings(codes)
+		for _, l := range codes {
+			p.Variants = append(p.Variants, varByID[id][l])
 		}
 		out = append(out, p)
 	}
@@ -230,6 +242,9 @@ func (s Store) Resolve(slug string) (Resolved, bool) {
 		return Resolved{}, false
 	}
 	r.ShowUpdated = su != 0
+	if IsPrivateLang(r.Lang) {
+		r.Lang = ""
+	}
 
 	arows, err := s.DB.Query(
 		`SELECT lang, slug FROM `+s.tbl()+
@@ -239,7 +254,7 @@ func (s Store) Resolve(slug string) (Resolved, bool) {
 		defer arows.Close()
 		for arows.Next() {
 			var a Alt
-			if arows.Scan(&a.Lang, &a.Slug) == nil {
+			if arows.Scan(&a.Lang, &a.Slug) == nil && !IsPrivateLang(a.Lang) {
 				r.Alternates = append(r.Alternates, a)
 			}
 		}
