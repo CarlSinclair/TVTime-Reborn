@@ -32,7 +32,7 @@ func (a *App) pages() legalpages.Store {
 
 func (a *App) reloadPages() {
 	langs := a.I18n.Langs()
-	list, err := a.pages().ListPages(langs)
+	list, err := a.pages().ListPages()
 	if err != nil {
 		logger.Error("PAGES reload: %v", err)
 		return
@@ -139,8 +139,7 @@ type pageView struct {
 // ---- admin ----
 
 func (a *App) pagesAdminData(r *http.Request, data map[string]any) error {
-	langs := a.I18n.Langs()
-	list, err := a.pages().ListPages(langs)
+	list, err := a.pages().ListPages()
 	if err != nil {
 		return err
 	}
@@ -162,7 +161,9 @@ func (a *App) pagesAdminData(r *http.Request, data map[string]any) error {
 		}
 		views = append(views, pageView{Page: p, Missing: missing})
 	}
-	data["PageList"], data["PageLangs"] = views, langs
+	data["PageList"] = views
+	data["LangSuggestions"] = legalpages.LanguageSuggestions(a.langOf(nil, r))
+	data["LangResolveURL"] = "/api/admin/pages/resolve-lang"
 	a.pageCache.mu.RLock()
 	data["PrivacyCustom"] = a.pageCache.customPrivacy
 	a.pageCache.mu.RUnlock()
@@ -186,9 +187,9 @@ func strOf(in map[string]any, key string) string {
 
 // variantsFrom reads the languages a form posted fields for; a language the form
 // did not mention is left alone.
-func (a *App) variantsFrom(in map[string]any) []legalpages.VariantInput {
+func (a *App) variantsFrom(in map[string]any, langs []string) []legalpages.VariantInput {
 	var out []legalpages.VariantInput
-	for _, l := range a.I18n.Langs() {
+	for _, l := range langs {
 		_, s1 := in["slug_"+l]
 		_, s2 := in["title_"+l]
 		_, s3 := in["body_"+l]
@@ -239,6 +240,21 @@ func (a *App) privacyDefault(lang string) (title, body string) {
 	return a.I18n.T(lang, "privacy.title"), strings.TrimSpace(b.String())
 }
 
+func (a *App) apiAdminPageLangResolve(w http.ResponseWriter, r *http.Request) {
+	admin, err := a.needAdmin(r)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	q := r.URL.Query().Get("q")
+	code, resolved := legalpages.NormalizeLang(q)
+	label := ""
+	if code != "" {
+		label = legalpages.LanguageLabel(code, a.lang(w, r, admin))
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"code": code, "label": label, "resolved": resolved})
+}
+
 func (a *App) apiAdminPages(w http.ResponseWriter, r *http.Request) {
 	admin, err := a.needAdmin(r)
 	if err != nil {
@@ -253,8 +269,10 @@ func (a *App) apiAdminPages(w http.ResponseWriter, r *http.Request) {
 	actor := admin.Username
 	store := a.pages()
 	slugs := []string{strOf(in, "slug")}
-	for _, l := range a.I18n.Langs() {
-		slugs = append(slugs, strOf(in, "slug_"+l))
+	for k := range in {
+		if strings.HasPrefix(k, "slug_") {
+			slugs = append(slugs, strOf(in, k))
+		}
 	}
 	for _, sl := range slugs {
 		if sl = strings.ToLower(strings.TrimSpace(sl)); sl != "" && a.isContactSlug(sl) {
@@ -274,8 +292,9 @@ func (a *App) apiAdminPages(w http.ResponseWriter, r *http.Request) {
 	}
 	switch strOf(in, "action") {
 	case "add":
-		lang := strOf(in, "lang")
-		if !a.I18n.Has(lang) {
+		lang, _ := legalpages.NormalizeLang(strOf(in, "lang"))
+		if lang == "" {
+			logger.Warn("PAGES add: empty language admin=%s", actor)
 			a.fail(w, r, errBadRequest)
 			return
 		}
@@ -288,7 +307,7 @@ func (a *App) apiAdminPages(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		target, _ := strconv.Atoi(strOf(in, "same_as"))
-		list, err := store.ListPages(a.I18n.Langs())
+		list, err := store.ListPages()
 		if err != nil {
 			a.fail(w, r, err)
 			return
@@ -300,7 +319,7 @@ func (a *App) apiAdminPages(w http.ResponseWriter, r *http.Request) {
 			}
 			found = true
 			for _, pv := range p.Variants {
-				if pv.Exists && pv.Lang == lang {
+				if pv.Exists && legalpages.SameLang(pv.Lang, lang) {
 					a.fail(w, r, apiErr{http.StatusBadRequest, "err.page_same_as"})
 					return
 				}
@@ -319,7 +338,19 @@ func (a *App) apiAdminPages(w http.ResponseWriter, r *http.Request) {
 			a.fail(w, r, errBadRequest)
 			return
 		}
-		if err := store.SavePage(pid(), boolOf(in, "page_enabled"), boolOf(in, "show_updated"), a.variantsFrom(in), actor); err != nil {
+		existing, err := store.ListPages()
+		if err != nil {
+			logger.Error("PAGES save: list failed page_id=%d err=%v", pid(), err)
+			a.fail(w, r, err)
+			return
+		}
+		var pageLangs []string
+		for _, p := range existing {
+			if p.ID == pid() {
+				pageLangs = p.Langs()
+			}
+		}
+		if err := store.SavePage(pid(), boolOf(in, "page_enabled"), boolOf(in, "show_updated"), a.variantsFrom(in, pageLangs), actor); err != nil {
 			a.fail(w, r, a.pageErr(err))
 			return
 		}

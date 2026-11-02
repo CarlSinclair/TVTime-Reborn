@@ -598,21 +598,67 @@
     status.className = "slug-status" + (msg ? (ok ? " is-ok" : " is-bad") : "");
   });
 
-  document.addEventListener("change", (event) => {
-    const form = event.target.closest(".pg-add-form");
-    if (!form || !event.target.closest("[data-same-lang], [data-same-toggle]")) return;
-    const lang = form.querySelector("[data-same-lang]");
+  const pageLangState = new WeakMap();
+
+  const syncPageSame = (form) => {
     const select = form.querySelector("[data-same-select]");
+    if (!select) return;
     const toggle = form.querySelector("[data-same-toggle]");
-    if (!lang || !select) return;
+    const group = form.querySelector("[data-same-group]");
+    const lang = (pageLangState.get(form) || "").toLowerCase();
+    let qualifying = 0;
     Array.from(select.options).forEach((o) => {
       if (o.value === "") return;
-      const taken = (o.dataset.langs || "").split(" ").includes(lang.value);
+      const taken = lang !== "" && (o.dataset.langs || "").toLowerCase().split(" ").includes(lang);
       o.hidden = taken;
       o.disabled = taken;
+      if (!taken) qualifying++;
     });
+    if (group) group.hidden = qualifying === 0;
+    if (qualifying === 0 && toggle) toggle.checked = false;
     if (select.selectedOptions.length && select.selectedOptions[0].disabled) select.value = "";
     if (toggle) select.required = toggle.checked;
+  };
+
+  const resolvePageLang = (form) => {
+    const input = form.querySelector("[data-same-lang]");
+    const out = form.querySelector("[data-lang-resolved]");
+    const url = input ? input.dataset.resolveUrl : "";
+    const q = input ? input.value.trim() : "";
+    if (!q || !url) {
+      pageLangState.set(form, "");
+      if (out) out.textContent = "";
+      syncPageSame(form);
+      return;
+    }
+    fetch(url + "?q=" + encodeURIComponent(q), { credentials: "same-origin" })
+      .then((resp) => {
+        if (!resp.ok) throw new Error("status " + resp.status);
+        return resp.json();
+      })
+      .then((data) => {
+        if (input.value.trim() !== q) return;
+        pageLangState.set(form, data.code || "");
+        if (out) out.textContent = data.label || "";
+        syncPageSame(form);
+      })
+      .catch((err) => {
+        console.error("pages: language resolve failed", { q, err });
+      });
+  };
+
+  let pageLangTimer = null;
+  document.addEventListener("input", (event) => {
+    const form = event.target.closest(".pg-add-form");
+    if (!form || !event.target.closest("[data-same-lang]")) return;
+    window.clearTimeout(pageLangTimer);
+    pageLangTimer = window.setTimeout(() => resolvePageLang(form), 250);
+  });
+
+  document.addEventListener("change", (event) => {
+    const form = event.target.closest(".pg-add-form");
+    if (!form || !event.target.closest("[data-same-toggle]")) return;
+    syncPageSame(form);
   });
 
   document.addEventListener("click", async (event) => {

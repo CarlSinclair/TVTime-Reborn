@@ -130,6 +130,10 @@ var LangNames = map[string]string{
 	"zh": "中文", "ru": "Русский", "ja": "日本語", "ko": "한국어", "ar": "العربية",
 }
 
+func (v *View) PageLangName(code string) string {
+	return legalpages.LanguageLabel(code, v.Lang)
+}
+
 func (v *View) LangName(code string) string {
 	if n, ok := LangNames[code]; ok {
 		return n
