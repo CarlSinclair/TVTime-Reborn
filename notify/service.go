@@ -326,23 +326,28 @@ func (s *Service) deliver(userID int64, event, link string, data map[string]any)
 		s.queueEmail(u, lang, title, body, abs)
 	}
 	if s.prefFor(u, cat, prefs, ChanTelegram) && s.canTelegram(u) {
-		if err := s.sendTelegram(u, title, body, abs); err != nil {
+		if err := s.sendTelegram(u, lang, event, data, abs); err != nil {
 			logger.Error("NOTIFY telegram failed uid=%d event=%s: %v", userID, event, err)
 		}
 	}
 }
 
-func (s *Service) sendTelegram(u *store.User, title, body, absLink string) error {
-	msg := title
-	if body != "" {
-		msg += "\n" + body
-	}
-	if absLink != "" {
-		msg += "\n\n" + absLink
-	}
+func (s *Service) sendTelegram(u *store.User, lang, event string, data map[string]any, absLink string) error {
+	msg := s.telegramHTML(lang, event, data, absLink)
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	err := s.Bot.SendMessage(ctx, u.TelegramChatID, msg)
+	var err error
+	sent := false
+	if img, _ := data["image"].(string); img != "" && len(msg) <= telegram.MaxCaption {
+		err = s.Bot.SendPhotoHTML(ctx, u.TelegramChatID, s.BaseURL+img, msg)
+		sent = err == nil || errors.Is(err, telegram.ErrBotBlocked)
+		if !sent {
+			logger.Warn("NOTIFY telegram photo failed uid=%d event=%s image=%s, sending text only: %v", u.ID, event, img, err)
+		}
+	}
+	if !sent {
+		err = s.Bot.SendHTML(ctx, u.TelegramChatID, msg)
+	}
 	if errors.Is(err, telegram.ErrBotBlocked) {
 		if cerr := s.Store.SetTelegramChat(u.ID, ""); cerr != nil {
 			logger.Error("NOTIFY clear dead telegram chat uid=%d: %v", u.ID, cerr)
@@ -442,7 +447,7 @@ func (s *Service) SendTest(u *store.User, channel string) error {
 		if !s.canTelegram(u) {
 			return ErrTelegramUnavailable
 		}
-		return s.sendTelegram(u, title, body, s.BaseURL+link)
+		return s.sendTelegram(u, lang, "test", map[string]any{}, s.BaseURL+link)
 	}
 	return ErrUnknownChannel
 }

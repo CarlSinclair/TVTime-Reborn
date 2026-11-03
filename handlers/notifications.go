@@ -253,6 +253,12 @@ func (a *App) apiNotificationSettings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if in.Master[notify.ChanTelegram] && !u.NotifyTelegram {
+		if err := a.confirmTelegramOn(r.Context(), u); err != nil {
+			a.fail(w, r, err)
+			return
+		}
+	}
 	if err := a.Store.SetNotifyFlags(u.ID, in.Master[notify.ChanInApp], in.Master[notify.ChanPush], in.Master[notify.ChanEmail], in.Master[notify.ChanTelegram]); err != nil {
 		a.fail(w, r, err)
 		return

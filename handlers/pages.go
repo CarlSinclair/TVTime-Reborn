@@ -127,7 +127,6 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/account/telegram/status", a.apiTelegramStatus)
 	mux.HandleFunc("POST /api/account/telegram/unlink-chat", a.apiTelegramUnlinkChat)
 	mux.HandleFunc("POST /api/account/telegram/unlink", a.apiTelegramUnlinkIdentity)
-	mux.HandleFunc("POST /api/account/telegram/enable-dm", a.apiTelegramEnableDM)
 	mux.HandleFunc("POST /api/telegram/webhook", a.handleTelegramWebhook)
 	mux.HandleFunc("POST /api/profile", a.apiUpdateProfile)
 	mux.HandleFunc("POST /api/profile/avatar", a.apiUploadMedia("avatars"))

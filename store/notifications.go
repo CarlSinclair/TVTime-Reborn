@@ -212,23 +212,25 @@ func (s *Store) PushSubs(userID int64) ([]PushSub, error) {
 }
 
 type EpisodeAlert struct {
-	UserID    int64
-	EpisodeID int64
-	ShowID    int64
-	ShowTMDB  int64
-	ShowName  string
-	Season    int
-	Episode   int
-	Name      string
-	AirDate   string
-	AirAt     string
+	UserID     int64
+	EpisodeID  int64
+	ShowID     int64
+	ShowTMDB   int64
+	ShowName   string
+	Season     int
+	Episode    int
+	Name       string
+	AirDate    string
+	AirAt      string
+	StillPath  string
+	PosterPath string
 }
 
 // PendingEpisodeAlerts returns (user, episode) pairs for followed running shows
 // whose episode aired in [from, to] and that the user has not been told about.
 // The caller filters by each user's own local date.
 func (s *Store) PendingEpisodeAlerts(from, to string) ([]EpisodeAlert, error) {
-	rows, err := s.DB.Query(`SELECT f.user_id, e.id, sh.id, sh.tmdb_id, sh.name, e.season_number, e.episode_number, e.name, e.air_date, COALESCE(e.air_at, '')
+	rows, err := s.DB.Query(`SELECT f.user_id, e.id, sh.id, sh.tmdb_id, sh.name, e.season_number, e.episode_number, e.name, e.air_date, COALESCE(e.air_at, ''), e.still_path, sh.poster_path
 	  FROM follows f
 	  JOIN shows sh ON sh.id = f.show_id
 	  JOIN episodes e ON e.show_id = sh.id
@@ -244,7 +246,7 @@ func (s *Store) PendingEpisodeAlerts(from, to string) ([]EpisodeAlert, error) {
 	var out []EpisodeAlert
 	for rows.Next() {
 		var a EpisodeAlert
-		if err := rows.Scan(&a.UserID, &a.EpisodeID, &a.ShowID, &a.ShowTMDB, &a.ShowName, &a.Season, &a.Episode, &a.Name, &a.AirDate, &a.AirAt); err != nil {
+		if err := rows.Scan(&a.UserID, &a.EpisodeID, &a.ShowID, &a.ShowTMDB, &a.ShowName, &a.Season, &a.Episode, &a.Name, &a.AirDate, &a.AirAt, &a.StillPath, &a.PosterPath); err != nil {
 			return nil, err
 		}
 		out = append(out, a)
