@@ -279,20 +279,7 @@ func (b *Bot) SendMessageButtons(ctx context.Context, chatID, text string, butto
 		}
 		payload["reply_markup"] = map[string]any{"inline_keyboard": rows}
 	}
-	if err := b.pace(ctx, chatID); err != nil {
-		return 0, err
-	}
-	res, err := b.callResult(ctx, "sendMessage", payload)
-	var rl rateLimitedError
-	if errors.As(err, &rl) && rl.wait > 0 && rl.wait <= maxRetryAfter {
-		logger.Warn("TELEGRAM rate limited chat=%s, retrying in %s", chatID, rl.wait)
-		select {
-		case <-ctx.Done():
-			return 0, ctx.Err()
-		case <-time.After(rl.wait):
-		}
-		res, err = b.callResult(ctx, "sendMessage", payload)
-	}
+	res, err := b.sendPaced(ctx, chatID, "sendMessage", payload)
 	if err != nil {
 		return 0, err
 	}
@@ -303,6 +290,49 @@ func (b *Bot) SendMessageButtons(ctx context.Context, chatID, text string, butto
 		return 0, nil
 	}
 	return sent.MessageID, nil
+}
+
+// sendPaced waits for the chat's turn, calls the method, and retries once when
+// Telegram asks for a short pause.
+func (b *Bot) sendPaced(ctx context.Context, chatID, method string, payload any) (json.RawMessage, error) {
+	if err := b.pace(ctx, chatID); err != nil {
+		return nil, err
+	}
+	res, err := b.callResult(ctx, method, payload)
+	var rl rateLimitedError
+	if errors.As(err, &rl) && rl.wait > 0 && rl.wait <= maxRetryAfter {
+		logger.Warn("TELEGRAM rate limited chat=%s, retrying in %s", chatID, rl.wait)
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(rl.wait):
+		}
+		res, err = b.callResult(ctx, method, payload)
+	}
+	return res, err
+}
+
+// MaxCaption is Telegram's limit for a photo caption.
+const MaxCaption = 1024
+
+// SendHTML sends text formatted with Telegram's HTML subset. The caller must
+// escape any user-supplied text.
+func (b *Bot) SendHTML(ctx context.Context, chatID, text string) error {
+	if len(text) > 4000 {
+		text = text[:4000]
+	}
+	_, err := b.sendPaced(ctx, chatID, "sendMessage", map[string]any{"chat_id": chatID, "text": text, "parse_mode": "HTML", "disable_web_page_preview": true})
+	return err
+}
+
+// SendPhotoHTML sends a picture by public URL with an HTML caption of at most
+// MaxCaption bytes.
+func (b *Bot) SendPhotoHTML(ctx context.Context, chatID, photoURL, caption string) error {
+	if len(caption) > MaxCaption {
+		return fmt.Errorf("telegram sendPhoto: caption is %d bytes, limit %d", len(caption), MaxCaption)
+	}
+	_, err := b.sendPaced(ctx, chatID, "sendPhoto", map[string]any{"chat_id": chatID, "photo": photoURL, "caption": caption, "parse_mode": "HTML"})
+	return err
 }
 
 // AnswerCallback acknowledges a button press so the client stops its spinner.

@@ -176,41 +176,31 @@ func (a *App) apiTelegramUnlinkIdentity(w http.ResponseWriter, r *http.Request) 
 	a.okJSON(w, nil)
 }
 
-// apiTelegramEnableDM connects notifications for accounts that signed in with
-// Telegram: their numeric id is also their private chat id with the bot, but
-// only if they have started it, so a real message is sent and its result
-// decides success.
-func (a *App) apiTelegramEnableDM(w http.ResponseWriter, r *http.Request) {
-	u, err := a.needUser(r)
-	if err != nil {
-		a.fail(w, r, err)
-		return
+// confirmTelegramOn sends the "notifications are on" message when the user
+// switches the Telegram channel on, at most once per five minutes. A message
+// Telegram refuses means the toggle would not work, so the error is returned.
+func (a *App) confirmTelegramOn(ctx context.Context, u *store.User) error {
+	if !a.Bot.Configured() || u.TelegramChatID == "" {
+		return nil
 	}
-	if !a.Bot.Configured() {
-		a.fail(w, r, apiErr{http.StatusServiceUnavailable, "err.telegram_unavailable"})
-		return
+	if !a.tgOnLimit.Allow(itoa(u.ID)) {
+		return nil
 	}
-	if u.TelegramID == 0 {
-		a.fail(w, r, errBadRequest)
-		return
-	}
-	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
-	title, body := a.Notif.Text(u.Locale, "test", map[string]any{})
-	if err := a.Bot.SendMessage(ctx, itoa(u.TelegramID), title+"\n"+body); err != nil {
-		if errors.Is(err, telegram.ErrBotBlocked) {
-			a.fail(w, r, apiErr{http.StatusBadRequest, "err.telegram_start_bot"})
-		} else {
-			logger.Error("TELEGRAM enable dm uid=%d: %v", u.ID, err)
-			a.fail(w, r, apiErr{http.StatusBadGateway, "err.telegram_send_failed"})
+	err := a.Bot.SendMessage(ctx, u.TelegramChatID, "✅ "+a.tgT(u.Locale, "tg.dm_enabled", nil))
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, telegram.ErrBotBlocked) {
+		logger.Warn("TELEGRAM confirm on uid=%d chat=%s: bot blocked, chat dropped: %v", u.ID, u.TelegramChatID, err)
+		if cerr := a.Store.SetTelegramChat(u.ID, ""); cerr != nil {
+			logger.Error("TELEGRAM clear dead chat uid=%d: %v", u.ID, cerr)
 		}
-		return
+		return apiErr{http.StatusBadRequest, "err.telegram_start_bot"}
 	}
-	if err := a.Store.SetTelegramChatClearOthers(u.ID, itoa(u.TelegramID)); err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	a.okJSON(w, nil)
+	logger.Error("TELEGRAM confirm on uid=%d chat=%s: %v", u.ID, u.TelegramChatID, err)
+	return apiErr{http.StatusBadGateway, "err.telegram_send_failed"}
 }
 
 // handleTelegramWebhook receives bot updates: "/start <token>" links a private
@@ -346,7 +336,7 @@ func (a *App) handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 		reply(lang, "linked")
 	case "/stop":
 		if lookupErr == nil {
-			if err := a.Store.SetTelegramChat(existing.ID, ""); err != nil {
+			if err := a.Store.SetNotifyFlags(existing.ID, existing.NotifyInApp, existing.NotifyPush, existing.NotifyEmail, false); err != nil {
 				logger.Error("TELEGRAM stop uid=%d: %v", existing.ID, err)
 				reply(lang, "error")
 				return

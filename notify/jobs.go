@@ -159,7 +159,7 @@ func (s *Service) EpisodeAlerts(now time.Time) {
 				event, count = "season_aired", whole
 			}
 			s.Send(a.UserID, event, fmt.Sprintf("/show/%d/season/%d", a.ShowTMDB, a.Season), map[string]any{
-				"show": s.localShowName(u, a), "season": a.Season, "count": count,
+				"show": s.localShowName(u, a), "season": a.Season, "count": count, "image": artworkPath(a.PosterPath),
 			})
 			sent[a.UserID]++
 			total++
@@ -181,7 +181,7 @@ func (s *Service) EpisodeAlerts(now time.Time) {
 			}
 		}
 		s.Send(a.UserID, "episode_aired", fmt.Sprintf("/episode/%d", a.EpisodeID), map[string]any{
-			"show": s.localShowName(u, a), "code": fmt.Sprintf("S%02dE%02d", a.Season, a.Episode), "name": epName,
+			"show": s.localShowName(u, a), "code": fmt.Sprintf("S%02dE%02d", a.Season, a.Episode), "name": epName, "image": artworkPath(firstNonEmpty(a.StillPath, a.PosterPath)),
 		})
 		sent[a.UserID]++
 		total++

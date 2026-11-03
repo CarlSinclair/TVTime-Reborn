@@ -61,6 +61,7 @@ type App struct {
 
 	authLimit    *auth.Limiter
 	mailLimit    *auth.Limiter
+	tgOnLimit    *auth.Limiter
 	commentLimit *auth.Limiter
 	reportLimit  *auth.Limiter
 	searchLimit  *auth.Limiter
@@ -85,6 +86,7 @@ func New(cfg *config.Config, st *store.Store, a *auth.Service, sy *syncer.Syncer
 		mfaLimit:     auth.NewLimiter(8, 10*time.Minute),
 		authLimit:    auth.NewLimiter(15, time.Minute),
 		mailLimit:    auth.NewLimiter(5, time.Hour),
+		tgOnLimit:    auth.NewLimiter(1, 5*time.Minute),
 		commentLimit: auth.NewLimiter(8, time.Minute),
 		reportLimit:  auth.NewLimiter(40, time.Hour),
 		searchLimit:  auth.NewLimiter(40, time.Minute),

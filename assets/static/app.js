@@ -968,11 +968,6 @@
       return;
     }
     if (el.id === "telegram-connect") return telegramConnect(el);
-    if (el.id === "telegram-dm") {
-      const data = await run(el, () => api("/api/account/telegram/enable-dm"));
-      if (data) window.location.reload();
-      return;
-    }
     if ("telegramUnlinkChat" in d) {
       const data = await run(el, () => api("/api/account/telegram/unlink-chat"));
       if (data) window.location.reload();
