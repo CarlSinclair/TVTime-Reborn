@@ -488,7 +488,7 @@ func (a *App) pageAdmin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		data["Stats"], data["Errors"], data["Mails"] = st, errs, mails
-		data["Version"] = logger.Version
+		data["Version"] = logger.CurrentVersion()
 		data["MailOn"], data["TMDBOn"], data["FederationOn"] = a.Mail != nil && a.Mail.Configured(), a.TMDB != nil && a.TMDB.Configured(), a.Fed != nil
 	}
 	data["Tab"] = tab
