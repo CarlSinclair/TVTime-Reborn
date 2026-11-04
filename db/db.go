@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"tvt/logger"
 	"github.com/CarlSinclair/csuit-libs/sqlretry"
+	"tvt/logger"
 
 	_ "modernc.org/sqlite"
 )
