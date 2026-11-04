@@ -95,6 +95,13 @@ func (p *Pusher) privateKey() (*ecdsa.PrivateKey, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open vapid private key: %w", err)
 	}
+	if secretbox.NeedsMigration(sealed) {
+		if re, rerr := secretbox.Seal(p.Secret, vapidLabel, plain); rerr != nil {
+			logger.Error("SECRETS vapid key reseal failed err=%v", rerr)
+		} else if serr := p.Store.KVSet(kvVAPIDPrivate, re); serr != nil {
+			logger.Error("SECRETS vapid key store failed err=%v", serr)
+		}
+	}
 	der, err := base64.RawURLEncoding.DecodeString(plain)
 	if err != nil {
 		return nil, fmt.Errorf("decode vapid private key: %w", err)

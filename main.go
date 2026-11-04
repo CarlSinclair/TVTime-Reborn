@@ -89,6 +89,16 @@ func main() {
 	}
 	nt := notify.New(st, ml, bot, bundle, notify.NewPusher(st, cfg.JWTSecret, vapidSubject), cfg.AppName, cfg.BaseURL)
 	authSvc := auth.New(st, cfg.JWTSecret, cfg.CookieSecure)
+	if n, err := settings.MigrateSecrets(); err != nil {
+		logger.Error("SECRETS app config migration finished with errors resealed=%d err=%v", n, err)
+	} else if n > 0 {
+		logger.Info("SECRETS app config resealed=%d", n)
+	}
+	if n, err := authSvc.MigrateTOTP(); err != nil {
+		logger.Error("SECRETS totp migration finished with errors resealed=%d err=%v", n, err)
+	} else if n > 0 {
+		logger.Info("SECRETS totp resealed=%d", n)
+	}
 	baseURL, perr := url.Parse(cfg.BaseURL)
 	if perr != nil || baseURL.Hostname() == "" {
 		logger.Fatal("TVT_BASE_URL %q is not a valid URL: %v", cfg.BaseURL, perr)
