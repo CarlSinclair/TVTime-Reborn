@@ -147,7 +147,7 @@ func main() {
 		MaxHeaderBytes:    16 << 10,
 	}
 	go func() {
-		logger.Info("%s %s listening on %s (base %s)", cfg.AppName, logger.Version, cfg.Addr, cfg.BaseURL)
+		logger.Info("%s %s listening on %s (base %s)", cfg.AppName, logger.CurrentVersion(), cfg.Addr, cfg.BaseURL)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Fatal("server: %v", err)
 		}

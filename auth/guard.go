@@ -78,7 +78,7 @@ func ClientIP(r *http.Request) string {
 			}
 			parts := strings.Split(v, ",")
 			if ip := net.ParseIP(strings.TrimSpace(parts[len(parts)-1])); ip != nil {
-				logger.RememberCountry(ip.String(), headerCountry(r))
+				logger.RememberRequestLocation(r, ip.String())
 				return ip.String()
 			}
 		}
@@ -96,20 +96,9 @@ func ClientCountry(r *http.Request) string {
 	}
 	peer := net.ParseIP(host)
 	if peer == nil || !(peer.IsLoopback() || peer.IsPrivate()) {
-		return "??"
+		return "[??]"
 	}
-	if c := headerCountry(r); c != "" {
-		return c
-	}
-	return "??"
-}
-
-func headerCountry(r *http.Request) string {
-	c := strings.ToUpper(strings.TrimSpace(r.Header.Get("CF-IPCountry")))
-	if len(c) != 2 || c[0] < 'A' || c[0] > 'Z' || c[1] < 'A' || c[1] > 'Z' {
-		return ""
-	}
-	return c
+	return logger.LocationFromRequest(r)
 }
 
 type Limiter struct {
