@@ -27,6 +27,7 @@ var (
 	GetTraceID                 = shared.GetTraceID
 	StructuredLog              = shared.StructuredLog
 	LogWithContext             = shared.LogWithContext
+	LocationFromRequest        = shared.LocationFromRequest
 	RememberLocation           = shared.RememberLocation
 	RememberRequestLocation    = shared.RememberRequestLocation
 	SetTimeZone                = shared.SetTimeZone

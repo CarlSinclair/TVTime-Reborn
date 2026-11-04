@@ -19,6 +19,8 @@ require (
 	modernc.org/sqlite v1.60.1
 )
 
+require github.com/getsentry/sentry-go v0.48.0 // indirect
+
 require (
 	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
