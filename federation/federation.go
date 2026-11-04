@@ -94,6 +94,13 @@ func (s *Service) loadKey() error {
 		if err != nil || len(raw) != ed25519.PrivateKeySize {
 			return errors.New("federation key is corrupt")
 		}
+		if secretbox.NeedsMigration(sealed) {
+			if re, rerr := secretbox.Seal(s.Secret, keyLabel, plain); rerr != nil {
+				logger.Error("SECRETS federation key reseal failed err=%v", rerr)
+			} else if serr := s.Store.KVSet(keyName, re); serr != nil {
+				logger.Error("SECRETS federation key store failed err=%v", serr)
+			}
+		}
 		s.priv = ed25519.PrivateKey(raw)
 		s.pub = s.priv.Public().(ed25519.PublicKey)
 		return nil

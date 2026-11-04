@@ -3,44 +3,72 @@ package secretbox
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
+
+	shared "github.com/CarlSinclair/csuit-libs/secretbox"
 )
 
-func key(secret, label string) []byte {
+func ring(secret string) (*shared.Keyring, error) {
+	master := sha256.Sum256([]byte("tvt-secretbox-master:" + secret))
+	sum := sha256.Sum256(master[:])
+	id := hex.EncodeToString(sum[:4])
+	return shared.New(id, map[string][]byte{id: master[:]})
+}
+
+func Seal(secret, label, plaintext string) (string, error) {
+	r, err := ring(secret)
+	if err != nil {
+		return "", err
+	}
+	return r.Seal(label, plaintext)
+}
+
+func Open(secret, label, sealed string) (string, error) {
+	if strings.HasPrefix(sealed, shared.PrefixV2) {
+		r, err := ring(secret)
+		if err != nil {
+			return "", err
+		}
+		return r.Open(label, sealed)
+	}
+	return openLegacy(secret, label, sealed)
+}
+
+func NeedsMigration(sealed string) bool {
+	return sealed != "" && !strings.HasPrefix(sealed, shared.PrefixV2)
+}
+
+func Reseal(secret, label, sealed string) (string, bool, error) {
+	if !NeedsMigration(sealed) {
+		return sealed, false, nil
+	}
+	plain, err := Open(secret, label, sealed)
+	if err != nil {
+		return "", false, err
+	}
+	out, err := Seal(secret, label, plain)
+	if err != nil {
+		return "", false, err
+	}
+	return out, true, nil
+}
+
+func legacyKey(secret, label string) []byte {
 	h := sha256.Sum256([]byte(label + ":" + secret))
 	return h[:]
 }
 
-// Seal encrypts plaintext with AES-256-GCM under a key derived from the app
-// secret and a purpose label, so a value sealed for one purpose cannot be
-// opened as another.
-func Seal(secret, label, plaintext string) (string, error) {
-	block, err := aes.NewCipher(key(secret, label))
-	if err != nil {
-		return "", fmt.Errorf("secretbox cipher: %w", err)
-	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return "", fmt.Errorf("secretbox gcm: %w", err)
-	}
-	nonce := make([]byte, gcm.NonceSize())
-	if _, err := rand.Read(nonce); err != nil {
-		return "", fmt.Errorf("secretbox nonce: %w", err)
-	}
-	out := gcm.Seal(nonce, nonce, []byte(plaintext), []byte(label))
-	return base64.RawURLEncoding.EncodeToString(out), nil
-}
-
-func Open(secret, label, sealed string) (string, error) {
+func openLegacy(secret, label, sealed string) (string, error) {
 	raw, err := base64.RawURLEncoding.DecodeString(sealed)
 	if err != nil {
 		return "", fmt.Errorf("secretbox decode: %w", err)
 	}
-	block, err := aes.NewCipher(key(secret, label))
+	block, err := aes.NewCipher(legacyKey(secret, label))
 	if err != nil {
 		return "", fmt.Errorf("secretbox cipher: %w", err)
 	}

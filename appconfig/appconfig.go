@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"tvt/config"
+	"tvt/logger"
 	"tvt/secretbox"
 	"tvt/store"
 )
@@ -219,6 +220,40 @@ func (m *Manager) Saved(f Field) (string, bool, error) {
 		return plain, true, nil
 	}
 	return raw, true, nil
+}
+
+func (m *Manager) MigrateSecrets() (int, error) {
+	moved := 0
+	var firstErr error
+	for _, f := range Fields {
+		if !f.Secret {
+			continue
+		}
+		raw := m.St.KVGet(keyPrefix + f.Key)
+		if !strings.HasPrefix(raw, sealedMark) {
+			continue
+		}
+		out, changed, err := secretbox.Reseal(m.Secret, sealedLabel, strings.TrimPrefix(raw, sealedMark))
+		if err != nil {
+			logger.Error("SECRETS app config reseal failed key=%s err=%v", f.Key, err)
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
+		}
+		if !changed {
+			continue
+		}
+		if err := m.St.KVSet(keyPrefix+f.Key, sealedMark+out); err != nil {
+			logger.Error("SECRETS app config store failed key=%s err=%v", f.Key, err)
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
+		}
+		moved++
+	}
+	return moved, firstErr
 }
 
 // Set stores an override; an empty value removes it so the environment applies.

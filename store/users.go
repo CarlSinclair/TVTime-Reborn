@@ -406,6 +406,28 @@ func (s *Store) SetTOTPSecret(userID int64, enc string) error {
 	return s.exec("set totp secret", userID, `UPDATE users SET totp_secret_enc = ?, totp_enabled = 0, totp_last_step = 0 WHERE id = ?`, enc, userID)
 }
 
+func (s *Store) TOTPSecrets() (map[int64]string, error) {
+	rows, err := s.DB.Query(`SELECT id, totp_secret_enc FROM users WHERE totp_secret_enc <> ''`)
+	if err != nil {
+		return nil, fmt.Errorf("list totp secrets: %w", err)
+	}
+	defer rows.Close()
+	out := map[int64]string{}
+	for rows.Next() {
+		var id int64
+		var enc string
+		if err := rows.Scan(&id, &enc); err != nil {
+			return nil, fmt.Errorf("scan totp secret: %w", err)
+		}
+		out[id] = enc
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) ReplaceTOTPSecretEnc(userID int64, enc string) error {
+	return s.exec("replace totp secret ciphertext", userID, `UPDATE users SET totp_secret_enc = ? WHERE id = ?`, enc, userID)
+}
+
 func (s *Store) EnableTOTP(userID, step int64, recoveryHashes []string) error {
 	tx, err := s.DB.Begin()
 	if err != nil {

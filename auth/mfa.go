@@ -18,6 +18,7 @@ import (
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 	qrcode "github.com/skip2/go-qrcode"
+	"tvt/logger"
 )
 
 const (
@@ -34,6 +35,37 @@ func (s *Service) sealSecret(plain string) (string, error) {
 
 func (s *Service) openSecret(sealed string) (string, error) {
 	return secretbox.Open(string(s.Secret), totpLabel, sealed)
+}
+
+func (s *Service) MigrateTOTP() (int, error) {
+	all, err := s.Store.TOTPSecrets()
+	if err != nil {
+		return 0, err
+	}
+	moved := 0
+	var firstErr error
+	for id, enc := range all {
+		out, changed, err := secretbox.Reseal(string(s.Secret), totpLabel, enc)
+		if err != nil {
+			logger.Error("SECRETS totp reseal failed uid=%d err=%v", id, err)
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
+		}
+		if !changed {
+			continue
+		}
+		if err := s.Store.ReplaceTOTPSecretEnc(id, out); err != nil {
+			logger.Error("SECRETS totp store failed uid=%d err=%v", id, err)
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
+		}
+		moved++
+	}
+	return moved, firstErr
 }
 
 // BeginTOTPSetup stores a fresh, not-yet-enabled secret and returns the
