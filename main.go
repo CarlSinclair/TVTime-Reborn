@@ -82,7 +82,7 @@ func main() {
 	ml := mailer.New(cfg)
 	hook := hmac.New(sha256.New, []byte(cfg.JWTSecret))
 	hook.Write([]byte("telegram-webhook"))
-	bot := telegram.New(cfg.TelegramBot, cfg.TelegramName, hex.EncodeToString(hook.Sum(nil))[:48])
+	bot := telegram.Use(telegram.New(cfg.TelegramBot, cfg.TelegramName, hex.EncodeToString(hook.Sum(nil))[:48]))
 	vapidSubject := cfg.BaseURL
 	if !strings.HasPrefix(vapidSubject, "https://") {
 		vapidSubject = "mailto:" + strings.TrimPrefix(cfg.MailFrom, "mailto:")
