@@ -236,6 +236,7 @@ func newEnv(t *testing.T) *env {
 	fake, tgURL := newTelegramFake(t)
 	bot := telegram.New("123456:test-token", "tvt_test_bot", "whsecret")
 	bot.API = tgURL
+	telegram.Use(bot)
 	ml := mailer.New(cfg)
 	nt := notify.New(st, ml, bot, bundle, notify.NewPusher(st, cfg.JWTSecret, "mailto:test@example.com"), cfg.AppName, cfg.BaseURL)
 	nt.Inline = true
