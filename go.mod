@@ -5,7 +5,7 @@ go 1.26.0
 toolchain go1.26.10
 
 require (
-	github.com/CarlSinclair/csuit-libs v0.0.0
+	github.com/CarlSinclair/csuit-libs v1.0.0
 	github.com/dop251/goja v0.0.0-20261012212121-0c308c5ed11b
 	github.com/go-webauthn/webauthn v0.18.2
 	github.com/golang-jwt/jwt/v5 v5.3.1
@@ -54,5 +54,3 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 )
-
-replace github.com/CarlSinclair/csuit-libs => /var/www/html/lib

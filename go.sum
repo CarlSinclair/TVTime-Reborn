@@ -1,3 +1,5 @@
+github.com/CarlSinclair/csuit-libs v1.0.0 h1:5dD8ts+rGw47XrDmeUgl6zlgKl/MuJ4ojFN7Ml/vul0=
+github.com/CarlSinclair/csuit-libs v1.0.0/go.mod h1:jgYzFj/BXNgFf/s2vJWyt7kwXaoe8s+hBhdLfyhvJbg=
 github.com/Masterminds/semver/v3 v3.5.0 h1:kQceYJfbupGfZOKZQg0kou0DgAKhzDg2NZPAwZ/2OOE=
 github.com/Masterminds/semver/v3 v3.5.0/go.mod h1:4V+yj/TJE1HU9XfppCwVMZq3I84lprf4nC11bSS5beM=
 github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc h1:biVzkmvwrH8WK8raXaxBx6fRVTlJILwEwQGL1I/ByEI=
