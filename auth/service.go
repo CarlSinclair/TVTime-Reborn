@@ -1,8 +1,8 @@
 package auth
 
 import (
+	"context"
 	"crypto/rand"
-	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"errors"
@@ -10,21 +10,22 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	"unicode"
 
 	"tvt/logger"
 	"tvt/store"
 
+	"github.com/CarlSinclair/csuit-libs/authkit"
+	"github.com/CarlSinclair/csuit-libs/session"
+	"github.com/CarlSinclair/csuit-libs/validate"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 )
 
 const (
 	AccessTokenDuration  = 15 * time.Minute
 	RefreshTokenDuration = 30 * 24 * time.Hour
 	RotationGrace        = 60 * time.Second
-	EmailTokenDuration   = 30 * time.Minute
+	EmailTokenDuration   = 5 * time.Minute
 
 	PurposeLogin  = "login"
 	PurposeReset  = "reset"
@@ -40,20 +41,24 @@ var (
 )
 
 type Service struct {
-	Store  *store.Store
-	Secret []byte
-	Secure bool
-	pk     *passkeyState
+	Store     *store.Store
+	Secret    []byte
+	Secure    bool
+	Sessions  *session.Manager
+	Refresher *session.Refresher
+	pk        *passkeyState
 }
 
 func New(st *store.Store, secret string, secure bool) *Service {
-	return &Service{Store: st, Secret: []byte(secret), Secure: secure}
+	sessions := &session.Manager{Store: sessionStore{st: st}, CacheTTL: AccessTokenDuration, CacheDisabled: true}
+	return &Service{
+		Store: st, Secret: []byte(secret), Secure: secure,
+		Sessions:  sessions,
+		Refresher: &session.Refresher{Store: refreshStore{st: st}, Sessions: sessions, Grace: RotationGrace},
+	}
 }
 
-func hashToken(t string) string {
-	h := sha256.Sum256([]byte(t))
-	return hex.EncodeToString(h[:])
-}
+func hashToken(t string) string { return authkit.HashToken(t) }
 
 func randomToken() (string, error) {
 	b := make([]byte, 32)
@@ -63,61 +68,38 @@ func randomToken() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-const passwordSpecials = "!@#$%^&*()-_+=[]{}|;:'\",.<>/?`~"
-
-// ValidPassword enforces the same rules as the other products: at least eight
-// characters with an upper case letter, a lower case letter, a digit and a
-// symbol. The upper limit is bcrypt's 72 bytes.
 func ValidPassword(p string) error {
-	if len(p) < 8 || len(p) > 72 {
-		return ErrPasswordRules
-	}
-	var upper, lower, digit, special bool
-	for _, c := range p {
-		switch {
-		case unicode.IsUpper(c):
-			upper = true
-		case unicode.IsLower(c):
-			lower = true
-		case unicode.IsDigit(c):
-			digit = true
-		case strings.ContainsRune(passwordSpecials, c):
-			special = true
-		}
-	}
-	if !upper || !lower || !digit || !special {
+	if len(p) > 72 || len(validate.PasswordStrengthErrors(p)) > 0 {
 		return ErrPasswordRules
 	}
 	return nil
 }
 
-// HashCost is the bcrypt work factor for new password hashes. Tests lower it;
-// nothing else changes it.
-var HashCost = 12
-
 func HashPassword(p string) (string, error) {
 	if err := ValidPassword(p); err != nil {
 		return "", err
 	}
-	h, err := bcrypt.GenerateFromPassword([]byte(p), HashCost)
+	h, err := validate.HashPassword(p)
 	if err != nil {
 		return "", fmt.Errorf("bcrypt: %w", err)
 	}
-	return string(h), nil
+	return h, nil
 }
-
-var dummyHash, _ = bcrypt.GenerateFromPassword([]byte("tvt-dummy-password"), 12)
 
 func (s *Service) Login(email, password string) (*store.User, error) {
 	u, err := s.Store.UserByEmail(strings.ToLower(strings.TrimSpace(email)))
 	if err != nil {
-		bcrypt.CompareHashAndPassword(dummyHash, []byte(password))
+		validate.BurnPasswordCheck(password)
 		if errors.Is(err, store.ErrNotFound) {
 			return nil, ErrBadCredentials
 		}
 		return nil, fmt.Errorf("login lookup: %w", err)
 	}
-	if u.PasswordHash == "" || bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)) != nil {
+	if u.PasswordHash == "" {
+		validate.BurnPasswordCheck(password)
+		return nil, ErrBadCredentials
+	}
+	if !validate.CheckPasswordHash(password, u.PasswordHash) {
 		return nil, ErrBadCredentials
 	}
 	if u.IsDeactivated && !u.SelfDeactivated {
@@ -131,7 +113,7 @@ func (s *Service) CheckPassword(u *store.User, password string) bool {
 	if u.PasswordHash == "" {
 		return false
 	}
-	return bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)) == nil
+	return validate.CheckPasswordHash(password, u.PasswordHash)
 }
 
 func (s *Service) signToken(userID int64, scope string, ttl time.Duration) (string, error) {
@@ -193,12 +175,12 @@ func (s *Service) parseSessionToken(raw, scope string) (int64, string, error) {
 // User-Agent. It is not a secret: it only lets a reused refresh token from the
 // same browser (a response that never arrived) be told apart from one replayed
 // from somewhere else.
+
 func deviceTag(r *http.Request) string {
 	if r == nil {
 		return ""
 	}
-	sum := sha256.Sum256([]byte(r.Header.Get("User-Agent")))
-	return hex.EncodeToString(sum[:8])
+	return authkit.DeviceTag(r.Header.Get("User-Agent"))
 }
 
 func (s *Service) tokenDevice(raw string) string {
@@ -222,18 +204,6 @@ func (s *Service) storeRefresh(tx *sql.Tx, userID int64, sid, raw string, exp ti
 	_, err := tx.Exec(`INSERT INTO refresh_tokens (user_id, sid, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)`,
 		userID, sid, hashToken(raw), store.Ts(exp), store.Now())
 	return err
-}
-
-func (s *Service) sessionAlive(uid int64, sid string) bool {
-	if sid == "" {
-		return false
-	}
-	var n int
-	if err := s.Store.DB.QueryRow(`SELECT COUNT(*) FROM refresh_tokens WHERE sid = ? AND user_id = ? AND expires_at > ?`, sid, uid, store.Now()).Scan(&n); err != nil {
-		logger.Error("AUTH session lookup uid=%d: %v", uid, err)
-		return false
-	}
-	return n > 0
 }
 
 func (s *Service) StartSession(w http.ResponseWriter, userID int64) error {
@@ -292,160 +262,60 @@ func (s *Service) StartSessionFor(w http.ResponseWriter, r *http.Request, userID
 // refresh token, exactly one rotates it; the others are inside the grace window
 // and only receive a fresh access token (the winner's Set-Cookie carries the
 // new refresh token). A superseded token outside the window is rejected.
+
 func (s *Service) Authenticate(w http.ResponseWriter, r *http.Request) (*store.User, error) {
+	ctx := r.Context()
 	if tok := s.field(r, fieldAccess); tok != "" {
-		if uid, sid, err := s.parseSessionToken(tok, "access"); err == nil && s.sessionAlive(uid, sid) {
-			return s.loadUser(uid)
+		if uid, sid, err := s.parseSessionToken(tok, "access"); err == nil && sid != "" {
+			alive, serr := s.Sessions.Valid(ctx, uid, sid)
+			if serr != nil {
+				logger.Error("AUTH session lookup uid=%d: %v", uid, serr)
+				return nil, fmt.Errorf("session lookup uid=%d: %w", uid, serr)
+			}
+			if alive {
+				return s.loadUser(uid)
+			}
 		}
 	}
 	refreshTok := s.field(r, fieldRefresh)
 	if refreshTok == "" {
 		return nil, ErrBadToken
 	}
-	uid, sid, err := s.parseSessionToken(refreshTok, "refresh")
-	if err != nil {
+	if _, _, err := s.parseSessionToken(refreshTok, "refresh"); err != nil {
 		s.ClearCookies(w)
 		return nil, ErrBadToken
 	}
-	oldHash := hashToken(refreshTok)
-
-	var supersededAt sql.NullString
-	var expires string
-	err = s.Store.DB.QueryRow(`SELECT expires_at, superseded_at FROM refresh_tokens WHERE token_hash = ? AND user_id = ?`, oldHash, uid).Scan(&expires, &supersededAt)
-	if err != nil {
-		s.ClearCookies(w)
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrBadToken
-		}
-		return nil, fmt.Errorf("lookup refresh uid=%d: %w", uid, err)
-	}
-	if store.ParseTs(expires).Before(time.Now()) {
+	device := authkit.DeviceTag(r.UserAgent())
+	out, err := s.Refresher.Refresh(ctx, authkit.HashToken(refreshTok),
+		func() bool { d := s.tokenDevice(refreshTok); return d != "" && d == device },
+		func(uid int64, sid string) (session.Minted, error) {
+			tok, err := s.signSessionToken(uid, "refresh", RefreshTokenDuration, sid, device)
+			if err != nil {
+				return session.Minted{}, err
+			}
+			return session.Minted{Token: tok, Hash: authkit.HashToken(tok), Expires: time.Now().Add(RefreshTokenDuration)}, nil
+		})
+	switch {
+	case errors.Is(err, session.ErrRefreshInvalid), errors.Is(err, session.ErrRefreshReused):
 		s.ClearCookies(w)
 		return nil, ErrBadToken
+	case err != nil:
+		return nil, fmt.Errorf("refresh session: %w", err)
 	}
-	u, err := s.loadUser(uid)
+	u, err := s.loadUser(out.UserID)
 	if err != nil {
 		s.ClearCookies(w)
 		return nil, err
 	}
-
-	newRefresh, err := s.signSessionToken(uid, "refresh", RefreshTokenDuration, sid, deviceTag(r))
+	access, err := s.signSessionToken(out.UserID, "access", AccessTokenDuration, out.SID)
 	if err != nil {
-		return nil, fmt.Errorf("sign refresh uid=%d: %w", uid, err)
-	}
-	newHash := hashToken(newRefresh)
-	tx, err := s.Store.DB.Begin()
-	if err != nil {
-		return nil, fmt.Errorf("begin rotate uid=%d: %w", uid, err)
-	}
-	defer tx.Rollback()
-	res, err := tx.Exec(`UPDATE refresh_tokens SET superseded_at = ?, superseded_by = ? WHERE token_hash = ? AND superseded_at IS NULL`,
-		store.Now(), newHash, oldHash)
-	if err != nil {
-		return nil, fmt.Errorf("claim rotation uid=%d: %w", uid, err)
-	}
-	won, err := res.RowsAffected()
-	if err != nil {
-		return nil, fmt.Errorf("rotation rows uid=%d: %w", uid, err)
-	}
-	if won == 1 {
-		if err := s.storeRefresh(tx, uid, sid, newRefresh, time.Now().Add(RefreshTokenDuration)); err != nil {
-			return nil, fmt.Errorf("store rotated refresh uid=%d: %w", uid, err)
-		}
-		if err := tx.Commit(); err != nil {
-			return nil, fmt.Errorf("commit rotate uid=%d: %w", uid, err)
-		}
-		s.setField(w, fieldRefresh, newRefresh)
-	} else {
-		tx.Rollback()
-		var sup string
-		if err := s.Store.DB.QueryRow(`SELECT superseded_at FROM refresh_tokens WHERE token_hash = ?`, oldHash).Scan(&sup); err != nil {
-			return nil, fmt.Errorf("read superseded uid=%d: %w", uid, err)
-		}
-		if time.Since(store.ParseTs(sup)) > RotationGrace {
-			healed, err := s.healReuse(w, uid, sid, oldHash, refreshTok, r, store.ParseTs(sup))
-			if err != nil {
-				return nil, err
-			}
-			if !healed {
-				logger.Warn("AUTH superseded refresh token reused outside grace uid=%d from a different browser, revoking all sessions", uid)
-				if _, err := s.Store.DB.Exec(`DELETE FROM refresh_tokens WHERE user_id = ?`, uid); err != nil {
-					logger.Error("AUTH revoke sessions after reuse uid=%d: %v", uid, err)
-				}
-				s.ClearCookies(w)
-				return nil, ErrBadToken
-			}
-		}
-	}
-	access, err := s.signSessionToken(uid, "access", AccessTokenDuration, sid)
-	if err != nil {
-		return nil, fmt.Errorf("sign access uid=%d: %w", uid, err)
+		return nil, fmt.Errorf("sign access uid=%d: %w", out.UserID, err)
 	}
 	s.setField(w, fieldAccess, access)
+	if out.NewToken != "" {
+		s.setField(w, fieldRefresh, out.NewToken)
+	}
 	return u, nil
-}
-
-// healReuse recovers from a refresh token that was presented after it had been
-// replaced. When it comes from the same browser it was issued to and the chain
-// it started has not moved on, the likely cause is a rotation response that never
-// reached the browser (a dropped connection, a backgrounded app), not theft, so
-// the head of the chain is rotated for this browser instead of ending every
-// session. A different browser, or a chain that has already advanced, is still
-// treated as theft.
-func (s *Service) healReuse(w http.ResponseWriter, uid int64, sid, oldHash, presented string, r *http.Request, supersededAt time.Time) (bool, error) {
-	if tag := s.tokenDevice(presented); tag == "" || tag != deviceTag(r) || time.Since(supersededAt) > 24*time.Hour {
-		return false, nil
-	}
-	head := oldHash
-	for hops := 0; hops < 8; hops++ {
-		var next sql.NullString
-		var sup sql.NullString
-		if err := s.Store.DB.QueryRow(`SELECT superseded_by, superseded_at FROM refresh_tokens WHERE token_hash = ?`, head).Scan(&next, &sup); err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return false, nil
-			}
-			return false, fmt.Errorf("walk refresh chain uid=%d: %w", uid, err)
-		}
-		if !sup.Valid {
-			break
-		}
-		if !next.Valid || next.String == "" {
-			return false, nil
-		}
-		head = next.String
-		if hops == 7 {
-			return false, nil
-		}
-	}
-	if head == oldHash {
-		return false, nil
-	}
-	newRefresh, err := s.signSessionToken(uid, "refresh", RefreshTokenDuration, sid, deviceTag(r))
-	if err != nil {
-		return false, fmt.Errorf("sign healed refresh uid=%d: %w", uid, err)
-	}
-	tx, err := s.Store.DB.Begin()
-	if err != nil {
-		return false, fmt.Errorf("begin heal uid=%d: %w", uid, err)
-	}
-	defer tx.Rollback()
-	res, err := tx.Exec(`UPDATE refresh_tokens SET superseded_at = ?, superseded_by = ? WHERE token_hash = ? AND superseded_at IS NULL`, store.Now(), hashToken(newRefresh), head)
-	if err != nil {
-		return false, fmt.Errorf("claim heal uid=%d: %w", uid, err)
-	}
-	if n, _ := res.RowsAffected(); n != 1 {
-		// another request healed it first; its Set-Cookie carries the new token
-		return true, nil
-	}
-	if err := s.storeRefresh(tx, uid, sid, newRefresh, time.Now().Add(RefreshTokenDuration)); err != nil {
-		return false, fmt.Errorf("store healed refresh uid=%d: %w", uid, err)
-	}
-	if err := tx.Commit(); err != nil {
-		return false, fmt.Errorf("commit heal uid=%d: %w", uid, err)
-	}
-	s.setField(w, fieldRefresh, newRefresh)
-	logger.Info("AUTH recovered a refresh token that never arrived uid=%d", uid)
-	return true, nil
 }
 
 func (s *Service) loadUser(uid int64) (*store.User, error) {
@@ -475,7 +345,7 @@ func (s *Service) EndSession(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (s *Service) RevokeAll(userID int64) error {
-	if _, err := s.Store.DB.Exec(`DELETE FROM refresh_tokens WHERE user_id = ?`, userID); err != nil {
+	if err := s.Sessions.RevokeAll(context.Background(), userID, ""); err != nil {
 		return fmt.Errorf("revoke all uid=%d: %w", userID, err)
 	}
 	return nil

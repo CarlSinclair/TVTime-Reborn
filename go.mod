@@ -5,7 +5,7 @@ go 1.26.0
 toolchain go1.26.10
 
 require (
-	github.com/CarlSinclair/csuit-libs v1.0.0
+	github.com/CarlSinclair/csuit-libs v1.2.4
 	github.com/dop251/goja v0.0.0-20261012212121-0c308c5ed11b
 	github.com/go-webauthn/webauthn v0.18.2
 	github.com/golang-jwt/jwt/v5 v5.3.1
@@ -19,7 +19,11 @@ require (
 	modernc.org/sqlite v1.60.1
 )
 
-require github.com/getsentry/sentry-go v0.48.0 // indirect
+require (
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
+	github.com/getsentry/sentry-go v0.48.0 // indirect
+	github.com/redis/go-redis/v9 v9.17.3 // indirect
+)
 
 require (
 	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect

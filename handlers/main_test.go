@@ -4,12 +4,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/CarlSinclair/csuit-libs/validate"
 	"golang.org/x/crypto/bcrypt"
-
-	"tvt/auth"
 )
 
 func TestMain(m *testing.M) {
-	auth.HashCost = bcrypt.MinCost
+	validate.BcryptCost = bcrypt.MinCost
 	os.Exit(m.Run())
 }
