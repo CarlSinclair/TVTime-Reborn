@@ -2,9 +2,6 @@ package auth
 
 import (
 	"bytes"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"image/png"
@@ -12,10 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/CarlSinclair/csuit-libs/authkit"
+	"github.com/CarlSinclair/csuit-libs/twofa"
 	"tvt/secretbox"
 	"tvt/store"
 
-	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 	qrcode "github.com/skip2/go-qrcode"
 	"tvt/logger"
@@ -107,17 +105,8 @@ func (s *Service) checkTOTP(u *store.User, code string) (int64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("open totp secret uid=%d: %w", u.ID, err)
 	}
-	code = strings.ReplaceAll(strings.TrimSpace(code), " ", "")
-	now := time.Now()
-	for _, off := range []int{0, -1, 1} {
-		t := now.Add(time.Duration(off) * 30 * time.Second)
-		ok, err := totp.ValidateCustom(code, secret, t, totp.ValidateOpts{Period: 30, Skew: 0, Digits: otp.DigitsSix, Algorithm: otp.AlgorithmSHA1})
-		if err != nil {
-			continue
-		}
-		if ok {
-			return t.Unix() / 30, nil
-		}
+	if step, ok := twofa.VerifyStep(secret, code, time.Now()); ok {
+		return step, nil
 	}
 	return 0, ErrBadMFACode
 }
@@ -153,22 +142,18 @@ func (s *Service) RegenerateRecoveryCodes(u *store.User) ([]string, error) {
 
 func newRecoveryCodes() (plain, hashes []string, err error) {
 	for i := 0; i < recoveryCodeCount; i++ {
-		b := make([]byte, 5)
-		if _, err := rand.Read(b); err != nil {
+		code, hash, err := authkit.NewRecoveryCode()
+		if err != nil {
 			return nil, nil, fmt.Errorf("recovery code entropy: %w", err)
 		}
-		h := strings.ToUpper(hex.EncodeToString(b))
-		code := h[:5] + "-" + h[5:]
 		plain = append(plain, code)
-		hashes = append(hashes, hashRecovery(code))
+		hashes = append(hashes, hash)
 	}
 	return plain, hashes, nil
 }
 
 func hashRecovery(code string) string {
-	norm := strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(code), " ", ""))
-	h := sha256.Sum256([]byte(norm))
-	return hex.EncodeToString(h[:])
+	return authkit.HashToken(strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(code), " ", "")))
 }
 
 // VerifySecondFactor accepts either a current TOTP code or an unused recovery
