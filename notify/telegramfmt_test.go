@@ -116,6 +116,7 @@ func fakeTelegram(t *testing.T, failPhoto bool) (*telegram.Bot, func() []tgCall)
 	t.Cleanup(srv.Close)
 	b := telegram.New("123456:ABC-token", "tvt_bot", "s")
 	b.API = srv.URL
+	telegram.Use(b)
 	return b, func() []tgCall { mu.Lock(); defer mu.Unlock(); return append([]tgCall(nil), calls...) }
 }
 
