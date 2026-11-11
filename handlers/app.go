@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/CarlSinclair/csuit-libs/legalpages"
 	"tvt/appconfig"
 	"tvt/assets"
 	"tvt/auth"
@@ -22,7 +23,6 @@ import (
 	"tvt/federation"
 	"tvt/i18n"
 	"tvt/importer"
-	"github.com/CarlSinclair/csuit-libs/legalpages"
 	"tvt/logger"
 	"tvt/mailer"
 	"tvt/media"
