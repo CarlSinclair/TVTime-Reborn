@@ -7,9 +7,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/CarlSinclair/csuit-libs/legalpages"
 	"tvt/auth"
 	"tvt/captcha"
-	"github.com/CarlSinclair/csuit-libs/legalpages"
 	"tvt/logger"
 )
 
