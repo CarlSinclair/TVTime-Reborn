@@ -9,7 +9,7 @@ import (
 
 	"tvt/auth"
 	"tvt/captcha"
-	"tvt/legalpages"
+	"github.com/CarlSinclair/csuit-libs/legalpages"
 	"tvt/logger"
 )
 

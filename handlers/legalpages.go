@@ -8,7 +8,7 @@ import (
 	"sync"
 	"tvt/i18n"
 
-	"tvt/legalpages"
+	"github.com/CarlSinclair/csuit-libs/legalpages"
 	"tvt/logger"
 )
 
