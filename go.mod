@@ -1,8 +1,8 @@
 module tvt
 
-go 1.26.0
+go 1.27.0
 
-toolchain go1.26.10
+toolchain go1.27.4
 
 require (
 	github.com/CarlSinclair/csuit-libs v1.2.4
@@ -12,6 +12,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/minio/minio-go/v7 v7.4.1
 	github.com/pquerna/otp v1.5.0
+	github.com/redis/go-redis/v9 v9.17.3
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	golang.org/x/crypto v0.58.0
 	golang.org/x/image v0.47.0
@@ -22,7 +23,6 @@ require (
 require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/getsentry/sentry-go v0.48.0 // indirect
-	github.com/redis/go-redis/v9 v9.17.3 // indirect
 )
 
 require (
