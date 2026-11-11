@@ -22,7 +22,7 @@ import (
 	"tvt/federation"
 	"tvt/i18n"
 	"tvt/importer"
-	"tvt/legalpages"
+	"github.com/CarlSinclair/csuit-libs/legalpages"
 	"tvt/logger"
 	"tvt/mailer"
 	"tvt/media"
