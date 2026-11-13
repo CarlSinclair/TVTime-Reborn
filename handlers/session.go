@@ -8,14 +8,28 @@ import (
 	"tvt/auth"
 	"tvt/logger"
 	"tvt/store"
+
+	"github.com/CarlSinclair/csuit-libs/twofa"
 )
 
 // finishLogin is the single exit for every successful first factor (password,
-// magic link, Telegram): accounts with 2FA get a short-lived pending cookie and
-// must pass the second-factor step before any session exists.
-func (a *App) finishLogin(w http.ResponseWriter, r *http.Request, u *store.User) {
-	if u.TOTPEnabled {
-		if err := a.Auth.BeginMFA(w, u.ID); err != nil {
+// magic link, Telegram, passkey): accounts with a second step get a short-lived
+// pending cookie and must pass it before any session exists.
+func (a *App) finishLogin(w http.ResponseWriter, r *http.Request, u *store.User, via twofa.Via) {
+	need, err := a.twoFARequired(u, via)
+	if err != nil {
+		logger.Error("AUTH 2fa requirement check uid=%d: %v", u.ID, err)
+		a.fail(w, r, err)
+		return
+	}
+	if need {
+		tok, err := a.Auth.BeginMFA(w, u.ID)
+		if err == nil && via == twofa.ViaMagic {
+			err = twofa.MarkDone(tok, twofa.MethodEmail)
+		}
+		if err != nil {
+			logger.Error("AUTH begin mfa uid=%d via=%s: %v", u.ID, via, err)
+			a.Auth.ClearMFA(w)
 			a.fail(w, r, err)
 			return
 		}
@@ -29,10 +43,25 @@ func (a *App) finishLogin(w http.ResponseWriter, r *http.Request, u *store.User)
 	a.okJSON(w, map[string]any{"redirect": "/"})
 }
 
+func (a *App) twoFARequiredAfterTelegram(u *store.User) (bool, error) {
+	return a.twoFARequired(u, twofa.ViaTelegram)
+}
+
 func (a *App) finishLoginRedirect(w http.ResponseWriter, r *http.Request, u *store.User) {
-	if u.TOTPEnabled {
-		if err := a.Auth.BeginMFA(w, u.ID); err != nil {
+	need, err := a.twoFARequiredAfterTelegram(u)
+	if err != nil {
+		logger.Error("AUTH 2fa requirement check uid=%d: %v", u.ID, err)
+		http.Redirect(w, r, "/login?error=internal", http.StatusSeeOther)
+		return
+	}
+	if need {
+		tok, err := a.Auth.BeginMFA(w, u.ID)
+		if err == nil {
+			err = twofa.MarkDone(tok, twofa.MethodTelegram)
+		}
+		if err != nil {
 			logger.Error("AUTH begin mfa uid=%d: %v", u.ID, err)
+			a.Auth.ClearMFA(w)
 			http.Redirect(w, r, "/login?error=internal", http.StatusSeeOther)
 			return
 		}
@@ -47,39 +76,27 @@ func (a *App) finishLoginRedirect(w http.ResponseWriter, r *http.Request, u *sto
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-func (a *App) pageMFA(w http.ResponseWriter, r *http.Request) {
-	if _, err := a.Auth.PendingMFAUser(r); err != nil {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-	a.page(w, r, "mfa", "mfa.title", nil)
-}
-
 func (a *App) apiMFAVerify(w http.ResponseWriter, r *http.Request) {
 	var in struct{ Code string }
 	if err := decode(r, &in); err != nil {
 		a.fail(w, r, err)
 		return
 	}
-	uid, err := a.Auth.PendingMFAUser(r)
+	s, err := a.loadTwoFAStep(r)
 	if err != nil {
-		a.fail(w, r, apiErr{http.StatusUnauthorized, "err.mfa_expired"})
+		a.fail(w, r, err)
+		return
+	}
+	uid := s.user.ID
+	if !s.has(twofa.MethodTOTP) {
+		a.fail(w, r, errBadRequest)
 		return
 	}
 	if err := a.allow(a.mfaLimit, "mfa:"+itoa(uid)); err != nil {
 		a.fail(w, r, err)
 		return
 	}
-	u, err := a.Store.UserByID(uid)
-	if err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	if u.IsDeactivated && !u.SelfDeactivated {
-		a.fail(w, r, apiErr{http.StatusForbidden, "err.deactivated"})
-		return
-	}
-	if err := a.Auth.VerifySecondFactor(u, in.Code); err != nil {
+	if err := a.Auth.VerifySecondFactor(s.user, in.Code); err != nil {
 		if errors.Is(err, auth.ErrBadMFACode) {
 			logger.Warn("AUTH 2fa failed uid=%d from=%s", uid, auth.ClientCountry(r))
 			a.fail(w, r, apiErr{http.StatusUnauthorized, "err.mfa_bad_code"})
@@ -88,7 +105,15 @@ func (a *App) apiMFAVerify(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	a.Auth.ClearMFA(w)
+	complete, err := a.finishTwoFAMethod(w, s, twofa.MethodTOTP)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	if !complete {
+		a.okJSON(w, map[string]any{"redirect": "/login/2fa"})
+		return
+	}
 	if err := a.Auth.StartSessionFor(w, r, uid); err != nil {
 		a.fail(w, r, err)
 		return
@@ -152,13 +177,7 @@ func (a *App) requireReauth(u *store.User, password, code string) error {
 		}
 		return nil
 	}
-	if u.TOTPEnabled {
-		if err := a.Auth.VerifySecondFactor(u, code); err != nil {
-			return apiErr{http.StatusUnauthorized, "err.mfa_bad_code"}
-		}
-		return nil
-	}
-	return nil
+	return a.requireSecondFactor(u, code)
 }
 
 func (a *App) apiTOTPDisable(w http.ResponseWriter, r *http.Request) {

@@ -1,17 +1,12 @@
 package handlers_test
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"regexp"
-	"sort"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -21,6 +16,7 @@ import (
 	"tvt/trakt"
 	"tvt/tvmaze"
 
+	"github.com/CarlSinclair/csuit-libs/telegramlogin"
 	"github.com/pquerna/otp/totp"
 )
 
@@ -98,42 +94,56 @@ func TestMFAPendingCookieIsNotASession(t *testing.T) {
 	}
 }
 
-func tgPayload(token string, fields map[string]string) url.Values {
-	keys := make([]string, 0, len(fields))
-	for k := range fields {
-		keys = append(keys, k)
+func (c *client) telegramSignIn(id int64, username, name string) int {
+	c.t.Helper()
+	code, out := c.post("/auth/telegram/start", nil)
+	if code != 200 {
+		c.t.Fatalf("telegram login start: %d %v", code, out)
 	}
-	sort.Strings(keys)
-	parts := make([]string, 0, len(keys))
-	for _, k := range keys {
-		parts = append(parts, k+"="+fields[k])
+	token, _ := out["token"].(string)
+	secret, _ := out["secret"].(string)
+	if !strings.HasPrefix(out["app"].(string), "tg://resolve?domain=") || !strings.Contains(out["web"].(string), "https://t.me/") {
+		c.t.Fatalf("login links must open the Telegram app with a browser fallback: %v", out)
 	}
-	secret := sha256.Sum256([]byte(token))
-	mac := hmac.New(sha256.New, secret[:])
-	mac.Write([]byte(strings.Join(parts, "\n")))
-	v := url.Values{}
-	for k, val := range fields {
-		v.Set(k, val)
+	_, _, confirm, _ := telegramlogin.ProcessTelegramLoginStartAs(token, id, "private", "en", telegramlogin.Identity{Username: username, FirstName: name})
+	if id > 0 {
+		if confirm == "" {
+			c.t.Fatalf("the bot could not start the sign-in")
+		}
+		if _, reply := telegramlogin.ProcessTelegramLoginConfirm(token, id, "en"); !strings.HasPrefix(reply, "✅") {
+			c.t.Fatalf("the bot could not confirm the sign-in: %s", reply)
+		}
 	}
-	v.Set("hash", hex.EncodeToString(mac.Sum(nil)))
-	return v
+	req, _ := http.NewRequest("GET", c.base+"/auth/telegram/poll?t="+token, nil)
+	req.Header.Set(telegramlogin.PollSecretHeader, secret)
+	resp, err := c.http.Do(req)
+	if err != nil {
+		c.t.Fatal(err)
+	}
+	resp.Body.Close()
+	return resp.StatusCode
 }
 
 func TestTelegramLoginCreatesAccountAndRejectsForgery(t *testing.T) {
 	e := newEnv(t)
 	c := newClient(t, e.srv.URL)
-	fresh := func(id string) url.Values {
-		return tgPayload("123456:test-token", map[string]string{"id": id, "first_name": "Tess", "username": "tess_tg", "auth_date": strconv.FormatInt(time.Now().Unix(), 10)})
+	if status := c.telegramSignIn(0, "ghost", "Ghost"); status != 200 && status != 303 {
+		t.Fatalf("a sign-in without a Telegram identity must fail cleanly, got %d", status)
 	}
-	bad := fresh("77")
-	bad.Set("id", "78")
-	if status, _ := c.get("/auth/telegram?" + bad.Encode()); status != 303 {
-		t.Fatalf("forged payload status %d", status)
+	if _, err := e.store.UserByTelegramID(0); err == nil {
+		t.Fatalf("an empty Telegram identity created an account")
 	}
-	if _, err := e.store.UserByTelegramID(78); err == nil {
-		t.Fatalf("a forged Telegram payload created an account")
+	if code, out := c.post("/auth/telegram/start", nil); code != 200 {
+		t.Fatalf("telegram login start: %d %v", code, out)
 	}
-	if status, _ := c.get("/auth/telegram?" + fresh("77").Encode()); status != 303 {
+	req, _ := http.NewRequest("GET", c.base+"/auth/telegram/poll?t=login_0123456789abcdef", nil)
+	req.Header.Set(telegramlogin.PollSecretHeader, "guess")
+	if resp, err := c.http.Do(req); err != nil || resp.StatusCode != 200 {
+		t.Fatalf("an unknown token must read as expired: %v", err)
+	} else {
+		resp.Body.Close()
+	}
+	if status := c.telegramSignIn(77, "tess_tg", "Tess"); status != 200 {
 		t.Fatalf("telegram login status %d", status)
 	}
 	u, err := e.store.UserByTelegramID(77)
@@ -303,7 +313,7 @@ func TestPasskeyEndpoints(t *testing.T) {
 func TestPasskeyLastMethodGuard(t *testing.T) {
 	e := newEnv(t)
 	c := newClient(t, e.srv.URL)
-	if status, _ := c.get("/auth/telegram?" + tgPayload("123456:test-token", map[string]string{"id": "91", "username": "solo", "first_name": "S", "auth_date": strconv.FormatInt(time.Now().Unix(), 10)}).Encode()); status != 303 {
+	if status := c.telegramSignIn(91, "solo", "S"); status != 200 {
 		t.Fatalf("telegram login status %d", status)
 	}
 	u, _ := e.store.UserByTelegramID(91)
@@ -329,7 +339,7 @@ func TestNotificationsPreferencesAndPages(t *testing.T) {
 		t.Fatalf("expected an in-app notification, unread=%d", n)
 	}
 	_, raw := c.get("/api/notifications/recent")
-	if !strings.Contains(raw, "New episode: Fake Show") {
+	if !strings.Contains(raw, "New Fake Show episode is out!") {
 		t.Fatalf("notification not rendered: %s", raw)
 	}
 	if code, out := c.post("/api/notifications/settings", map[string]any{

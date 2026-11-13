@@ -14,6 +14,7 @@ import (
 	"tvt/trakt"
 	"tvt/tvdb"
 	"tvt/tvmaze"
+	"tvt/youtube"
 )
 
 const (
@@ -23,20 +24,27 @@ const (
 )
 
 type Syncer struct {
-	Store    *store.Store
-	TMDB     *tmdb.Client
-	TVmaze   *tvmaze.Client
-	Trakt    *trakt.Client
-	TVDB     *tvdb.Client
-	Now      func() time.Time
-	mu       sync.Mutex
-	locks    map[string]*sync.Mutex
-	failed   map[string]time.Time
-	prefetch sync.Mutex
+	Store       *store.Store
+	TMDB        *tmdb.Client
+	TVmaze      *tvmaze.Client
+	Trakt       *trakt.Client
+	TVDB        *tvdb.Client
+	YouTube     *youtube.Client
+	Now         func() time.Time
+	mu          sync.Mutex
+	locks       map[string]*sync.Mutex
+	failed      map[string]time.Time
+	prefetch    sync.Mutex
+	shortMu     sync.Mutex
+	backfillMu  sync.Mutex
+	backfilling map[int64]bool
+	shorts      map[string]bool
+	feedMu      sync.Mutex
+	feeds       map[string]cachedFeed
 }
 
 func New(st *store.Store, c *tmdb.Client) *Syncer {
-	return &Syncer{Store: st, TMDB: c, locks: map[string]*sync.Mutex{}, failed: map[string]time.Time{}}
+	return &Syncer{Store: st, TMDB: c, locks: map[string]*sync.Mutex{}, failed: map[string]time.Time{}, shorts: map[string]bool{}, feeds: map[string]cachedFeed{}}
 }
 
 func (s *Syncer) now() time.Time {
@@ -81,6 +89,9 @@ func avgRuntime(r []int) int {
 // unsynced show from fetching it twice.
 func (s *Syncer) SyncShow(ctx context.Context, tmdbID int64) (*store.Show, error) {
 	if tmdbID < 0 {
+		if sh, handled, err := s.SyncYouTubeShow(ctx, tmdbID); handled {
+			return sh, err
+		}
 		return s.SyncTVDBShow(ctx, -tmdbID)
 	}
 	l := s.lockFor(fmt.Sprintf("show:%d", tmdbID))

@@ -16,7 +16,7 @@ import (
 	"tvt/telegram"
 )
 
-const testLocale = `{"notif":{"episode_aired":{"title":"New episode: {show}","body":"{code} {name} is out now & more."},"password_changed":{"title":"Password changed","body":"Your password was changed."}}}`
+const testLocale = `{"notif":{"episode_aired":{"title":"New {show} episode is out!","body":"{code} {name} & more"},"password_changed":{"title":"Password changed","body":"Your password was changed."}}}`
 
 func testService(t *testing.T) *Service {
 	t.Helper()
@@ -31,7 +31,7 @@ func TestTelegramHTMLLinksEpisodeCodeAndName(t *testing.T) {
 	s := testService(t)
 	data := map[string]any{"show": "Show", "code": "S02E05", "name": "The Name"}
 	got := s.telegramHTML("en", "episode_aired", data, "https://tvt.example/episode/9")
-	want := "<b>New episode: Show</b>\n<a href=\"https://tvt.example/episode/9\">S02E05 The Name</a> is out now &amp; more."
+	want := "<b>New Show episode is out!</b>\n<a href=\"https://tvt.example/episode/9\">S02E05 The Name</a> &amp; more"
 	if got != want {
 		t.Fatalf("got  %q\nwant %q", got, want)
 	}

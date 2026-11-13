@@ -1,6 +1,7 @@
 {{define "content"}}
 <section class="auth-card">
   <h1>{{.T "mfa.title"}}</h1>
+  {{if .Data.TOTP}}
   <p>{{.T "mfa.text"}}</p>
   <form class="stack" data-api="/api/auth/2fa">
     <label>{{.T "mfa.code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="20" required autofocus></label>
@@ -8,5 +9,30 @@
     <p class="form-error" role="alert" hidden></p>
     <button class="btn" type="submit">{{.T "token.continue"}}</button>
   </form>
+  {{end}}
+  {{if .Data.Email}}
+  {{if .Data.TOTP}}<p class="muted">{{.T "mfa.other"}}</p>{{end}}
+  <form class="stack" data-api="/api/auth/2fa/email/send" data-success="{{.T "mfa.email_sent"}}">
+    <p class="form-error" role="alert" hidden></p>
+    <button class="btn ghost" type="submit">{{.T "mfa.email_btn"}}</button>
+  </form>
+  <form class="stack" data-api="/api/auth/2fa/email/verify">
+    <label>{{.T "mfa.email_label"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required></label>
+    <p class="form-error" role="alert" hidden></p>
+    <button class="btn" type="submit">{{.T "token.continue"}}</button>
+  </form>
+  {{end}}
+  {{if .Data.Telegram}}
+  {{if or .Data.TOTP .Data.Email}}<p class="muted">{{.T "mfa.other"}}</p>{{end}}
+  <div class="stack">
+    <button type="button" class="btn" data-tfa-telegram data-start="/api/auth/2fa/telegram/start" data-poll="/api/auth/2fa/telegram/poll"
+      data-msg-waiting="{{.T "mfa.tg_waiting"}}"
+      data-msg-denied="{{.T "mfa.tg_denied"}}"
+      data-msg-expired="{{.T "mfa.tg_expired"}}"
+      data-msg-error="{{.T "mfa.tg_failed"}}">{{.T "mfa.tg_btn"}}</button>
+    <p class="muted" data-tfa-status role="status" hidden></p>
+  </div>
+  <script src="/static/twofa_telegram.js?v={{assetV}}" defer></script>
+  {{end}}
 </section>
 {{end}}

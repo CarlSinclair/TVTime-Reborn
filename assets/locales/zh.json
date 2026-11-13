@@ -218,7 +218,24 @@
     "danger": "危险区域",
     "cancel": "取消",
     "recovery_title": "恢复码",
-    "recovery_n": "剩余 %d 个"
+    "recovery_n": "剩余 %d 个",
+    "tab_integrations": "集成",
+    "tfa_methods": "登录验证方式",
+    "tfa_telegram": "Telegram 审批",
+    "tfa_telegram_hint": "我们会向您绑定的 Telegram 聊天发送一条包含“批准”和“拒绝”按钮的消息。",
+    "tfa_telegram_needs_link": "请先绑定 Telegram 账号，才能使用 Telegram 审批。",
+    "tfa_mode_title": "启用多种方式时",
+    "tfa_mode_any": "任选一种即可，登录时也可以改用其他方式",
+    "tfa_mode_all": "要求启用的所有方式",
+    "tfa_passkey_skips": "使用通行密钥登录时跳过这些验证",
+    "tfa_prefs_save": "保存验证设置",
+    "tfa_prefs_saved": "验证设置已保存。",
+    "tfa_email": "邮箱验证码",
+    "tfa_email_hint": "我们会向您账户的邮箱地址发送一个 6 位数验证码。",
+    "tfa_email_needs_mail": "邮箱验证码需要已确认的邮箱地址，并且本服务器已启用外发邮件。",
+    "tfa_magic_skips": "使用邮件链接登录时跳过这些验证",
+    "tfa_telegram_skips": "使用 Telegram 登录时跳过这些验证",
+    "forgot_current_password_btn": "我忘记了当前密码：向邮箱发送验证码"
   },
   "footer": {
     "tmdb": "剧集数据和图片由以下平台提供：",
@@ -328,6 +345,7 @@
     "server_host_hint": "添加其他服务器后，两边用户之间的动态和评论将双向共享。",
     "server_connect": "连接",
     "server_new": "新",
+    "server_name": "自称 %s。",
     "server_media": "图片从 %s 加载。",
     "server_media_note": "批准此服务器后，你的访客的浏览器将直接从 %s 加载其评论中的图片。",
     "server_approve": "批准",
@@ -426,7 +444,8 @@
       "storage": "存储 (R2 / S3)",
       "metadata": "剧集数据来源",
       "telegram": "Telegram 机器人",
-      "branding": "站点信息"
+      "branding": "站点信息",
+      "redis": "Redis"
     },
     "cfg": {
       "smtp_host": "SMTP 主机",
@@ -452,8 +471,15 @@
       "operator_name": "运营者名称",
       "privacy_contact": "隐私联系方式",
       "source_url": "源代码网址",
-      "contact_email": "联系表单邮箱"
-    }
+      "contact_email": "联系表单邮箱",
+      "redis_addr": "Redis 地址（主机:端口）",
+      "redis_password": "Redis 密码",
+      "redis_db": "Redis 数据库编号"
+    },
+    "avatar": "服务器头像",
+    "avatar_hint": "显示在其他服务器的服务器列表中，位于此服务器名称旁。正方形图片效果最佳。",
+    "avatar_upload": "上传头像",
+    "avatar_remove": "移除头像"
   },
   "offline": {
     "title": "你已离线",
@@ -476,6 +502,7 @@
     "contact_unavailable": "联系表单暂时不可用。",
     "captcha_failed": "验证未完成或已过期，请重试。",
     "no_email": "此账户没有邮箱地址。",
+    "instance_name_announce": "名称已保存，但无法通知已连接的服务器",
     "config_invalid": "这些设置无效",
     "test_failed": "测试失败",
     "test_no_email": "请输入接收测试邮件的地址。",
@@ -524,12 +551,14 @@
     "import_empty": "导出文件中没有剧集或已看剧集。",
     "import_busy": "你已有一个正在进行的导入。",
     "import_too_big": "文件太大。",
+    "import_invalid_youtube": "这看起来不是来自 Google Takeout 的 YouTube 观看历史。请将历史记录导出为 JSON，而不是 HTML。",
     "email_same": "这已经是你的邮箱地址。",
     "telegram_not_linked": "请先连接 Telegram。",
     "email_not_verified": "请先验证你的邮箱地址。",
     "push_not_enabled": "请先在此设备上启用推送。",
     "friend_self": "不能添加自己。",
-    "friend_remote": "无法连接到该服务器或找不到此人。"
+    "friend_remote": "无法连接到该服务器或找不到此人。",
+    "tfa_prefs_failed": "无法保存验证设置，请重试。"
   },
   "mail": {
     "login": {
@@ -553,6 +582,10 @@
     "emailchanged": {
       "subject": "你的 %s 邮箱已更改",
       "body": "你的 %s 账户邮箱已更改为 %s。如果不是你本人操作，请立即重置密码。"
+    },
+    "tfa": {
+      "subject": "您的 %s 验证码",
+      "body": "您的 %s 验证码为 %s。有效期为 10 分钟。如果您并未尝试登录或更改设置，请忽略此邮件，并考虑更改密码。"
     }
   },
   "js": {
@@ -661,7 +694,6 @@
     "passkey_remove_confirm": "要移除这个通行密钥吗？",
     "invalid_timing": "请输入有效的数字。",
     "telegram_failed": "Telegram 登录已取消或被拦截，请重试。",
-    "telegram_open": "打开 Telegram",
     "import_uploading": "上传中",
     "import_started": "导入已开始，你可以离开此页面。",
     "import_pending": "排队等待中",
@@ -674,6 +706,7 @@
     "import_skipped": "未能匹配的剧集集数：%d",
     "import_reason_not_found": "未找到",
     "import_reason_error": "查询失败",
+    "import_reason_not_followed": "此处未关注",
     "pw_toggle": "显示或隐藏密码",
     "pw_min": "至少 8 个字符",
     "pw_upper": "一个大写字母",
@@ -704,7 +737,25 @@
     "feed_no_friends": "你还没有好友。",
     "user_blocked": "已屏蔽该用户。",
     "report_user_reason": "你为什么要举报这个人？",
-    "server_forget_confirm": "忘记此服务器的密钥？它下次连接时，将信任它提供的任何密钥。"
+    "server_forget_confirm": "忘记此服务器的密钥？它下次连接时，将信任它提供的任何密钥。",
+    "int_push_done": "此设备已开启推送。",
+    "int_no_distributor": "请先安装 ntfy 等推送应用，然后重试。",
+    "int_failed": "操作未成功，请重试。",
+    "int_yt_synced": "YouTube 历史记录已同步。",
+    "int_yt_signed_in": "已登录 YouTube。",
+    "int_scrobble_done": "检测到的剧集已发送。",
+    "int_key_revoked": "密钥已撤销。",
+    "int_connected": "已连接",
+    "int_not_connected": "未连接",
+    "int_access_on": "已授予访问权限",
+    "int_access_off": "未授予访问权限",
+    "int_api_none": "还没有密钥。",
+    "int_api_last_used": "上次使用",
+    "int_api_never": "从未",
+    "int_api_revoke": "撤销",
+    "int_api_revoke_confirm": "撤销此密钥？使用它的一切都将停止工作。",
+    "telegram_waiting": "正在等待你在 Telegram 中确认",
+    "avatar_announce_failed": "头像已保存，但无法通知已连接的服务器。"
   },
   "genre": {
     "action_adventure": "动作冒险",
@@ -728,7 +779,19 @@
     "code": "验证码",
     "recovery_hint": "设备丢失了？请改为输入一个恢复码。",
     "text": "请输入验证器应用中的 6 位验证码。",
-    "title": "两步验证"
+    "title": "两步验证",
+    "other": "或使用其他方式",
+    "tg_btn": "在 Telegram 中批准",
+    "tg_waiting": "等待您在 Telegram 中批准",
+    "tg_denied": "该请求已在 Telegram 中被拒绝。",
+    "tg_expired": "请求已过期，请重试。",
+    "tg_failed": "无法发送 Telegram 消息，请使用其他方式。",
+    "email_title": "邮箱确认",
+    "email_btn": "向我发送邮箱验证码",
+    "email_sent": "我们已向您的邮箱地址发送了一个 6 位数验证码。",
+    "email_wait": "验证码刚刚已发送。请稍等几秒后再申请新的验证码。",
+    "email_failed": "无法发送邮件。请使用其他方式。",
+    "email_label": "邮箱验证码"
   },
   "notif": {
     "abuse_report": {
@@ -758,8 +821,8 @@
     "email_needs_verified": "邮件通知需要你的账号有已验证的邮箱地址。",
     "empty": "暂无通知。",
     "episode_aired": {
-      "body": "{code} {name} 已上线。",
-      "title": "新剧集：{show}"
+      "body": "{code} {name}",
+      "title": "{show} 新剧集已上线！"
     },
     "episodes_aired": {
       "body": "第 {season} 季的 {count} 集已上线。",
@@ -906,7 +969,17 @@
     "human_btn": "联系真人",
     "faq_intro": "请选择一个问题，或联系真人。",
     "faq_back": "返回问题列表",
-    "faq_gone": "该问题已不可用。"
+    "faq_gone": "该问题已不可用。",
+    "login_ask": "有人正尝试用此 Telegram 账号登录 {app}。请确认是你本人。",
+    "login_confirm_btn": "是，登录",
+    "login_done": "完成！你可以返回 {app}，你已登录。",
+    "login_invalid": "该登录请求无效或已过期。请返回 {app} 重试。",
+    "tfa_prompt": "有人正在登录您的账号。仅在确认是您本人时才批准。",
+    "tfa_approve": "批准",
+    "tfa_deny": "拒绝",
+    "tfa_approved": "已批准。您可以返回登录页面。",
+    "tfa_denied": "已拒绝。如果不是您本人操作，请修改密码。",
+    "tfa_stale": "该请求已过期或已被处理。"
   },
   "privacy": {
     "title": "隐私政策",
@@ -972,7 +1045,12 @@
     "keeps": "你在这里已有的记录不会被修改或删除。文件只在服务器上读取以生成导入内容，之后不会保留。",
     "file_label": "TV Time 导出文件（.zip）",
     "progress": "导入进度",
-    "unmatched": "未能匹配的剧集"
+    "unmatched": "未能匹配的剧集",
+    "yt_title": "导入 YouTube 观看历史",
+    "yt_how_body": "请在 takeout.google.com 请求您的数据，仅选择 YouTube 和 YouTube Music，将历史记录格式设置为 JSON，然后按原样上传 zip 文件（或其中的观看历史文件）。",
+    "yt_what": "首先加载您在此关注的每个 YouTube 频道的完整上传记录，大型频道可能需要一些时间，然后按照您观看的时间，将您看过的视频标记为已观看。您观看但未关注的频道会在之后列出。",
+    "yt_keeps": "您在此已跟踪的内容不会有任何更改。您的文件在服务器上读取，之后不会保存，也不会发送给 Google。",
+    "yt_file_label": "来自 Google Takeout 的 YouTube 历史记录（.zip 或 .json）"
   },
   "about": {
     "title": "关于",
@@ -995,5 +1073,29 @@
     "prompt": "请输入完整的用户名，例如 alice。",
     "none": "没有这个用户名的用户。",
     "remote": "无法连接到该服务器或找不到此人。"
+  },
+  "integrations": {
+    "app_title": "自动追踪",
+    "app_intro": "安装 Android 应用，即可同步你在此设备上观看的内容。你在其他服务的登录 cookie 绝不会离开手机：只有视频 id 和剧集标题会发送到这里。",
+    "app_missing": "请在 Android 应用中打开此页面以启用这些功能。",
+    "push_title": "此设备上的推送通知",
+    "push_text": "通过 ntfy 等推送应用接收提醒，无需 Google 服务。这是对其他通知渠道的补充。",
+    "push_button": "在此设备上启用",
+    "yt_title": "YouTube 历史记录",
+    "yt_text": "将你在 YouTube 上看过的视频在这里标记为已看，适用于你关注的频道和播放列表。",
+    "yt_connect": "登录 YouTube",
+    "yt_sync": "立即同步",
+    "scrobble_title": "流媒体应用",
+    "scrobble_text": "通过媒体通知检测你在 Netflix、Prime Video 或 Disney+ 等应用中看完的剧集，并标记为已看。",
+    "scrobble_access": "允许通知访问",
+    "scrobble_sync": "发送检测到的剧集",
+    "api_title": "API 密钥",
+    "api_intro": "密钥让你自己的脚本和 AI 代理可以读取你的资料库并将剧集标记为已看。每个密钥只拥有你选择的权限。",
+    "api_reference": "API 参考",
+    "api_label": "名称",
+    "api_scope_library_read": "读取我的剧集和接下来要看的内容",
+    "api_scope_watch_write": "将剧集标记为已看",
+    "api_create": "创建密钥",
+    "api_created": "请立即复制此密钥。它只会显示一次。"
   }
 }

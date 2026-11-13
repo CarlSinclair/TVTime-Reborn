@@ -314,28 +314,6 @@ func (a *App) apiNotificationTest(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-var pushHosts = []string{".googleapis.com", ".push.services.mozilla.com", ".push.apple.com", ".notify.windows.com", ".push.microsoft.com"}
-
-// validPushEndpoint limits server-side requests to the browser vendors' push
-// services, so a subscription cannot be used to make the server call an
-// arbitrary URL.
-func validPushEndpoint(raw string) bool {
-	if len(raw) > 2048 {
-		return false
-	}
-	u, err := url.Parse(raw)
-	if err != nil || u.Scheme != "https" || u.User != nil {
-		return false
-	}
-	host := strings.ToLower(u.Hostname())
-	for _, suf := range pushHosts {
-		if strings.HasSuffix(host, suf) || host == strings.TrimPrefix(suf, ".") {
-			return true
-		}
-	}
-	return false
-}
-
 func (a *App) apiPushKey(w http.ResponseWriter, r *http.Request) {
 	if _, err := a.needUser(r); err != nil {
 		a.fail(w, r, err)
@@ -362,7 +340,7 @@ func (a *App) apiPushSubscribe(w http.ResponseWriter, r *http.Request) {
 			Auth   string `json:"auth"`
 		} `json:"keys"`
 	}
-	if err := decode(r, &in); err != nil || !validPushEndpoint(in.Endpoint) {
+	if err := decode(r, &in); err != nil || !notify.ValidBrowserEndpoint(in.Endpoint) {
 		a.fail(w, r, errBadRequest)
 		return
 	}
@@ -371,6 +349,40 @@ func (a *App) apiPushSubscribe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.okJSON(w, nil)
+}
+
+func (a *App) apiPushDevice(w http.ResponseWriter, r *http.Request) {
+	u, err := a.needUser(r)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	var in struct {
+		Endpoint string `json:"endpoint"`
+		Keys     struct {
+			P256dh string `json:"p256dh"`
+			Auth   string `json:"auth"`
+		} `json:"keys"`
+	}
+	if err := decode(r, &in); err != nil || !notify.ValidDeviceEndpoint(in.Endpoint) || in.Keys.P256dh == "" || in.Keys.Auth == "" {
+		a.fail(w, r, errBadRequest)
+		return
+	}
+	if err := a.Store.SavePushSub(u.ID, in.Endpoint, in.Keys.P256dh, in.Keys.Auth, "app: "+trunc(r.UserAgent(), 190)); err != nil {
+		logger.Error("PUSH device register uid=%d host=%s: %v", u.ID, hostOfURL(in.Endpoint), err)
+		a.fail(w, r, err)
+		return
+	}
+	logger.Info("PUSH device registered uid=%d host=%s", u.ID, hostOfURL(in.Endpoint))
+	a.okJSON(w, nil)
+}
+
+func hostOfURL(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "?"
+	}
+	return u.Host
 }
 
 func (a *App) apiPushUnsubscribe(w http.ResponseWriter, r *http.Request) {

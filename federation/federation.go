@@ -50,7 +50,21 @@ type Service struct {
 	// ImageURL turns a stored picture name into its full address; both are set by
 	// the app that owns the media store.
 	MediaOrigin func() string
-	ImageURL    func(name string) string
+	// Name returns this server's public name as currently saved.
+	Name func() string
+	// Avatar returns the address of this server's own avatar, or "" when none is set.
+	Avatar func() string
+	// StoreAvatar re-encodes and keeps another server's avatar, returning the local file name.
+	StoreAvatar func(ctx context.Context, raw []byte) (string, error)
+	// DeleteAvatar removes a kept avatar file that is no longer in use.
+	DeleteAvatar func(ctx context.Context, name string) error
+	ImageURL     func(name string) string
+	// UserAvatarURL turns a local person's avatar file into the absolute address others can load it from.
+	UserAvatarURL func(name string) string
+	// StoreUserAvatar re-encodes and keeps another server's person avatar, returning the local file name.
+	StoreUserAvatar func(ctx context.Context, userID int64, raw []byte) (string, error)
+	// DeleteUserAvatar removes a kept person avatar file that is no longer in use.
+	DeleteUserAvatar func(ctx context.Context, name string) error
 
 	priv      ed25519.PrivateKey
 	pub       ed25519.PublicKey
@@ -142,6 +156,8 @@ type wellKnown struct {
 	Host    string `json:"host"`
 	Key     string `json:"key"`
 	Media   string `json:"media,omitempty"`
+	Name    string `json:"name,omitempty"`
+	Avatar  string `json:"avatar,omitempty"`
 }
 
 func (s *Service) WellKnown(w http.ResponseWriter, r *http.Request) {
@@ -151,12 +167,17 @@ func (s *Service) WellKnown(w http.ResponseWriter, r *http.Request) {
 	if s.MediaOrigin != nil {
 		doc.Media = s.MediaOrigin()
 	}
+	doc.Name = s.ownName()
+	if s.Avatar != nil {
+		doc.Avatar = s.Avatar()
+	}
 	json.NewEncoder(w).Encode(doc)
 }
 
 type userInfo struct {
 	Username string `json:"username"`
 	Name     string `json:"name"`
+	Avatar   string `json:"avatar,omitempty"`
 }
 
 func (s *Service) UserInfo(w http.ResponseWriter, r *http.Request) {
@@ -175,7 +196,11 @@ func (s *Service) UserInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(userInfo{Username: u.Username, Name: u.Name()})
+	info := userInfo{Username: u.Username, Name: u.Name()}
+	if u.AvatarPath != "" && s.UserAvatarURL != nil {
+		info.Avatar = s.UserAvatarURL(u.AvatarPath)
+	}
+	json.NewEncoder(w).Encode(info)
 }
 
 func (s *Service) fetch(ctx context.Context, host, path string, out any) (int, error) {
@@ -232,11 +257,7 @@ func (s *Service) peerKey(ctx context.Context, host string) (ed25519.PublicKey, 
 	if err := s.Store.PinPeer(host, doc.Key); err != nil {
 		return nil, err
 	}
-	if validOrigin(doc.Media, s.Insecure) {
-		if err := s.Store.SetPeerMedia(host, doc.Media); err != nil {
-			logger.Error("FEDERATION %v", err)
-		}
-	}
+	s.applyProfile(ctx, host, doc)
 	logger.Info("FEDERATION pinned the key of %s", host)
 	raw, _ := base64.StdEncoding.DecodeString(doc.Key)
 	return ed25519.PublicKey(raw), nil
@@ -321,7 +342,12 @@ func (s *Service) ResolveUser(ctx context.Context, name, host string) (*store.Us
 	if code != http.StatusOK || !strings.EqualFold(info.Username, name) {
 		return nil, fmt.Errorf("%w: %s answered %d", ErrUnreachable, host, code)
 	}
-	return s.Store.EnsureRemoteUser(host, info.Username, cleanName(info.Name))
+	u, err := s.Store.EnsureRemoteUser(host, info.Username, cleanName(info.Name))
+	if err != nil {
+		return nil, err
+	}
+	s.applyUserAvatar(ctx, host, u, info.Avatar)
+	return u, nil
 }
 
 // stripFormat removes invisible formatting characters (zero-width joiners,
@@ -360,6 +386,8 @@ type Event struct {
 	Ref      string `json:"ref"`
 	Kind     string `json:"kind"`
 	ShowTMDB int64  `json:"show_tmdb,omitempty"`
+	YT       string `json:"yt,omitempty"`
+	YTV      string `json:"ytv,omitempty"`
 	Show     string `json:"show,omitempty"`
 	Poster   string `json:"poster,omitempty"`
 	Season   int    `json:"season,omitempty"`
@@ -379,6 +407,8 @@ type message struct {
 	Ref   string `json:"ref,omitempty"`
 	// NewName is the username a person changed to; From carries the old one.
 	NewName string `json:"new_name,omitempty"`
+	// Instance is the sender's own public name, sent when an admin changes it.
+	Instance string `json:"instance,omitempty"`
 	// Comment is an episode comment shared with every allow-listed server.
 	Comment *CommentMsg `json:"comment,omitempty"`
 	Reason  string      `json:"reason,omitempty"`
@@ -396,6 +426,8 @@ type CommentMsg struct {
 	// sender's own.
 	ParentHost string `json:"parent_host,omitempty"`
 	ShowTMDB   int64  `json:"show_tmdb"`
+	YT         string `json:"yt,omitempty"`
+	YTV        string `json:"ytv,omitempty"`
 	Season     int    `json:"season"`
 	Episode    int    `json:"episode"`
 	Body       string `json:"body"`
@@ -474,6 +506,7 @@ func (s *Service) Emit(u *store.User, ev Event) {
 	if ev.At == "" {
 		ev.At = store.Now()
 	}
+	s.addYouTubeRefs(&ev)
 	for _, h := range hosts {
 		e := ev
 		s.enqueue(h, message{Type: "activity", From: person(u), Event: &e})

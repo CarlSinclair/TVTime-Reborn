@@ -50,12 +50,10 @@ func (s *Service) refreshMedia(ctx context.Context, host string) {
 		logger.Warn("FEDERATION picture host of %s: %v", host, err)
 		return
 	}
-	if doc.Key != peer.PublicKey || !validOrigin(doc.Media, s.Insecure) {
+	if doc.Key != peer.PublicKey {
 		return
 	}
-	if err := s.Store.SetPeerMedia(host, doc.Media); err != nil {
-		logger.Error("FEDERATION %v", err)
-	}
+	s.applyProfile(ctx, host, doc)
 }
 
 // imageFrom returns the picture address a server sent with a comment if it

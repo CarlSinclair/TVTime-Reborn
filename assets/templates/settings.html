@@ -5,6 +5,7 @@
   <a class="tab {{if eq .Data.Tab "profile"}}active{{end}}" href="/settings?tab=profile">{{.T "settings.tab_profile"}}</a>
   <a class="tab {{if eq .Data.Tab "notifications"}}active{{end}}" href="/settings?tab=notifications">{{.T "settings.tab_notifications"}}</a>
   <a class="tab {{if eq .Data.Tab "import"}}active{{end}}" href="/settings?tab=import">{{.T "settings.tab_import"}}</a>
+  <a class="tab {{if eq .Data.Tab "integrations"}}active{{end}}" href="/settings?tab=integrations">{{.T "settings.tab_integrations"}}</a>
 </div>
 {{if .Data.Flash}}<p class="notice">{{.T "settings.telegram_linked"}}</p>{{end}}
 {{if .Data.FlashError}}<p class="notice error">{{.T (printf "err.%s" .Data.FlashError)}}</p>{{end}}
@@ -47,6 +48,10 @@
     {{else}}
     <button class="btn small" type="button" id="twofa-start">{{.T "settings.twofa_enable"}}</button>
     {{end}}
+  </div>
+  <div class="row">
+    <div class="row-main"><strong>{{.T "settings.tfa_methods"}}</strong></div>
+    <button class="btn ghost small" type="button" data-modal-open="m-twofa-prefs">{{.T "settings.change"}}</button>
   </div>
   {{if .User.TOTPEnabled}}
   <div class="row">
@@ -108,7 +113,7 @@
 </section>
 
 <dialog class="modal" id="m-email" aria-labelledby="m-email-t">
-  <form class="stack" data-api="/api/account/email/change" data-success="{{.T "settings.email_change_sent"}}" data-reload="1">
+  <form class="stack" data-tfa-confirm="/api/account/2fa/confirm" data-api="/api/account/email/change" data-success="{{.T "settings.email_change_sent"}}" data-reload="1">
     <h2 id="m-email-t">{{.T "settings.email_change_btn"}}</h2>
     <label>{{.T "settings.email_new"}}<input type="email" name="email" autocomplete="email" required></label>
     {{if .User.HasPassword}}<label>{{.T "auth.password"}}<input type="password" name="password" autocomplete="current-password" required></label>{{end}}
@@ -119,7 +124,7 @@
 </dialog>
 
 <dialog class="modal" id="m-email-add" aria-labelledby="m-email-add-t">
-  <form class="stack" data-api="/api/account/email" data-success="{{.T "settings.email_added"}}" data-reload="1">
+  <form class="stack"{{if not .User.HasPassword}} data-tfa-confirm="/api/account/2fa/confirm"{{end}} data-api="/api/account/email" data-success="{{.T "settings.email_added"}}" data-reload="1">
     <h2 id="m-email-add-t">{{.T "settings.add_email"}}</h2>
     <p class="muted">{{.T "settings.add_email_hint"}}</p>
     <label>{{.T "auth.email"}}<input type="email" name="email" autocomplete="email" required></label>
@@ -129,9 +134,12 @@
 </dialog>
 
 <dialog class="modal" id="m-password" aria-labelledby="m-password-t">
-  <form class="stack" data-api="/api/account/password" data-success="{{.T "settings.password_changed"}}">
+  <form class="stack" data-tfa-confirm="/api/account/2fa/confirm" data-api="/api/account/password" data-success="{{.T "settings.password_changed"}}">
     <h2 id="m-password-t">{{.T "settings.password"}}</h2>
-    {{if .User.HasPassword}}<label>{{.T "settings.current_password"}}<input type="password" name="current" autocomplete="current-password" required></label>{{end}}
+    {{if .User.HasPassword}}<label>{{.T "settings.current_password"}}<input type="password" name="current" autocomplete="current-password"></label>
+    {{if .Data.MailOn}}<label>{{.T "mfa.email_label"}}<input type="text" name="email_code" inputmode="numeric" autocomplete="one-time-code" maxlength="6"></label>
+    <button class="btn ghost" type="button" data-forgot-send="/api/account/2fa/confirm/email/send" data-text-sent="{{.T "mfa.email_sent"}}" data-text-wait="{{.T "mfa.email_wait"}}" data-text-failed="{{.T "mfa.email_failed"}}">{{.T "settings.forgot_current_password_btn"}}</button>{{end}}{{end}}
+    {{if .User.TOTPEnabled}}<label>{{.T "mfa.code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code"></label>{{end}}
     <label>{{.T "settings.new_password"}}<input type="password" name="new" autocomplete="new-password" minlength="8" maxlength="72" data-pw-rules required></label>
     <p class="form-error" role="alert" hidden></p>
     <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn" type="submit">{{.T "settings.save"}}</button></div>
@@ -150,6 +158,29 @@
       <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn" type="submit">{{.T "settings.twofa_confirm"}}</button></div>
     </form>
   </div>
+</dialog>
+
+<dialog class="modal" id="m-twofa-prefs" aria-labelledby="m-twofa-prefs-t">
+  <form class="stack" data-tfa-confirm="/api/account/2fa/confirm" data-api="/api/account/2fa/prefs" data-success="{{.T "settings.tfa_prefs_saved"}}" data-reload="1">
+    <h2 id="m-twofa-prefs-t">{{.T "settings.tfa_methods"}}</h2>
+    <label class="check"><input type="checkbox" name="telegram" {{if .Data.TwoFAPrefs.Telegram}}checked{{end}} {{if not .Data.TelegramLinked}}disabled{{end}}> {{.T "settings.tfa_telegram"}}</label>
+    <p class="muted">{{if .Data.TelegramLinked}}{{.T "settings.tfa_telegram_hint"}}{{else}}{{.T "settings.tfa_telegram_needs_link"}}{{end}}</p>
+    <label>{{.T "settings.tfa_mode_title"}}
+      <select name="mode">
+        <option value="any" {{if not .Data.TwoFAPrefs.All}}selected{{end}}>{{.T "settings.tfa_mode_any"}}</option>
+        <option value="all" {{if .Data.TwoFAPrefs.All}}selected{{end}}>{{.T "settings.tfa_mode_all"}}</option>
+      </select>
+    </label>
+    <label class="check"><input type="checkbox" name="email" {{if .Data.TwoFAPrefs.Email}}checked{{end}} {{if not .Data.MailOn}}disabled{{end}}> {{.T "settings.tfa_email"}}</label>
+    <p class="muted">{{if .Data.MailOn}}{{.T "settings.tfa_email_hint"}}{{else}}{{.T "settings.tfa_email_needs_mail"}}{{end}}</p>
+    <label class="check"><input type="checkbox" name="passkey_skips" {{if .Data.TwoFAPrefs.PasskeySkips}}checked{{end}}> {{.T "settings.tfa_passkey_skips"}}</label>
+    <label class="check"><input type="checkbox" name="magic_skips" {{if .Data.TwoFAPrefs.MagicSkips}}checked{{end}}> {{.T "settings.tfa_magic_skips"}}</label>
+    <label class="check"><input type="checkbox" name="telegram_skips" {{if .Data.TwoFAPrefs.TelegramSkips}}checked{{end}}> {{.T "settings.tfa_telegram_skips"}}</label>
+    {{if .User.HasPassword}}<label>{{.T "auth.password"}}<input type="password" name="password" autocomplete="current-password" required></label>{{end}}
+    {{if .User.TOTPEnabled}}<label>{{.T "mfa.code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>{{end}}
+    <p class="form-error" role="alert" hidden></p>
+    <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn" type="submit">{{.T "settings.tfa_prefs_save"}}</button></div>
+  </form>
 </dialog>
 
 <dialog class="modal" id="m-twofa-off" aria-labelledby="m-twofa-off-t">
@@ -181,7 +212,7 @@
 </dialog>
 
 <dialog class="modal" id="m-delete" aria-labelledby="m-delete-t">
-  <form class="stack" data-api="/api/account/delete" data-confirm="{{.T "settings.delete_confirm"}}">
+  <form class="stack"{{if not .User.HasPassword}} data-tfa-confirm="/api/account/2fa/confirm"{{end}} data-api="/api/account/delete" data-confirm="{{.T "settings.delete_confirm"}}">
     <h2 id="m-delete-t">{{.T "settings.delete"}}</h2>
     <p class="muted">{{.T "settings.delete_warning"}}</p>
     {{if .User.HasPassword}}
@@ -200,7 +231,7 @@
 </dialog>
 
 <dialog class="modal" id="m-deactivate" aria-labelledby="m-deactivate-t">
-  <form class="stack" data-api="/api/account/deactivate" data-confirm="{{.T "settings.deactivate_confirm"}}">
+  <form class="stack"{{if not .User.HasPassword}} data-tfa-confirm="/api/account/2fa/confirm"{{end}} data-api="/api/account/deactivate" data-confirm="{{.T "settings.deactivate_confirm"}}">
     <h2 id="m-deactivate-t">{{.T "settings.deactivate"}}</h2>
     <p class="muted">{{.T "settings.deactivate_warning"}}</p>
     {{if .User.HasPassword}}
@@ -260,6 +291,44 @@
   <p><a href="/u/{{.User.Username}}">{{.T "profile.view_public"}}</a></p>
 </section>
 
+{{else if eq .Data.Tab "integrations"}}
+<section class="panel" data-integrations>
+  <h2>{{.T "integrations.app_title"}}</h2>
+  <p class="muted">{{.T "integrations.app_intro"}}</p>
+  <p class="notice" data-app-missing>{{.T "integrations.app_missing"}}</p>
+  <div class="stack" data-app-only hidden>
+    <div class="row">
+      <div class="row-main"><strong>{{.T "integrations.push_title"}}</strong><span class="muted">{{.T "integrations.push_text"}}</span></div>
+      <button class="btn small" type="button" data-int="push">{{.T "integrations.push_button"}}</button>
+    </div>
+    <div class="row">
+      <div class="row-main"><strong>{{.T "integrations.yt_title"}}</strong><span class="muted">{{.T "integrations.yt_text"}}</span><span class="muted" data-int-status="youtube"></span></div>
+      <button class="btn small" type="button" data-int="yt-connect">{{.T "integrations.yt_connect"}}</button>
+      <button class="btn ghost small" type="button" data-int="yt-sync">{{.T "integrations.yt_sync"}}</button>
+    </div>
+    <div class="row">
+      <div class="row-main"><strong>{{.T "integrations.scrobble_title"}}</strong><span class="muted">{{.T "integrations.scrobble_text"}}</span><span class="muted" data-int-status="scrobble"></span></div>
+      <button class="btn small" type="button" data-int="scrobble-access">{{.T "integrations.scrobble_access"}}</button>
+      <button class="btn ghost small" type="button" data-int="scrobble-sync">{{.T "integrations.scrobble_sync"}}</button>
+    </div>
+  </div>
+</section>
+<section class="panel" data-api-keys>
+  <h2>{{.T "integrations.api_title"}}</h2>
+  <p class="muted">{{.T "integrations.api_intro"}}</p>
+  <p class="muted"><a href="/api/v1/openapi.json">{{.T "integrations.api_reference"}}</a> &middot; <code>/mcp</code></p>
+  <form class="stack" id="api-key-form">
+    <label>{{.T "integrations.api_label"}}<input type="text" name="label" maxlength="100" required></label>
+    <label class="check"><input type="checkbox" name="scope" value="library:read" checked> {{.T "integrations.api_scope_library_read"}}</label>
+    <label class="check"><input type="checkbox" name="scope" value="watch:write"> {{.T "integrations.api_scope_watch_write"}}</label>
+    <button class="btn" type="submit">{{.T "integrations.api_create"}}</button>
+  </form>
+  <div class="notice" id="api-key-reveal" hidden>
+    <p>{{.T "integrations.api_created"}}</p>
+    <input type="text" id="api-key-value" readonly>
+  </div>
+  <div class="stack" id="api-key-list"></div>
+</section>
 {{else if eq .Data.Tab "import"}}
 <section class="panel">
   <h2>{{.T "import.title"}}</h2>
@@ -269,6 +338,14 @@
   <p class="muted">{{.T "import.what"}}</p>
   <p class="muted">{{.T "import.keeps"}}</p>
   <label id="import-picker">{{.T "import.file_label"}}<input type="file" accept=".zip,application/zip,application/x-zip-compressed" id="import-file" data-import="tvtime"></label>
+</section>
+
+<section class="panel">
+  <h2>{{.T "import.yt_title"}}</h2>
+  <p>{{.T "import.yt_how_body"}}</p>
+  <p class="muted">{{.T "import.yt_what"}}</p>
+  <p class="muted">{{.T "import.yt_keeps"}}</p>
+  <label id="import-picker-youtube">{{.T "import.yt_file_label"}}<input type="file" accept=".zip,.json,application/zip,application/x-zip-compressed,application/json" id="import-file-youtube" data-import="youtube"></label>
 </section>
 
 <section class="panel" id="import-status" hidden>
@@ -360,4 +437,5 @@
   </div>
 </section>
 {{end}}
+<script src="/static/twofa_confirm.js?v={{assetV}}" defer></script>
 {{end}}

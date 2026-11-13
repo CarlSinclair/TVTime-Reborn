@@ -218,7 +218,24 @@
     "danger": "위험 구역",
     "cancel": "취소",
     "recovery_title": "복구 코드",
-    "recovery_n": "%d개 남음"
+    "recovery_n": "%d개 남음",
+    "tab_integrations": "연동",
+    "tfa_methods": "로그인 시 인증 방법",
+    "tfa_telegram": "Telegram 승인",
+    "tfa_telegram_hint": "연결된 Telegram 채팅으로 승인 및 거부 버튼이 있는 메시지를 보내드립니다.",
+    "tfa_telegram_needs_link": "Telegram 승인을 사용하려면 먼저 Telegram 계정을 연결하세요.",
+    "tfa_mode_title": "둘 이상의 방법이 켜져 있을 때",
+    "tfa_mode_any": "방법 하나만 있으면 충분하며, 로그인할 때 다른 방법을 선택할 수 있습니다",
+    "tfa_mode_all": "켜진 모든 방법 요구",
+    "tfa_passkey_skips": "패스키로 로그인할 때는 이 확인을 건너뛰기",
+    "tfa_prefs_save": "인증 설정 저장",
+    "tfa_prefs_saved": "인증 설정이 저장되었습니다.",
+    "tfa_email": "이메일 코드",
+    "tfa_email_hint": "계정 이메일 주소로 6자리 코드를 보내 드립니다.",
+    "tfa_email_needs_mail": "이메일 코드를 사용하려면 인증된 이메일 주소와 이 서버의 발신 메일 기능이 필요합니다.",
+    "tfa_magic_skips": "이메일 링크로 로그인할 때는 이 확인 절차 건너뛰기",
+    "tfa_telegram_skips": "Telegram으로 로그인할 때는 이 확인 절차 건너뛰기",
+    "forgot_current_password_btn": "현재 비밀번호를 잊으셨나요? 이메일로 코드 받기"
   },
   "footer": {
     "tmdb": "작품 데이터와 이미지 제공:",
@@ -328,6 +345,7 @@
     "server_host_hint": "다른 서버를 추가하면 사용자 간에 활동과 댓글이 양방향으로 공유됩니다.",
     "server_connect": "연결",
     "server_new": "신규",
+    "server_name": "스스로를 %s(이)라고 부릅니다.",
     "server_media": "이미지는 %s에서 불러옵니다.",
     "server_media_note": "이 서버를 승인하면 방문자의 브라우저가 해당 서버의 댓글 이미지를 %s에서 직접 불러올 수 있습니다.",
     "server_approve": "승인",
@@ -426,7 +444,8 @@
       "storage": "스토리지 (R2 / S3)",
       "metadata": "시리즈 데이터 출처",
       "telegram": "텔레그램 봇",
-      "branding": "사이트 정보"
+      "branding": "사이트 정보",
+      "redis": "Redis"
     },
     "cfg": {
       "smtp_host": "SMTP 호스트",
@@ -452,8 +471,15 @@
       "operator_name": "운영자 이름",
       "privacy_contact": "개인정보 문의처",
       "source_url": "소스 코드 URL",
-      "contact_email": "문의 양식 이메일"
-    }
+      "contact_email": "문의 양식 이메일",
+      "redis_addr": "Redis 주소 (호스트:포트)",
+      "redis_password": "Redis 비밀번호",
+      "redis_db": "Redis 데이터베이스 번호"
+    },
+    "avatar": "서버 아바타",
+    "avatar_hint": "다른 서버의 서버 목록에서 이 서버 이름 옆에 표시됩니다. 정사각형 이미지가 가장 좋습니다.",
+    "avatar_upload": "아바타 업로드",
+    "avatar_remove": "아바타 삭제"
   },
   "offline": {
     "title": "오프라인 상태입니다",
@@ -476,6 +502,7 @@
     "contact_unavailable": "문의 양식을 지금은 사용할 수 없습니다.",
     "captcha_failed": "캡차를 풀지 않았거나 만료되었습니다. 다시 시도해 주세요.",
     "no_email": "이 계정에는 이메일 주소가 없습니다.",
+    "instance_name_announce": "이름은 저장되었지만 연결된 서버에 알리지 못했습니다",
     "config_invalid": "이 설정은 올바르지 않습니다",
     "test_failed": "테스트에 실패했습니다",
     "test_no_email": "테스트를 보낼 이메일 주소를 입력하세요.",
@@ -524,12 +551,14 @@
     "import_empty": "내보내기 파일에 작품이나 시청한 에피소드가 없습니다.",
     "import_busy": "이미 진행 중인 가져오기가 있습니다.",
     "import_too_big": "파일이 너무 큽니다.",
+    "import_invalid_youtube": "Google Takeout에서 내보낸 YouTube 시청 기록이 아닌 것 같습니다. 기록은 HTML이 아닌 JSON으로 내보내세요.",
     "email_same": "이미 사용 중인 이메일 주소입니다.",
     "telegram_not_linked": "먼저 Telegram을 연결하세요.",
     "email_not_verified": "먼저 이메일 주소를 인증하세요.",
     "push_not_enabled": "먼저 이 기기에서 푸시를 켜세요.",
     "friend_self": "자기 자신은 추가할 수 없습니다.",
-    "friend_remote": "해당 서버에 연결할 수 없거나 그 사람을 찾을 수 없습니다."
+    "friend_remote": "해당 서버에 연결할 수 없거나 그 사람을 찾을 수 없습니다.",
+    "tfa_prefs_failed": "인증 설정을 저장할 수 없습니다. 다시 시도하세요."
   },
   "mail": {
     "login": {
@@ -553,6 +582,10 @@
     "emailchanged": {
       "subject": "%s 이메일이 변경되었습니다",
       "body": "%s 계정의 이메일 주소가 %s(으)로 변경되었습니다. 본인이 아니라면 즉시 비밀번호를 재설정하세요."
+    },
+    "tfa": {
+      "subject": "%s 인증 코드",
+      "body": "%s 인증 코드는 %s입니다. 10분 후에 만료됩니다. 로그인하거나 설정을 변경하려고 하지 않으셨다면 이 이메일을 무시하고 비밀번호 변경을 고려해 주세요."
     }
   },
   "js": {
@@ -661,7 +694,6 @@
     "passkey_remove_confirm": "이 패스키를 삭제할까요?",
     "invalid_timing": "올바른 숫자를 입력하세요.",
     "telegram_failed": "Telegram 로그인이 취소되었거나 차단되었습니다. 다시 시도해 주세요.",
-    "telegram_open": "Telegram 열기",
     "import_uploading": "업로드 중",
     "import_started": "가져오기를 시작했습니다. 이 페이지를 떠나도 됩니다.",
     "import_pending": "순서를 기다리는 중",
@@ -674,6 +706,7 @@
     "import_skipped": "찾지 못한 에피소드: %d",
     "import_reason_not_found": "찾을 수 없음",
     "import_reason_error": "조회 실패",
+    "import_reason_not_followed": "여기서 팔로우하지 않음",
     "pw_toggle": "비밀번호 표시/숨기기",
     "pw_min": "8자 이상",
     "pw_upper": "대문자",
@@ -704,7 +737,25 @@
     "feed_no_friends": "아직 친구가 없습니다.",
     "user_blocked": "사용자를 차단했습니다.",
     "report_user_reason": "이 사람을 신고하는 이유가 무엇인가요?",
-    "server_forget_confirm": "이 서버의 키를 삭제할까요? 다음에 연결하면 제시하는 키를 그대로 신뢰합니다."
+    "server_forget_confirm": "이 서버의 키를 삭제할까요? 다음에 연결하면 제시하는 키를 그대로 신뢰합니다.",
+    "int_push_done": "이 기기의 푸시가 켜졌어요.",
+    "int_no_distributor": "먼저 ntfy 같은 푸시 앱을 설치한 후 다시 시도해 주세요.",
+    "int_failed": "작동하지 않았어요. 다시 시도해 주세요.",
+    "int_yt_synced": "YouTube 기록을 동기화했어요.",
+    "int_yt_signed_in": "YouTube에 로그인했어요.",
+    "int_scrobble_done": "감지된 에피소드를 보냈어요.",
+    "int_key_revoked": "키를 폐기했어요.",
+    "int_connected": "연결됨",
+    "int_not_connected": "연결 안 됨",
+    "int_access_on": "접근 허용됨",
+    "int_access_off": "접근 허용 안 됨",
+    "int_api_none": "아직 키가 없어요.",
+    "int_api_last_used": "마지막 사용",
+    "int_api_never": "없음",
+    "int_api_revoke": "폐기",
+    "int_api_revoke_confirm": "이 키를 폐기할까요? 이 키를 사용하는 모든 것이 작동을 멈춰요.",
+    "telegram_waiting": "Telegram에서 확인하기를 기다리는 중",
+    "avatar_announce_failed": "아바타는 저장되었지만 연결된 서버에 알리지 못했습니다."
   },
   "genre": {
     "action_adventure": "액션 & 어드벤처",
@@ -728,7 +779,19 @@
     "code": "인증 코드",
     "recovery_hint": "기기를 분실하셨나요? 대신 복구 코드를 입력하세요.",
     "text": "인증 앱의 6자리 코드를 입력하세요.",
-    "title": "2단계 인증"
+    "title": "2단계 인증",
+    "other": "또는 다른 방법 사용",
+    "tg_btn": "Telegram에서 승인",
+    "tg_waiting": "Telegram에서 승인을 기다리는 중",
+    "tg_denied": "Telegram에서 요청이 거부되었습니다.",
+    "tg_expired": "요청이 만료되었습니다. 다시 시도하세요.",
+    "tg_failed": "Telegram 메시지를 보낼 수 없습니다. 다른 방법을 사용하세요.",
+    "email_title": "이메일로 확인",
+    "email_btn": "이메일로 인증 코드 받기",
+    "email_sent": "이메일 주소로 6자리 인증 코드를 보냈습니다.",
+    "email_wait": "방금 인증 코드를 보냈습니다. 몇 초 후에 다시 요청해 주세요.",
+    "email_failed": "이메일을 보낼 수 없습니다. 다른 방법을 사용해 주세요.",
+    "email_label": "이메일 코드"
   },
   "notif": {
     "abuse_report": {
@@ -758,8 +821,8 @@
     "email_needs_verified": "이메일 알림은 계정에 인증된 이메일 주소가 있어야 합니다.",
     "empty": "아직 알림이 없습니다.",
     "episode_aired": {
-      "body": "{code} {name}이(가) 공개되었습니다.",
-      "title": "새 에피소드: {show}"
+      "body": "{code} {name}",
+      "title": "{show}의 새 에피소드가 공개되었습니다!"
     },
     "episodes_aired": {
       "body": "시즌 {season}의 에피소드 {count}개가 공개되었습니다.",
@@ -906,7 +969,17 @@
     "human_btn": "담당자와 대화",
     "faq_intro": "질문을 고르거나 담당자와 대화하세요.",
     "faq_back": "질문 목록으로",
-    "faq_gone": "이 질문은 더 이상 제공되지 않습니다."
+    "faq_gone": "이 질문은 더 이상 제공되지 않습니다.",
+    "login_ask": "누군가 이 Telegram 계정으로 {app}에 로그인하려고 해요. 본인인지 확인해 주세요.",
+    "login_confirm_btn": "네, 로그인할게요",
+    "login_done": "완료! {app}(으)로 돌아가세요. 로그인되었어요.",
+    "login_invalid": "이 로그인 요청은 유효하지 않거나 만료되었어요. {app}(으)로 돌아가 다시 시도해 주세요.",
+    "tfa_prompt": "누군가 회원님의 계정에 로그인하려고 합니다. 본인이 맞을 때만 승인하세요.",
+    "tfa_approve": "승인",
+    "tfa_deny": "거부",
+    "tfa_approved": "승인되었습니다. 로그인 페이지로 돌아가도 됩니다.",
+    "tfa_denied": "거부되었습니다. 본인이 아니라면 비밀번호를 변경하세요.",
+    "tfa_stale": "이 요청은 만료되었거나 이미 응답되었습니다."
   },
   "privacy": {
     "title": "개인정보 처리방침",
@@ -972,7 +1045,12 @@
     "keeps": "여기서 이미 기록한 내용은 바뀌거나 삭제되지 않습니다. 파일은 가져오기를 만들기 위해 서버에서 읽히며 이후 보관되지 않습니다.",
     "file_label": "TV Time 내보내기 파일 (.zip)",
     "progress": "가져오기 진행 상황",
-    "unmatched": "찾지 못한 작품"
+    "unmatched": "찾지 못한 작품",
+    "yt_title": "YouTube 시청 기록 가져오기",
+    "yt_how_body": "takeout.google.com에서 데이터를 요청하고, YouTube와 YouTube Music만 선택한 뒤, 기록 형식을 JSON으로 설정하세요. 다운로드한 zip 파일(또는 그 안의 시청 기록 파일)을 수정하지 말고 그대로 업로드하세요.",
+    "yt_what": "먼저 여기서 팔로우하는 모든 YouTube 채널의 전체 업로드 기록을 불러옵니다. 채널 규모가 크면 시간이 다소 걸릴 수 있습니다. 그다음 시청한 동영상을 실제 시청 시각을 기준으로 시청 완료로 표시합니다. 팔로우하지 않고 시청만 한 채널은 이후에 목록으로 표시됩니다.",
+    "yt_keeps": "여기서 이미 관리하는 항목은 변경되지 않습니다. 파일은 서버에서 읽은 후 보관되지 않으며, Google로 아무것도 전송되지 않습니다.",
+    "yt_file_label": "Google Takeout의 YouTube 기록 (.zip 또는 .json)"
   },
   "about": {
     "title": "소개",
@@ -995,5 +1073,29 @@
     "prompt": "사용자 이름을 정확히 입력하세요. 예: alice.",
     "none": "해당 사용자 이름의 사람이 없습니다.",
     "remote": "해당 서버에 연결할 수 없거나 그 사람을 찾을 수 없습니다."
+  },
+  "integrations": {
+    "app_title": "자동 추적",
+    "app_intro": "Android 앱을 설치하면 이 기기에서 시청한 내용을 동기화할 수 있어요. 다른 서비스의 로그인 쿠키는 휴대폰 밖으로 나가지 않으며, 동영상 id와 에피소드 제목만 이곳으로 전송돼요.",
+    "app_missing": "이 기능을 켜려면 Android 앱에서 이 페이지를 열어 주세요.",
+    "push_title": "이 기기의 푸시 알림",
+    "push_text": "Google 서비스 없이 ntfy 같은 푸시 앱으로 알림을 받아요. 다른 알림 채널에 추가로 사용돼요.",
+    "push_button": "이 기기에서 켜기",
+    "yt_title": "YouTube 기록",
+    "yt_text": "팔로우하는 채널과 재생목록의 YouTube 시청 영상을 여기에서 시청 완료로 표시해요.",
+    "yt_connect": "YouTube 로그인",
+    "yt_sync": "지금 동기화",
+    "scrobble_title": "스트리밍 앱",
+    "scrobble_text": "Netflix, Prime Video, Disney+ 같은 앱에서 끝까지 본 에피소드를 미디어 알림으로 감지해 시청 완료로 표시해요.",
+    "scrobble_access": "알림 접근 허용",
+    "scrobble_sync": "감지된 에피소드 보내기",
+    "api_title": "API 키",
+    "api_intro": "키를 사용하면 내 스크립트와 AI 에이전트가 라이브러리를 읽고 에피소드를 시청 완료로 표시할 수 있어요. 각 키에는 선택한 권한만 부여돼요.",
+    "api_reference": "API 참고 문서",
+    "api_label": "이름",
+    "api_scope_library_read": "내 프로그램과 다음에 볼 것 읽기",
+    "api_scope_watch_write": "에피소드 시청 완료로 표시",
+    "api_create": "키 만들기",
+    "api_created": "지금 이 키를 복사하세요. 한 번만 표시돼요."
   }
 }

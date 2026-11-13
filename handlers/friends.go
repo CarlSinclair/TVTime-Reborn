@@ -68,6 +68,9 @@ func (a *App) findPerson(viewer *store.User, q string) (*store.User, bool, error
 		}
 		if known, kerr := a.Store.UserByUsername(store.RemoteHandle(name, host)); kerr == nil && known.IsRemote() {
 			u = known
+			rctx, rcancel := context.WithTimeout(context.Background(), 12*time.Second)
+			a.Fed.RefreshUser(rctx, u)
+			rcancel()
 		} else {
 			ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
 			defer cancel()

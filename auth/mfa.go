@@ -191,13 +191,13 @@ func (s *Service) DisableTOTP(userID int64) error { return s.Store.DisableTOTP(u
 
 // BeginMFA parks a login that passed its first factor: the user holds a
 // short-lived signed cookie that is only good for the second-factor endpoint.
-func (s *Service) BeginMFA(w http.ResponseWriter, userID int64) error {
+func (s *Service) BeginMFA(w http.ResponseWriter, userID int64) (string, error) {
 	tok, err := s.signToken(userID, "mfa", MFATokenDuration)
 	if err != nil {
-		return fmt.Errorf("sign mfa token uid=%d: %w", userID, err)
+		return "", fmt.Errorf("sign mfa token uid=%d: %w", userID, err)
 	}
 	s.setField(w, fieldMFA, tok)
-	return nil
+	return tok, nil
 }
 
 func (s *Service) PendingMFAUser(r *http.Request) (int64, error) {
@@ -207,5 +207,7 @@ func (s *Service) PendingMFAUser(r *http.Request) (int64, error) {
 	}
 	return s.parseToken(tok, "mfa")
 }
+
+func (s *Service) PendingMFAToken(r *http.Request) string { return s.field(r, fieldMFA) }
 
 func (s *Service) ClearMFA(w http.ResponseWriter) { s.setField(w, fieldMFA, "") }

@@ -8,7 +8,7 @@
     <p class="form-error" role="alert" hidden></p>
     <button class="btn" type="submit">{{.T "auth.register"}}</button>
   </form>
-  {{if .TelegramBot}}{{template "telegram_widget" (dict "BotID" .TelegramBotID "Label" (.T "auth.telegram_login") "Action" "login")}}{{end}}
+  {{if .TelegramBot}}{{template "telegram_widget" (dict "Label" (.T "auth.telegram_login"))}}{{end}}
   <p class="muted"><a href="/login">{{.T "auth.have_account"}}</a></p>
 </section>
 {{end}}

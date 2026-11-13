@@ -10,7 +10,7 @@
     <button class="btn ghost" type="button" data-magic data-success="{{.T "auth.magic_sent"}}">{{.T "auth.magic_link"}}</button>
   </form>
   {{if .PasskeysEnabled}}<p><button class="btn ghost wide" type="button" id="passkey-login">{{.T "auth.passkey_login"}}</button></p>{{end}}
-  {{if .TelegramBot}}{{template "telegram_widget" (dict "BotID" .TelegramBotID "Label" (.T "auth.telegram_login") "Action" "login")}}{{end}}
+  {{if .TelegramBot}}{{template "telegram_widget" (dict "Label" (.T "auth.telegram_login"))}}{{end}}
   <p class="center"><a href="/register">{{.T "auth.register"}}</a></p>
 </section>
 {{end}}

@@ -519,6 +519,13 @@ func (a *App) SetFederation(f *federation.Service) {
 	a.Fed = f
 	f.MediaOrigin = a.picOrigin
 	f.ImageURL = a.picAbsURL
+	f.Name = a.savedAppName
+	f.Avatar = a.ownAvatarURL
+	f.StoreAvatar = a.storePeerAvatar
+	f.DeleteAvatar = a.deletePeerAvatar
+	f.UserAvatarURL = a.userAvatarAbsURL
+	f.StoreUserAvatar = a.storeRemoteUserAvatar
+	f.DeleteUserAvatar = a.deleteRemoteUserAvatar
 }
 
 var (

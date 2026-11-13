@@ -218,7 +218,24 @@
     "danger": "危険な操作",
     "cancel": "キャンセル",
     "recovery_title": "リカバリーコード",
-    "recovery_n": "残り%d個"
+    "recovery_n": "残り%d個",
+    "tab_integrations": "連携",
+    "tfa_methods": "ログイン時の確認方法",
+    "tfa_telegram": "Telegramでの承認",
+    "tfa_telegram_hint": "リンクされたTelegramチャットに「承認」と「拒否」のボタン付きのメッセージを送信します。",
+    "tfa_telegram_needs_link": "Telegramでの承認を使うには、まずTelegramアカウントをリンクしてください。",
+    "tfa_mode_title": "複数の方法が有効な場合",
+    "tfa_mode_any": "いずれか1つの方法で十分です。ログイン時に別の方法を選ぶこともできます",
+    "tfa_mode_all": "有効なすべての方法を必須にする",
+    "tfa_passkey_skips": "パスキーでログインするときは、これらの確認をスキップする",
+    "tfa_prefs_save": "確認設定を保存",
+    "tfa_prefs_saved": "確認設定を保存しました。",
+    "tfa_email": "メールコード",
+    "tfa_email_hint": "6桁のコードをアカウントのメールアドレスに送信します。",
+    "tfa_email_needs_mail": "メールコードを利用するには、確認済みのメールアドレスと、このサーバーからの送信メールが必要です。",
+    "tfa_magic_skips": "メールのリンクでサインインするときは、これらの確認を省略する",
+    "tfa_telegram_skips": "Telegramでサインインするときは、これらの確認を省略する",
+    "forgot_current_password_btn": "現在のパスワードを忘れました: メールでコードを送信"
   },
   "footer": {
     "tmdb": "作品データと画像の提供元：",
@@ -328,6 +345,7 @@
     "server_host_hint": "別のサーバーを追加すると、ユーザー間でアクティビティとコメントが双方向に共有されます。",
     "server_connect": "接続",
     "server_new": "新規",
+    "server_name": "自身を %s と名乗る。",
     "server_media": "画像は %s から読み込まれます。",
     "server_media_note": "このサーバーを承認すると、訪問者のブラウザがそのコメントの画像を %s から直接読み込めるようになります。",
     "server_approve": "承認",
@@ -426,7 +444,8 @@
       "storage": "ストレージ (R2 / S3)",
       "metadata": "番組データの取得元",
       "telegram": "Telegram ボット",
-      "branding": "サイト情報"
+      "branding": "サイト情報",
+      "redis": "Redis"
     },
     "cfg": {
       "smtp_host": "SMTPホスト",
@@ -452,8 +471,15 @@
       "operator_name": "運営者名",
       "privacy_contact": "プライバシー連絡先",
       "source_url": "ソースコードのURL",
-      "contact_email": "お問い合わせフォームの宛先メール"
-    }
+      "contact_email": "お問い合わせフォームの宛先メール",
+      "redis_addr": "Redis のアドレス（ホスト:ポート）",
+      "redis_password": "Redis のパスワード",
+      "redis_db": "Redis のデータベース番号"
+    },
+    "avatar": "サーバーのアバター",
+    "avatar_hint": "他のサーバーのサーバー一覧で、このサーバー名の横に表示されます。正方形の画像が最適です。",
+    "avatar_upload": "アバターをアップロード",
+    "avatar_remove": "アバターを削除"
   },
   "offline": {
     "title": "オフラインです",
@@ -476,6 +502,7 @@
     "contact_unavailable": "お問い合わせフォームは現在ご利用いただけません。",
     "captcha_failed": "キャプチャが未解決か期限切れです。もう一度お試しください。",
     "no_email": "このアカウントにはメールアドレスがありません。",
+    "instance_name_announce": "名前は保存されましたが、接続中のサーバーに通知できませんでした",
     "config_invalid": "これらの設定は無効です",
     "test_failed": "テストに失敗しました",
     "test_no_email": "テストの送信先メールアドレスを入力してください。",
@@ -524,12 +551,14 @@
     "import_empty": "エクスポートに作品も視聴済みエピソードも含まれていません。",
     "import_busy": "インポートはすでに実行中です。",
     "import_too_big": "ファイルが大きすぎます。",
+    "import_invalid_youtube": "Google Takeout からエクスポートした YouTube の視聴履歴ではないようです。履歴は HTML ではなく JSON 形式でエクスポートしてください。",
     "email_same": "すでにそのメールアドレスです。",
     "telegram_not_linked": "先にTelegramを連携してください。",
     "email_not_verified": "先にメールアドレスを確認してください。",
     "push_not_enabled": "先にこの端末でプッシュを有効にしてください。",
     "friend_self": "自分自身は追加できません。",
-    "friend_remote": "そのサーバーに接続できないか、その人が見つかりません。"
+    "friend_remote": "そのサーバーに接続できないか、その人が見つかりません。",
+    "tfa_prefs_failed": "確認設定を保存できませんでした。もう一度お試しください。"
   },
   "mail": {
     "login": {
@@ -553,6 +582,10 @@
     "emailchanged": {
       "subject": "%sのメールアドレスが変更されました",
       "body": "%sアカウントのメールアドレスが %s に変更されました。心当たりがない場合は、すぐにパスワードをリセットしてください。"
+    },
+    "tfa": {
+      "subject": "%s の確認コード",
+      "body": "%s の確認コードは %s です。有効期限は10分です。サインインや設定の変更を行っていない場合は、このメールを無視し、パスワードの変更をご検討ください。"
     }
   },
   "js": {
@@ -661,7 +694,6 @@
     "passkey_remove_confirm": "このパスキーを削除しますか？",
     "invalid_timing": "有効な数値を入力してください。",
     "telegram_failed": "Telegramでのログインがキャンセルまたはブロックされました。もう一度お試しください。",
-    "telegram_open": "Telegramを開く",
     "import_uploading": "アップロード中",
     "import_started": "インポートを開始しました。このページを離れても大丈夫です。",
     "import_pending": "順番待ち",
@@ -674,6 +706,7 @@
     "import_skipped": "一致しなかったエピソード：%d",
     "import_reason_not_found": "見つかりません",
     "import_reason_error": "検索に失敗",
+    "import_reason_not_followed": "ここではフォローしていません",
     "pw_toggle": "パスワードの表示/非表示",
     "pw_min": "8文字以上",
     "pw_upper": "大文字",
@@ -704,7 +737,25 @@
     "feed_no_friends": "まだ友達がいません。",
     "user_blocked": "ユーザーをブロックしました。",
     "report_user_reason": "この人を報告する理由は何ですか？",
-    "server_forget_confirm": "このサーバーの鍵を忘れますか？次回の接続時には、提示された鍵がそのまま信頼されます。"
+    "server_forget_confirm": "このサーバーの鍵を忘れますか？次回の接続時には、提示された鍵がそのまま信頼されます。",
+    "int_push_done": "このデバイスのプッシュをオンにしました。",
+    "int_no_distributor": "先にntfyなどのプッシュアプリをインストールして、もう一度お試しください。",
+    "int_failed": "うまくいきませんでした。もう一度お試しください。",
+    "int_yt_synced": "YouTube履歴を同期しました。",
+    "int_yt_signed_in": "YouTubeにログインしました。",
+    "int_scrobble_done": "検出したエピソードを送信しました。",
+    "int_key_revoked": "キーを無効にしました。",
+    "int_connected": "接続済み",
+    "int_not_connected": "未接続",
+    "int_access_on": "アクセス許可済み",
+    "int_access_off": "アクセス未許可",
+    "int_api_none": "キーはまだありません。",
+    "int_api_last_used": "最終使用",
+    "int_api_never": "なし",
+    "int_api_revoke": "無効にする",
+    "int_api_revoke_confirm": "このキーを無効にしますか？使っているものはすべて動かなくなります。",
+    "telegram_waiting": "Telegramでの確認を待っています",
+    "avatar_announce_failed": "アバターは保存されましたが、接続中のサーバーに通知できませんでした。"
   },
   "genre": {
     "action_adventure": "アクション＆アドベンチャー",
@@ -728,7 +779,19 @@
     "code": "確認コード",
     "recovery_hint": "デバイスを紛失しましたか？代わりにリカバリーコードを入力してください。",
     "text": "認証アプリに表示される6桁のコードを入力してください。",
-    "title": "2段階認証"
+    "title": "2段階認証",
+    "other": "または別の方法を使用",
+    "tg_btn": "Telegramで承認",
+    "tg_waiting": "Telegramでの承認を待っています",
+    "tg_denied": "Telegramでリクエストが拒否されました。",
+    "tg_expired": "リクエストの有効期限が切れました。もう一度お試しください。",
+    "tg_failed": "Telegramメッセージを送信できませんでした。別の方法を使用してください。",
+    "email_title": "メールで確認",
+    "email_btn": "メールでコードを送信",
+    "email_sent": "6桁のコードをメールアドレスに送信しました。",
+    "email_wait": "コードを先ほど送信しました。別のコードを求める前に数秒お待ちください。",
+    "email_failed": "メールを送信できませんでした。別の方法をお試しください。",
+    "email_label": "メールコード"
   },
   "notif": {
     "abuse_report": {
@@ -758,8 +821,8 @@
     "email_needs_verified": "メール通知にはアカウントに確認済みのメールアドレスが必要です。",
     "empty": "まだ通知はありません。",
     "episode_aired": {
-      "body": "{code} {name} が配信されました。",
-      "title": "新エピソード：{show}"
+      "body": "{code} {name}",
+      "title": "{show} の新エピソードが配信されました！"
     },
     "episodes_aired": {
       "body": "シーズン{season}の{count}エピソードが配信されました。",
@@ -906,7 +969,17 @@
     "human_btn": "担当者と話す",
     "faq_intro": "質問を選ぶか、担当者とお話しください。",
     "faq_back": "質問一覧に戻る",
-    "faq_gone": "この質問は利用できなくなりました。"
+    "faq_gone": "この質問は利用できなくなりました。",
+    "login_ask": "誰かがこのTelegramアカウントで{app}にログインしようとしています。ご本人か確認してください。",
+    "login_confirm_btn": "はい、ログインする",
+    "login_done": "完了です！{app}に戻ってください。ログインしました。",
+    "login_invalid": "このログインリクエストは無効か、期限切れです。{app}に戻ってもう一度お試しください。",
+    "tfa_prompt": "誰かがあなたのアカウントにログインしようとしています。本人の場合のみ承認してください。",
+    "tfa_approve": "承認",
+    "tfa_deny": "拒否",
+    "tfa_approved": "承認しました。ログインページに戻ることができます。",
+    "tfa_denied": "拒否しました。心当たりがない場合は、パスワードを変更してください。",
+    "tfa_stale": "このリクエストは期限切れか、すでに応答済みです。"
   },
   "privacy": {
     "title": "プライバシーポリシー",
@@ -972,7 +1045,12 @@
     "keeps": "ここで既に記録している内容は変更も削除もされません。ファイルはインポート作成のためサーバー上で読み取られ、その後は保存されません。",
     "file_label": "TV Timeのエクスポート（.zip）",
     "progress": "インポートの進捗",
-    "unmatched": "一致しなかった作品"
+    "unmatched": "一致しなかった作品",
+    "yt_title": "YouTube の視聴履歴をインポート",
+    "yt_how_body": "takeout.google.com でデータをリクエストし、YouTube と YouTube Music のみを選択して、履歴の形式を JSON に設定してください。ダウンロードしたままの zip ファイル (または、その中の視聴履歴ファイル) をアップロードしてください。",
+    "yt_what": "まず、ここでフォローしているすべてのYouTubeチャンネルの投稿履歴を読み込みます。大規模なチャンネルでは時間がかかる場合があります。その後、視聴した動画を視聴時刻を使って視聴済みにします。フォローしていないが視聴したチャンネルは、その後に一覧表示されます。",
+    "yt_keeps": "ここで既に管理している内容は変更されません。ファイルはサーバーで読み取られ、その後保存されず、Google に送信されることもありません。",
+    "yt_file_label": "Google Takeout の YouTube 履歴 (.zip または .json)"
   },
   "about": {
     "title": "このサービスについて",
@@ -995,5 +1073,29 @@
     "prompt": "ユーザー名を正確に入力してください（例：alice）。",
     "none": "そのユーザー名の人は見つかりません。",
     "remote": "そのサーバーに接続できないか、その人が見つかりません。"
+  },
+  "integrations": {
+    "app_title": "自動トラッキング",
+    "app_intro": "Androidアプリをインストールすると、このデバイスで視聴した内容を同期できます。他のサービスのログイン用cookieがスマートフォンから出ることはありません。ここに送信されるのは動画IDとエピソードのタイトルだけです。",
+    "app_missing": "これらを有効にするには、Androidアプリでこのページを開いてください。",
+    "push_title": "このデバイスでのプッシュ通知",
+    "push_text": "Googleサービスなしで、ntfyなどのプッシュアプリ経由で通知を受け取れます。他の通知チャンネルに加えて利用できます。",
+    "push_button": "このデバイスで有効にする",
+    "yt_title": "YouTube履歴",
+    "yt_text": "フォローしているチャンネルとプレイリストについて、YouTubeで視聴した動画をここで視聴済みにします。",
+    "yt_connect": "YouTubeにログイン",
+    "yt_sync": "今すぐ同期",
+    "scrobble_title": "ストリーミングアプリ",
+    "scrobble_text": "NetflixやPrime Video、Disney+などのアプリで見終えたエピソードをメディア通知から検出し、視聴済みにします。",
+    "scrobble_access": "通知へのアクセスを許可",
+    "scrobble_sync": "検出したエピソードを送信",
+    "api_title": "APIキー",
+    "api_intro": "キーを使うと、自分のスクリプトやAIエージェントがライブラリを読み取り、エピソードを視聴済みにできます。各キーには選んだ権限だけが付きます。",
+    "api_reference": "APIリファレンス",
+    "api_label": "名前",
+    "api_scope_library_read": "マイ番組と次に見るものを読む",
+    "api_scope_watch_write": "エピソードを視聴済みにする",
+    "api_create": "キーを作成",
+    "api_created": "今すぐこのキーをコピーしてください。表示されるのは一度だけです。"
   }
 }

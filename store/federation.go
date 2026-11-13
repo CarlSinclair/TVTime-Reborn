@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"tvt/logger"
 )
 
 const EventLease = 14 * 24 * time.Hour
@@ -128,7 +130,9 @@ type PeerInfo struct {
 	New       bool
 	Share     bool
 	// Media is the origin the server's pictures are loaded from, if known.
-	Media string
+	Media  string
+	Name   string
+	Avatar string
 }
 
 func (s *Store) CountPeers() (int, error) {
@@ -154,6 +158,8 @@ func (s *Store) Peers(limit, offset int) ([]PeerInfo, error) {
 			return nil, err
 		}
 		p.Blocked, p.New, p.Share = b == 1, ack == 0, sh == 1
+		p.Name = s.PeerName(p.Host)
+		p.Avatar, _ = s.PeerAvatar(p.Host)
 		out = append(out, p)
 	}
 	return out, rows.Err()
@@ -236,6 +242,11 @@ func (s *Store) DropRemoteCommentsFrom(host string) (int64, error) {
 func (s *Store) ForgetPeer(host string) error {
 	if _, err := s.DB.Exec(`DELETE FROM federation_peers WHERE host = ?`, strings.ToLower(host)); err != nil {
 		return fmt.Errorf("forget peer %s: %w", host, err)
+	}
+	for _, k := range []string{peerNameKey, peerAvatarKey} {
+		if err := s.KVDelete(k + strings.ToLower(host)); err != nil {
+			logger.Error("STORE forget peer %s: leftover profile not removed: %v", host, err)
+		}
 	}
 	return nil
 }
@@ -535,4 +546,62 @@ func (s *Store) ApprovedMediaOrigins() ([]string, error) {
 		out = append(out, o)
 	}
 	return out, rows.Err()
+}
+
+const peerNameKey = "peer_name:"
+
+func (s *Store) SetPeerName(host, name string) error {
+	if err := s.KVSet(peerNameKey+strings.ToLower(host), name); err != nil {
+		return fmt.Errorf("set name of %s: %w", host, err)
+	}
+	return nil
+}
+
+func (s *Store) PeerName(host string) string { return s.KVGet(peerNameKey + strings.ToLower(host)) }
+
+func (s *Store) PeerHosts() ([]string, error) {
+	rows, err := s.DB.Query(`SELECT host FROM federation_peers WHERE blocked = 0 ORDER BY host`)
+	if err != nil {
+		return nil, fmt.Errorf("list peer hosts: %w", err)
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var h string
+		if err := rows.Scan(&h); err != nil {
+			return nil, err
+		}
+		out = append(out, h)
+	}
+	return out, rows.Err()
+}
+
+const peerAvatarKey = "peer_avatar:"
+
+func (s *Store) SetPeerAvatar(host, file, source string) error {
+	if err := s.KVSet(peerAvatarKey+strings.ToLower(host), file+"|"+source); err != nil {
+		return fmt.Errorf("set avatar of %s: %w", host, err)
+	}
+	return nil
+}
+
+func (s *Store) PeerAvatar(host string) (file, source string) {
+	file, source, _ = strings.Cut(s.KVGet(peerAvatarKey+strings.ToLower(host)), "|")
+	return file, source
+}
+
+func (s *Store) ClearPeerAvatar(host string) error {
+	if err := s.KVDelete(peerAvatarKey + strings.ToLower(host)); err != nil {
+		return fmt.Errorf("clear avatar of %s: %w", host, err)
+	}
+	return nil
+}
+
+func (s *Store) PeerAvatarInUse(file string) (bool, error) {
+	var n int
+	err := s.DB.QueryRow(`SELECT COUNT(*) FROM sync_state WHERE key LIKE ? AND value LIKE ?`, peerAvatarKey+"%", file+"|%").Scan(&n)
+	if err != nil {
+		return true, fmt.Errorf("check avatar %s in use: %w", file, err)
+	}
+	return n > 0, nil
 }

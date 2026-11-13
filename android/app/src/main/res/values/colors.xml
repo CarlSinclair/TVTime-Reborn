@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="shell_background">#0F1117</color>
+    <color name="shell_accent">#7C5CFF</color>
+    <color name="ic_launcher_background">#7C5CFF</color>
+</resources>

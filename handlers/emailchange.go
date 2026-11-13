@@ -55,15 +55,13 @@ func (a *App) apiChangeEmail(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if u.TOTPEnabled {
-		if err := a.allow(a.mfaLimit, "mfa-email:"+itoa(u.ID)); err != nil {
-			a.fail(w, r, err)
-			return
-		}
-		if err := a.Auth.VerifySecondFactor(u, in.Code); err != nil {
-			a.fail(w, r, apiErr{http.StatusUnauthorized, "err.mfa_bad_code"})
-			return
-		}
+	if err := a.allow(a.mfaLimit, "mfa-email:"+itoa(u.ID)); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	if err := a.requireSecondFactor(u, in.Code); err != nil {
+		a.fail(w, r, err)
+		return
 	}
 	if err := a.Store.SetPendingEmail(u.ID, email); err != nil {
 		if errors.Is(err, store.ErrEmailTaken) {

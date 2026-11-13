@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"io/fs"
 	"net/http"
@@ -10,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/CarlSinclair/csuit-libs/pwa"
 	"tvt/assets"
 	"tvt/auth"
 	"tvt/logger"
@@ -67,7 +67,13 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /media/{kind}/{file}", a.serveMedia)
 	mux.HandleFunc("GET /img/{size}/{file}", a.serveImage)
 	mux.HandleFunc("GET /tvdbimg/{file}", a.serveTVDBImage)
-	mux.HandleFunc("GET /auth/telegram", a.pageTelegramLogin)
+	mux.HandleFunc("GET /ytimg/{kind}/{file}", a.serveYTImage)
+	a.registerAPIV1(mux)
+	mux.HandleFunc("GET /api/account/api-keys", a.apiAccountKeys)
+	mux.HandleFunc("POST /api/account/api-keys", a.apiAccountKeyCreate)
+	mux.HandleFunc("POST /api/account/api-keys/{id}/revoke", a.apiAccountKeyRevoke)
+	mux.HandleFunc("POST /auth/telegram/start", a.apiTelegramLoginStart)
+	mux.HandleFunc("GET /auth/telegram/poll", a.pageTelegramLoginPoll)
 	mux.HandleFunc("GET /login/2fa", a.pageMFA)
 	mux.HandleFunc("GET /login", a.pageSimple("login", "auth.login"))
 	mux.HandleFunc("GET /register", a.pageSimple("register", "auth.register"))
@@ -88,6 +94,8 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/admin/signups", a.apiAdminSignups)
 	mux.HandleFunc("POST /api/admin/logo", a.apiAdminLogoUpload)
 	mux.HandleFunc("POST /api/admin/logo/remove", a.apiAdminLogoRemove)
+	mux.HandleFunc("POST /api/admin/avatar", a.apiAdminAvatarUpload)
+	mux.HandleFunc("POST /api/admin/avatar/remove", a.apiAdminAvatarRemove)
 	mux.HandleFunc("POST /api/admin/config", a.apiAdminConfigSave)
 	mux.HandleFunc("POST /api/admin/config/test", a.apiAdminConfigTest)
 	mux.HandleFunc("POST /api/admin/restart", a.apiAdminRestart)
@@ -106,6 +114,10 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/auth/magic/consume", a.apiMagicConsume)
 	mux.HandleFunc("POST /api/auth/reset/consume", a.apiResetConsume)
 	mux.HandleFunc("POST /api/auth/2fa", a.apiMFAVerify)
+	mux.HandleFunc("GET /api/auth/2fa/telegram/start", a.apiTwoFATelegramStart)
+	mux.HandleFunc("GET /api/auth/2fa/telegram/poll", a.apiTwoFATelegramPoll)
+	mux.HandleFunc("POST /api/auth/2fa/email/send", a.apiTwoFAEmailSend)
+	mux.HandleFunc("POST /api/auth/2fa/email/verify", a.apiTwoFAEmailVerify)
 	mux.HandleFunc("POST /api/auth/passkey/begin", a.apiPasskeyLoginBegin)
 	mux.HandleFunc("POST /api/auth/passkey/finish", a.apiPasskeyLoginFinish)
 	mux.HandleFunc("POST /api/account/passkey/begin", a.apiPasskeyAddBegin)
@@ -122,6 +134,12 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/account/2fa/setup", a.apiTOTPSetup)
 	mux.HandleFunc("POST /api/account/2fa/enable", a.apiTOTPEnable)
 	mux.HandleFunc("POST /api/account/2fa/disable", a.apiTOTPDisable)
+	mux.HandleFunc("POST /api/account/2fa/prefs", a.apiTwoFAPrefs)
+	mux.HandleFunc("GET /api/account/2fa/confirm/config", a.apiTwoFAConfirmConfig)
+	mux.HandleFunc("GET /api/account/2fa/confirm/start", a.apiTwoFAConfirmStart)
+	mux.HandleFunc("GET /api/account/2fa/confirm/poll", a.apiTwoFAConfirmPoll)
+	mux.HandleFunc("GET /api/account/2fa/confirm/email/send", a.apiTwoFAConfirmEmailSend)
+	mux.HandleFunc("GET /api/account/2fa/confirm/email/verify", a.apiTwoFAConfirmEmailVerify)
 	mux.HandleFunc("POST /api/account/2fa/recovery", a.apiRecoveryRegenerate)
 	mux.HandleFunc("POST /api/account/telegram/link-token", a.apiTelegramLinkToken)
 	mux.HandleFunc("GET /api/account/telegram/status", a.apiTelegramStatus)
@@ -138,12 +156,16 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/notifications/read-all", a.apiNotificationsReadAll)
 	mux.HandleFunc("POST /api/notifications/settings", a.apiNotificationSettings)
 	mux.HandleFunc("POST /api/import/tvtime", a.apiImportTVTime)
+	mux.HandleFunc("POST /api/import/youtube", a.apiImportYouTube)
 	mux.HandleFunc("GET /api/import/status", a.apiImportStatus)
 	mux.HandleFunc("POST /api/notifications/test", a.apiNotificationTest)
 	mux.HandleFunc("POST /api/notifications/timing", a.apiNotificationTiming)
 	mux.HandleFunc("POST /api/notifications/{id}/read", a.apiNotificationRead)
 	mux.HandleFunc("GET /api/push/key", a.apiPushKey)
 	mux.HandleFunc("POST /api/push/subscribe", a.apiPushSubscribe)
+	mux.HandleFunc("POST /api/account/push/device", a.apiPushDevice)
+	mux.HandleFunc("POST /api/account/integrations/scrobble", a.apiIntegrationScrobble)
+	mux.HandleFunc("POST /api/account/integrations/youtube/sync", a.apiIntegrationYouTubeSync)
 	mux.HandleFunc("POST /api/push/unsubscribe", a.apiPushUnsubscribe)
 	mux.HandleFunc("POST /api/account/delete", a.apiDeleteAccount)
 	mux.HandleFunc("POST /api/account/deactivate", a.apiDeactivateAccount)
@@ -227,21 +249,13 @@ func (a *App) serviceWorker(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) manifest(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/manifest+json")
-	m := map[string]any{
-		"id": "/", "name": a.Cfg.AppName, "short_name": a.Cfg.AppName, "start_url": "/", "scope": "/", "display": "standalone",
-		"description": "Track the shows you watch, see what is next and talk about each episode.", "categories": []string{"entertainment"},
-		"background_color": "#0f1117", "theme_color": "#7c5cff",
-		"icons": []map[string]string{
-			{"src": "/static/img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
-			{"src": "/static/img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
-			{"src": "/static/img/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
-			{"src": "/static/img/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"},
-		},
-	}
-	if err := json.NewEncoder(w).Encode(m); err != nil {
-		logger.Warn("manifest write: %v", err)
-	}
+	pwa.Handler(func(*http.Request) pwa.Manifest {
+		return pwa.Manifest{
+			Name: a.Cfg.AppName, ShortName: a.Cfg.AppName, Description: "Track the shows you watch, see what is next and talk about each episode.",
+			Categories: []string{"entertainment"}, BackgroundColor: "#0f1117", ThemeColor: "#7c5cff",
+			Icons: append(pwa.StandardIcons("/static/img"), pwa.Icon{Src: "/static/img/icon.svg", Sizes: "any", Type: "image/svg+xml", Purpose: "any"}),
+		}
+	}).ServeHTTP(w, r)
 }
 
 func (a *App) pageSimple(name, titleKey string) http.HandlerFunc {

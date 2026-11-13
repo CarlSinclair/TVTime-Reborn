@@ -50,6 +50,13 @@ func (s *Service) onCommentCtx(ctx context.Context, host string, m message) erro
 	if shared, err := s.Store.PeerShares(host); err != nil || !shared {
 		return err
 	}
+	showTMDB, season, episode, found, err := s.localYouTube(c.YT, c.YTV, c.ShowTMDB, "", "", c.Season, c.Episode)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return nil
+	}
 	body := cleanBody(c.Body)
 	image := ""
 	if c.Image != "" {
@@ -84,8 +91,8 @@ func (s *Service) onCommentCtx(ctx context.Context, host string, m message) erro
 	_, lookup := s.Store.RemoteCommentAuthor(host, c.Ref)
 	alreadyHeld := lookup == nil
 	if err := s.Store.SaveRemoteComment(store.RemoteComment{
-		UserID: shadow.ID, Host: host, Ref: c.Ref, ParentRef: c.Parent, ParentHost: parentHost, ShowTMDB: c.ShowTMDB,
-		Season: clampInt(c.Season, 0, 5000), Episode: clampInt(c.Episode, 0, 100000),
+		UserID: shadow.ID, Host: host, Ref: c.Ref, ParentRef: c.Parent, ParentHost: parentHost, ShowTMDB: showTMDB,
+		Season: clampInt(season, 0, 5000), Episode: clampInt(episode, 0, 100000),
 		Body: body, Spoiler: c.Spoiler, CreatedAt: parseStamp(c.Created), Edited: edited, Image: image,
 	}); err != nil {
 		return err
@@ -192,7 +199,7 @@ type renewResponse struct {
 
 // CommentMessage builds the shared form of a local comment.
 func CommentMessage(c *store.OpenComment, imageURL func(name string) string) CommentMsg {
-	m := CommentMsg{Ref: "c:" + strconv.FormatInt(c.ID, 10), ShowTMDB: c.ShowTMDB, Season: c.Season, Episode: c.Episode,
+	m := CommentMsg{Ref: "c:" + strconv.FormatInt(c.ID, 10), ShowTMDB: c.ShowTMDB, YT: c.YTSource, YTV: c.YTVideo, Season: c.Season, Episode: c.Episode,
 		Body: c.Body, Spoiler: c.Spoiler, Created: c.CreatedAt, Edited: c.EditedAt}
 	if c.Image != "" && imageURL != nil {
 		m.Image = imageURL(c.Image)

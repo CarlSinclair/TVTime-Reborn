@@ -35,6 +35,7 @@ import (
 	"tvt/trakt"
 	"tvt/tvdb"
 	"tvt/tvmaze"
+	"tvt/youtube"
 )
 
 func main() {
@@ -58,6 +59,8 @@ func main() {
 	if err := settings.Apply(cfg); err != nil {
 		logger.Error("settings saved in the admin UI were ignored, using the environment: %v", err)
 	}
+	stopRedis := startRedis(cfg)
+	defer stopRedis()
 	if cfg.OperatorName == "" || cfg.PrivacyContact == "" {
 		logger.Warn("The operator name and privacy contact are not both set (TVT_OPERATOR_NAME, TVT_PRIVACY_CONTACT or Admin > Config): the privacy page will not say who runs this site or how to reach them")
 	}
@@ -72,6 +75,7 @@ func main() {
 	if cfg.TVDBKey != "" {
 		sy.TVDB = tvdb.New(cfg.TVDBKey)
 	}
+	sy.YouTube = youtube.New()
 	if cfg.TraktClientID != "" {
 		sy.Trakt = trakt.New(cfg.TraktClientID)
 	}
@@ -142,6 +146,7 @@ func main() {
 	}
 	go st.RunUpNextMaintenance(ctx)
 	go sy.Run(ctx)
+	go sy.RunYouTube(ctx)
 	nt.Start(ctx)
 	go nt.RunJobs(ctx)
 	go app.SetupTelegram()
