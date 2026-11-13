@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TVT</string>
+    <string name="push_channel">Episode alerts and replies</string>
+    <string name="shell_instance_title">Which TVT server is yours?</string>
+    <string name="shell_instance_hint">tvt</string>
+</resources>

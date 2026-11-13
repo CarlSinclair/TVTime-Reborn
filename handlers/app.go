@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/CarlSinclair/csuit-libs/apikit"
 	"github.com/CarlSinclair/csuit-libs/legalpages"
 	"tvt/appconfig"
 	"tvt/assets"
@@ -34,16 +35,17 @@ import (
 )
 
 type App struct {
-	Cfg   *config.Config
-	Store *store.Store
-	Auth  *auth.Service
-	Sync  *syncer.Syncer
-	TMDB  *tmdb.Client
-	Mail  *mailer.Mailer
-	I18n  *i18n.Bundle
-	Notif *notify.Service
-	Bot   *telegram.Bot
-	Media media.Store
+	Cfg     *config.Config
+	apiAuth *apikit.Authenticator
+	Store   *store.Store
+	Auth    *auth.Service
+	Sync    *syncer.Syncer
+	TMDB    *tmdb.Client
+	Mail    *mailer.Mailer
+	I18n    *i18n.Bundle
+	Notif   *notify.Service
+	Bot     *telegram.Bot
+	Media   media.Store
 
 	Importer *importer.Runner
 	Fed      *federation.Service
@@ -110,6 +112,7 @@ func New(cfg *config.Config, st *store.Store, a *auth.Service, sy *syncer.Syncer
 	if err := app.loadTemplates(); err != nil {
 		return nil, err
 	}
+	app.configureTelegramLogin()
 	return app, nil
 }
 
@@ -153,8 +156,6 @@ func (v *View) Dir() string {
 func (v *View) PasskeysEnabled() bool { return v.App.Auth.PasskeysEnabled() }
 
 func (v *View) SourceURL() string { return v.App.Cfg.SourceURL }
-
-func (v *View) TelegramBotID() string { return v.App.Bot.BotID() }
 
 // TN renders a named-placeholder string: TN("key", "name", "value", ...).
 func (v *View) TN(key string, kv ...string) string {
@@ -209,27 +210,28 @@ func (a *App) lang(w http.ResponseWriter, r *http.Request, u *store.User) string
 
 func (a *App) loadTemplates() error {
 	funcs := template.FuncMap{
-		"img":      imgURL,
-		"imgset":   imgSet,
-		"loveHref": loveHref,
-		"starsOf":  starsOf,
-		"code":     episodeCode,
-		"add":      func(x, y int) int { return x + y },
-		"seq":      seq,
-		"pct":      pct,
-		"year":     year,
-		"aired":    aired,
-		"stars":    func(f float64) string { return fmt.Sprintf("%.1f", f) },
-		"dict":     dict,
-		"hours":    fmtMinutes,
-		"truncate": truncate,
-		"minutes":  fmtMinutes,
-		"join":     strings.Join,
-		"initial":  initial,
-		"avatar":   func(name string) string { return a.mediaURL("avatars", name) },
-		"banner":   func(name string) string { return a.mediaURL("banners", name) },
-		"assetV":   func() string { return assetVersion },
-		"logoURL":  a.logoURL,
+		"img":          imgURL,
+		"imgset":       imgSet,
+		"loveHref":     loveHref,
+		"starsOf":      starsOf,
+		"code":         episodeCode,
+		"add":          func(x, y int) int { return x + y },
+		"seq":          seq,
+		"pct":          pct,
+		"year":         year,
+		"aired":        aired,
+		"stars":        func(f float64) string { return fmt.Sprintf("%.1f", f) },
+		"dict":         dict,
+		"hours":        fmtMinutes,
+		"truncate":     truncate,
+		"minutes":      fmtMinutes,
+		"join":         strings.Join,
+		"initial":      initial,
+		"avatar":       func(name string) string { return a.mediaURL("avatars", name) },
+		"banner":       func(name string) string { return a.mediaURL("banners", name) },
+		"assetV":       func() string { return assetVersion },
+		"logoURL":      a.logoURL,
+		"serverAvatar": a.serverAvatarSrc,
 	}
 	sub, err := fs.Sub(assets.FS, "templates")
 	if err != nil {
@@ -372,19 +374,19 @@ func decode(r *http.Request, dst any) error {
 }
 
 func isStatic(p string) bool {
-	return strings.HasPrefix(p, "/static/") || strings.HasPrefix(p, "/media/") || strings.HasPrefix(p, "/img/") || p == "/sw.js" || p == "/manifest.webmanifest" || p == "/healthz"
+	return strings.HasPrefix(p, "/static/") || strings.HasPrefix(p, "/media/") || strings.HasPrefix(p, "/img/") || strings.HasPrefix(p, "/tvdbimg/") || strings.HasPrefix(p, "/ytimg/") || p == "/sw.js" || p == "/manifest.webmanifest" || p == "/healthz"
 }
 
 var publicPages = map[string]bool{
 	"/login": true, "/login/2fa": true, "/register": true, "/forgot": true, "/privacy": true, "/about": true,
-	"/offline": true, "/auth/telegram": true,
+	"/offline": true, "/auth/telegram/start": true, "/auth/telegram/poll": true,
 }
 
 // publicRoute lists everything reachable without signing in: the sign-in and
 // recovery pages, the legal pages, static files and the machine endpoints.
 // Everything else needs an account.
 func (a *App) publicRoute(p string) bool {
-	return isStatic(p) || publicPages[p] || p == "/" || p == "/welcome" || p == "/api/contact" || strings.HasPrefix(p, "/api/captcha/") || a.isContactSlug(p) || a.isPageSlug(p) || strings.HasPrefix(p, "/t/") || strings.HasPrefix(p, "/api/auth/") || p == "/api/telegram/webhook" ||
+	return isStatic(p) || publicPages[p] || p == "/" || p == "/welcome" || p == "/api/contact" || strings.HasPrefix(p, "/api/captcha/") || a.isContactSlug(p) || a.isPageSlug(p) || isMachineAPI(p) || strings.HasPrefix(p, "/t/") || strings.HasPrefix(p, "/api/auth/") || p == "/api/telegram/webhook" ||
 		p == "/.well-known/tvt" || strings.HasPrefix(p, "/federation/")
 }
 
@@ -444,7 +446,7 @@ func (a *App) middleware(next http.Handler) http.Handler {
 		if a.Cfg.CookieSecure {
 			sw.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		}
-		sw.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:"+a.publicMediaOrigin()+a.peerImageOrigins()+"; style-src 'self'; script-src 'self' https://telegram.org; frame-src https://oauth.telegram.org https://telegram.org; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+		sw.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:"+a.publicMediaOrigin()+a.peerImageOrigins()+"; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 		ctx := r.Context()
 		if !isStatic(r.URL.Path) {
 			u, err := a.Auth.Authenticate(sw, r)
@@ -490,7 +492,7 @@ func (a *App) middleware(next http.Handler) http.Handler {
 				}
 			}
 		}
-		if r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions && r.URL.Path != "/api/telegram/webhook" && !isFederation(r.URL.Path) {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions && r.URL.Path != "/api/telegram/webhook" && !isFederation(r.URL.Path) && !isMachineAPI(r.URL.Path) {
 			if !a.Auth.CSRFValid(r) {
 				logger.Warn("CSRF rejected %s %s from=%s", r.Method, r.URL.Path, auth.ClientCountry(r))
 				a.fail(sw, r, errForbidden)

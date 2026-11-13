@@ -17,6 +17,8 @@ import (
 	"tvt/logger"
 	"tvt/store"
 	"tvt/telegram"
+
+	"github.com/CarlSinclair/csuit-libs/telegramlogin"
 )
 
 func hashLinkToken(t string) string {
@@ -30,77 +32,6 @@ func tgLangFor(a *App, code string) string {
 		return i18n.Fallback
 	}
 	return a.I18n.Pick(code)
-}
-
-// pageTelegramLogin handles the Telegram Login Widget redirect. A signed-in
-// user with ?action=link attaches the Telegram identity to their account;
-// otherwise it signs in the linked account, creating one on first use.
-func (a *App) pageTelegramLogin(w http.ResponseWriter, r *http.Request) {
-	fail := func(code string) { http.Redirect(w, r, "/login?error="+code, http.StatusSeeOther) }
-	if !a.Bot.Configured() {
-		fail("telegram_unavailable")
-		return
-	}
-	if err := a.allow(a.authLimit, "tg:"+auth.ClientIP(r)); err != nil {
-		fail("rate_limited")
-		return
-	}
-	data, err := a.Bot.VerifyLogin(r.URL.Query())
-	if err != nil {
-		logger.Warn("AUTH telegram login rejected from=%s: %v", auth.ClientCountry(r), err)
-		fail("telegram_failed")
-		return
-	}
-	current := auth.UserFrom(r.Context())
-
-	if r.URL.Query().Get("action") == "link" {
-		if current == nil {
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
-			return
-		}
-		switch err := a.Store.LinkTelegram(current.ID, data.ID, data.Username); {
-		case err == nil:
-			a.Notif.Send(current.ID, "telegram_linked", "/settings?tab=account", nil)
-			http.Redirect(w, r, "/settings?tab=account&linked=1", http.StatusSeeOther)
-		case errors.Is(err, store.ErrTelegramTaken):
-			http.Redirect(w, r, "/settings?tab=account&error=telegram_taken", http.StatusSeeOther)
-		default:
-			logger.Error("AUTH telegram link uid=%d tg=%d: %v", current.ID, data.ID, err)
-			http.Redirect(w, r, "/settings?tab=account&error=internal", http.StatusSeeOther)
-		}
-		return
-	}
-
-	u, err := a.Store.UserByTelegramID(data.ID)
-	switch {
-	case err == nil:
-	case errors.Is(err, store.ErrNotFound):
-		if a.signupsClosed() {
-			fail("signups_closed")
-			return
-		}
-		u, err = a.Store.CreateTelegramUser(data.ID, data.Username, data.DisplayName(), a.lang(w, r, nil))
-		if err != nil {
-			logger.Error("AUTH telegram register tg=%d: %v", data.ID, err)
-			fail("internal")
-			return
-		}
-		logger.Info("AUTH telegram registered uid=%d tg=%d", u.ID, data.ID)
-	default:
-		logger.Error("AUTH telegram lookup tg=%d: %v", data.ID, err)
-		fail("internal")
-		return
-	}
-	if u.IsDeactivated && !u.SelfDeactivated {
-		fail("deactivated")
-		return
-	}
-	if data.Username != u.TelegramUsername {
-		if err := a.Store.LinkTelegram(u.ID, data.ID, data.Username); err != nil {
-			logger.Warn("AUTH telegram refresh username uid=%d: %v", u.ID, err)
-		}
-	}
-	a.finishLoginRedirect(w, r, u)
 }
 
 func (a *App) apiTelegramLinkToken(w http.ResponseWriter, r *http.Request) {
@@ -293,6 +224,10 @@ func (a *App) handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 	case "/close":
 		a.supportClose(chat, lang)
 	case "/start":
+		if telegramlogin.IsTelegramLoginToken(arg) {
+			a.telegramLoginStart(msg, chat, lang, arg)
+			return
+		}
 		if arg == "" {
 			if lookupErr == nil {
 				reply(lang, "status_linked")

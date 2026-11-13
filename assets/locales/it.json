@@ -218,7 +218,24 @@
     "danger": "Zona pericolosa",
     "cancel": "Annulla",
     "recovery_title": "Codici di recupero",
-    "recovery_n": "%d rimasti"
+    "recovery_n": "%d rimasti",
+    "tab_integrations": "Integrazioni",
+    "tfa_methods": "Metodi di verifica per l'accesso",
+    "tfa_telegram": "Approvazione tramite Telegram",
+    "tfa_telegram_hint": "Inviamo un messaggio con i pulsanti Approva e Rifiuta alla tua chat Telegram collegata.",
+    "tfa_telegram_needs_link": "Collega prima il tuo account Telegram per usare l'approvazione tramite Telegram.",
+    "tfa_mode_title": "Quando è attivo più di un metodo",
+    "tfa_mode_any": "È sufficiente un metodo e puoi sceglierne un altro al momento dell'accesso",
+    "tfa_mode_all": "Richiedi tutti i metodi attivi",
+    "tfa_passkey_skips": "Salta questi controlli quando accedo con una passkey",
+    "tfa_prefs_save": "Salva impostazioni di verifica",
+    "tfa_prefs_saved": "Impostazioni di verifica salvate.",
+    "tfa_email": "Codice via email",
+    "tfa_email_hint": "Inviamo via email un codice di 6 cifre all'indirizzo del tuo account.",
+    "tfa_email_needs_mail": "I codici via email richiedono un indirizzo email confermato e la posta in uscita attiva su questo server.",
+    "tfa_magic_skips": "Salta questi controlli quando accedo con un link via email",
+    "tfa_telegram_skips": "Salta questi controlli quando accedo con Telegram",
+    "forgot_current_password_btn": "Ho dimenticato la password attuale: inviami un codice via email"
   },
   "footer": {
     "tmdb": "Dati e immagini delle serie forniti da",
@@ -328,6 +345,7 @@
     "server_host_hint": "Aggiungere un altro server abilita la condivisione bidirezionale di attività e commenti tra gli utenti.",
     "server_connect": "Connetti",
     "server_new": "Nuovo",
+    "server_name": "Si chiama %s.",
     "server_media": "Le immagini vengono caricate da %s.",
     "server_media_note": "Approvare questo server permette ai browser dei tuoi visitatori di caricare le immagini dei suoi commenti direttamente da %s.",
     "server_approve": "Approva",
@@ -426,7 +444,8 @@
       "storage": "Archiviazione (R2 / S3)",
       "metadata": "Fonti dei dati delle serie",
       "telegram": "Bot di Telegram",
-      "branding": "Identità del sito"
+      "branding": "Identità del sito",
+      "redis": "Redis"
     },
     "cfg": {
       "smtp_host": "Server SMTP",
@@ -452,8 +471,15 @@
       "operator_name": "Nome dell'operatore",
       "privacy_contact": "Contatto per la privacy",
       "source_url": "URL del codice sorgente",
-      "contact_email": "Email del modulo di contatto"
-    }
+      "contact_email": "Email del modulo di contatto",
+      "redis_addr": "Indirizzo Redis (host:porta)",
+      "redis_password": "Password di Redis",
+      "redis_db": "Numero del database Redis"
+    },
+    "avatar": "Avatar del server",
+    "avatar_hint": "Mostrato accanto al nome di questo server negli elenchi dei server degli altri server. Funziona meglio un'immagine quadrata.",
+    "avatar_upload": "Carica avatar",
+    "avatar_remove": "Rimuovi avatar"
   },
   "offline": {
     "title": "Sei offline",
@@ -476,6 +502,7 @@
     "contact_unavailable": "Il modulo di contatto non è disponibile al momento.",
     "captcha_failed": "Il captcha non è stato risolto o è scaduto. Riprova.",
     "no_email": "Questo account non ha un indirizzo email.",
+    "instance_name_announce": "Il nome è stato salvato, ma non è stato possibile informare i server connessi",
     "config_invalid": "Queste impostazioni non sono valide",
     "test_failed": "Il test non è riuscito",
     "test_no_email": "Inserisci un indirizzo email per il test.",
@@ -524,12 +551,14 @@
     "import_empty": "L'esportazione non contiene serie né episodi visti.",
     "import_busy": "Hai già un'importazione in corso.",
     "import_too_big": "Il file è troppo grande.",
+    "import_invalid_youtube": "Non sembra una cronologia di visualizzazione di YouTube esportata da Google Takeout. Esporta la cronologia in JSON, non in HTML.",
     "email_same": "Questo è già il tuo indirizzo e-mail.",
     "telegram_not_linked": "Collega prima Telegram.",
     "email_not_verified": "Verifica prima il tuo indirizzo e-mail.",
     "push_not_enabled": "Attiva prima le notifiche push su questo dispositivo.",
     "friend_self": "Non puoi aggiungere te stesso.",
-    "friend_remote": "Impossibile raggiungere quel server o trovare quella persona."
+    "friend_remote": "Impossibile raggiungere quel server o trovare quella persona.",
+    "tfa_prefs_failed": "Impossibile salvare le impostazioni di verifica. Riprova."
   },
   "mail": {
     "login": {
@@ -553,6 +582,10 @@
     "emailchanged": {
       "subject": "La tua e-mail di %s è stata cambiata",
       "body": "L'indirizzo e-mail del tuo account %s è stato cambiato in %s. Se non sei stato tu, reimposta subito la password."
+    },
+    "tfa": {
+      "subject": "Il tuo codice di verifica %s",
+      "body": "Il tuo codice di verifica %s è %s. Scade tra 10 minuti. Se non hai tentato di accedere o di modificare un'impostazione, ignora questa email e valuta di cambiare la password."
     }
   },
   "js": {
@@ -661,7 +694,6 @@
     "passkey_remove_confirm": "Rimuovere questa passkey?",
     "invalid_timing": "Inserisci un numero valido.",
     "telegram_failed": "L'accesso con Telegram è stato annullato o bloccato. Riprova.",
-    "telegram_open": "Apri Telegram",
     "import_uploading": "Caricamento",
     "import_started": "Importazione avviata. Puoi lasciare questa pagina.",
     "import_pending": "In attesa del proprio turno",
@@ -674,6 +706,7 @@
     "import_skipped": "Episodi non riconosciuti: %d",
     "import_reason_not_found": "non trovata",
     "import_reason_error": "ricerca non riuscita",
+    "import_reason_not_followed": "non seguito qui",
     "pw_toggle": "Mostra o nascondi la password",
     "pw_min": "Almeno 8 caratteri",
     "pw_upper": "Una lettera maiuscola",
@@ -704,7 +737,25 @@
     "feed_no_friends": "Non hai ancora amici.",
     "user_blocked": "Utente bloccato.",
     "report_user_reason": "Perché stai segnalando questa persona?",
-    "server_forget_confirm": "Dimenticare la chiave di questo server? Alla prossima connessione verrà considerata attendibile la chiave che presenterà."
+    "server_forget_confirm": "Dimenticare la chiave di questo server? Alla prossima connessione verrà considerata attendibile la chiave che presenterà.",
+    "int_push_done": "Push attivo su questo dispositivo.",
+    "int_no_distributor": "Installa prima un'app push come ntfy, poi riprova.",
+    "int_failed": "Non ha funzionato. Riprova.",
+    "int_yt_synced": "Cronologia di YouTube sincronizzata.",
+    "int_yt_signed_in": "Accesso a YouTube effettuato.",
+    "int_scrobble_done": "Episodi rilevati inviati.",
+    "int_key_revoked": "Chiave revocata.",
+    "int_connected": "Connesso",
+    "int_not_connected": "Non connesso",
+    "int_access_on": "Accesso consentito",
+    "int_access_off": "Accesso non consentito",
+    "int_api_none": "Ancora nessuna chiave.",
+    "int_api_last_used": "Ultimo utilizzo",
+    "int_api_never": "mai",
+    "int_api_revoke": "Revoca",
+    "int_api_revoke_confirm": "Revocare questa chiave? Tutto ciò che la usa smetterà di funzionare.",
+    "telegram_waiting": "In attesa che tu confermi su Telegram",
+    "avatar_announce_failed": "L'avatar è stato salvato, ma non è stato possibile avvisare i server collegati."
   },
   "genre": {
     "action_adventure": "Azione e avventura",
@@ -728,7 +779,19 @@
     "code": "Codice di verifica",
     "recovery_hint": "Hai perso il dispositivo? Inserisci invece uno dei tuoi codici di recupero.",
     "text": "Inserisci il codice di 6 cifre della tua app di autenticazione.",
-    "title": "Verifica in due passaggi"
+    "title": "Verifica in due passaggi",
+    "other": "Oppure usa un altro metodo",
+    "tg_btn": "Approva in Telegram",
+    "tg_waiting": "In attesa della tua approvazione su Telegram",
+    "tg_denied": "La richiesta è stata rifiutata su Telegram.",
+    "tg_expired": "La richiesta è scaduta. Riprova.",
+    "tg_failed": "Impossibile inviare il messaggio Telegram. Usa un altro metodo.",
+    "email_title": "Conferma con email",
+    "email_btn": "Inviami un codice via email",
+    "email_sent": "Abbiamo inviato un codice di 6 cifre al tuo indirizzo email.",
+    "email_wait": "Un codice è stato inviato poco fa. Attendi qualche secondo prima di richiederne un altro.",
+    "email_failed": "Impossibile inviare l'email. Usa un altro metodo.",
+    "email_label": "Codice via email"
   },
   "notif": {
     "abuse_report": {
@@ -758,8 +821,8 @@
     "email_needs_verified": "Le notifiche via e-mail richiedono un indirizzo e-mail verificato sul tuo account.",
     "empty": "Ancora nessuna notifica.",
     "episode_aired": {
-      "body": "{code} {name} è disponibile.",
-      "title": "Nuovo episodio: {show}"
+      "body": "{code} {name}",
+      "title": "Il nuovo episodio di {show} è disponibile!"
     },
     "episodes_aired": {
       "body": "{count} episodi della stagione {season} sono disponibili.",
@@ -906,7 +969,17 @@
     "human_btn": "Parla con una persona",
     "faq_intro": "Scegli una domanda o parla con una persona.",
     "faq_back": "Torna alle domande",
-    "faq_gone": "Questa domanda non è più disponibile."
+    "faq_gone": "Questa domanda non è più disponibile.",
+    "login_ask": "Qualcuno sta cercando di accedere a {app} con questo account Telegram. Conferma che sei tu.",
+    "login_confirm_btn": "Sì, fammi accedere",
+    "login_done": "Fatto! Puoi tornare a {app}, hai effettuato l'accesso.",
+    "login_invalid": "Questa richiesta di accesso non è valida o è scaduta. Torna a {app} e riprova.",
+    "tfa_prompt": "Qualcuno sta accedendo al tuo account. Approva solo se sei stato tu.",
+    "tfa_approve": "Approva",
+    "tfa_deny": "Rifiuta",
+    "tfa_approved": "Approvato. Puoi tornare alla pagina di accesso.",
+    "tfa_denied": "Rifiutato. Se non sei stato tu, cambia la password.",
+    "tfa_stale": "Questa richiesta è scaduta o ha già ricevuto risposta."
   },
   "privacy": {
     "title": "Informativa sulla privacy",
@@ -972,7 +1045,12 @@
     "keeps": "Nulla di ciò che già segui qui viene modificato o rimosso. Il file viene letto sul server per preparare l'importazione e non viene conservato.",
     "file_label": "Esportazione di TV Time (.zip)",
     "progress": "Avanzamento dell'importazione",
-    "unmatched": "Serie non riconosciute"
+    "unmatched": "Serie non riconosciute",
+    "yt_title": "Importa la cronologia di visualizzazione di YouTube",
+    "yt_how_body": "Richiedi i tuoi dati su takeout.google.com, seleziona solo YouTube e YouTube Music, imposta il formato della cronologia su JSON e carica lo zip (o il file della cronologia di visualizzazione al suo interno) esattamente come scaricato.",
+    "yt_what": "Prima carica la cronologia completa dei caricamenti di ogni canale YouTube che segui qui, operazione che può richiedere tempo per i canali grandi, poi segna come visti i video che hai guardato, usando l'orario in cui li hai guardati. I canali che guardi ma non segui vengono elencati dopo.",
+    "yt_keeps": "Non viene modificato nulla di ciò che tracci già qui. Il file viene letto sul server e non viene conservato, e nulla viene inviato a Google.",
+    "yt_file_label": "Cronologia YouTube da Google Takeout (.zip o .json)"
   },
   "about": {
     "title": "Informazioni",
@@ -995,5 +1073,29 @@
     "prompt": "Scrivi il nome utente esatto, per esempio alice.",
     "none": "Nessuno con questo nome utente.",
     "remote": "Impossibile raggiungere quel server o trovare quella persona."
+  },
+  "integrations": {
+    "app_title": "Tracciamento automatico",
+    "app_intro": "Installa l'app Android per sincronizzare ciò che guardi su questo dispositivo. I cookie di accesso ad altri servizi non lasciano mai il tuo telefono: qui vengono inviati solo gli id dei video e i titoli degli episodi.",
+    "app_missing": "Apri questa pagina nell'app Android per attivarle.",
+    "push_title": "Notifiche push su questo dispositivo",
+    "push_text": "Ricevi avvisi tramite un'app push come ntfy, senza servizi Google. Si aggiunge agli altri canali di notifica.",
+    "push_button": "Attiva su questo dispositivo",
+    "yt_title": "Cronologia di YouTube",
+    "yt_text": "Segna qui come visti i video che hai guardato su YouTube, per i canali e le playlist che segui.",
+    "yt_connect": "Accedi a YouTube",
+    "yt_sync": "Sincronizza ora",
+    "scrobble_title": "App di streaming",
+    "scrobble_text": "Rileva gli episodi che finisci in app come Netflix, Prime Video o Disney+ dalla notifica multimediale e li segna come visti.",
+    "scrobble_access": "Consenti l'accesso alle notifiche",
+    "scrobble_sync": "Invia episodi rilevati",
+    "api_title": "Chiavi API",
+    "api_intro": "Le chiavi permettono ai tuoi script e agenti IA di leggere la tua libreria e segnare gli episodi come visti. Ogni chiave ha solo i permessi che scegli.",
+    "api_reference": "Riferimento API",
+    "api_label": "Nome",
+    "api_scope_library_read": "Leggi le mie serie e cosa viene dopo",
+    "api_scope_watch_write": "Segna gli episodi come visti",
+    "api_create": "Crea chiave",
+    "api_created": "Copia questa chiave adesso. Viene mostrata una sola volta."
   }
 }

@@ -32,6 +32,9 @@ type Config struct {
 	ClientIPHeader string
 	ImageBase      string
 	S3             media.S3Config
+	RedisAddr      string
+	RedisPassword  string
+	RedisDB        int
 	TraktClientID  string
 	TVDBKey        string
 	Federation     bool
@@ -77,6 +80,8 @@ func Load() (*Config, error) {
 		DevLogMail:     env("TVT_DEV_LOG_MAIL", "") == "1",
 		AdminEmail:     strings.ToLower(env("TVT_ADMIN_EMAIL", "")),
 		DataDir:        env("TVT_DATA_DIR", "data"),
+		RedisAddr:      env("TVT_REDIS_ADDR", ""),
+		RedisPassword:  env("TVT_REDIS_PASSWORD", ""),
 		TelegramBot:    env("TVT_TELEGRAM_BOT_TOKEN", ""),
 		TelegramName:   env("TVT_TELEGRAM_BOT_USERNAME", ""),
 		ClientIPHeader: env("TVT_CLIENT_IP_HEADER", "X-Forwarded-For"),
@@ -105,6 +110,11 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("TVT_SMTP_PORT is not a number: %w", err)
 	}
 	c.SMTPPort = port
+	db, err := strconv.Atoi(env("TVT_REDIS_DB", "0"))
+	if err != nil || db < 0 {
+		return nil, fmt.Errorf("TVT_REDIS_DB is not a valid database number")
+	}
+	c.RedisDB = db
 	c.S3.PublicURL = c.MediaPublicURL
 	if err := c.ValidateStorage(); err != nil {
 		return nil, err

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"tvt/federation"
 
 	"tvt/appconfig"
 	"tvt/config"
@@ -106,9 +107,14 @@ func (a *App) candidate(in map[string]any) (*config.Config, map[string]*string, 
 	if err != nil {
 		return nil, nil, group, err
 	}
-	if len([]rune(c.AppName)) == 0 || len([]rune(c.AppName)) > 40 {
-		return nil, nil, group, fmt.Errorf("the app name must be 1 to 40 characters")
+	clean, nerr := federation.CleanInstanceName(c.AppName)
+	if nerr != nil {
+		return nil, nil, group, fmt.Errorf("the site name is not valid: %w", nerr)
 	}
+	if v, has := changes["app_name"]; has && v != nil {
+		changes["app_name"] = &clean
+	}
+	c.AppName = clean
 	return c, changes, group, nil
 }
 
@@ -132,6 +138,7 @@ func (a *App) apiAdminConfigSave(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	oldName := a.savedAppName()
 	var keys []string
 	for k, v := range changes {
 		f, ok := appconfig.Lookup(k)
@@ -150,6 +157,13 @@ func (a *App) apiAdminConfigSave(w http.ResponseWriter, r *http.Request) {
 		keys = append(keys, k)
 	}
 	logger.Info("ADMIN uid=%d saved settings group=%s keys=%s (restart needed to apply)", admin.ID, group, strings.Join(keys, ","))
+	if _, touched := changes["app_name"]; touched && a.Fed != nil && a.savedAppName() != oldName {
+		if err := a.Fed.SendInstanceName(); err != nil {
+			logger.Error("ADMIN uid=%d saved the site name but telling the connected servers failed: %v", admin.ID, err)
+			a.configErr(w, r, http.StatusInternalServerError, "err.instance_name_announce", err)
+			return
+		}
+	}
 	a.okJSON(w, nil)
 }
 
@@ -266,4 +280,13 @@ func (a *App) apiAdminRestart(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(500 * time.Millisecond)
 		a.Restart()
 	}()
+}
+
+func (a *App) savedAppName() string {
+	c, err := a.Settings.Overlay(nil)
+	if err != nil {
+		logger.Error("FEDERATION reading the saved site name: %v", err)
+		return a.Cfg.AppName
+	}
+	return c.AppName
 }

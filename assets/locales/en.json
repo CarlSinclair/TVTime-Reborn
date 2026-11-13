@@ -204,6 +204,7 @@
     "passkey_remove": "Remove",
     "telegram_link_btn": "Link my Telegram account",
     "tab_import": "Import",
+    "tab_integrations": "Integrations",
     "email_title": "Email address",
     "email_pending": "Waiting for you to confirm %s. Open the link we emailed there.",
     "email_new": "New email address",
@@ -218,7 +219,23 @@
     "danger": "Danger zone",
     "cancel": "Cancel",
     "recovery_title": "Recovery codes",
-    "recovery_n": "%d left"
+    "recovery_n": "%d left",
+    "tfa_methods": "Sign-in verification methods",
+    "tfa_telegram": "Telegram approval",
+    "tfa_telegram_hint": "We send a message with Approve and Deny buttons to your linked Telegram chat.",
+    "tfa_telegram_needs_link": "Link your Telegram account first to use Telegram approval.",
+    "tfa_mode_title": "When more than one method is on",
+    "tfa_mode_any": "Any one method is enough, and you can pick another way when signing in",
+    "tfa_mode_all": "Require every enabled method",
+    "tfa_passkey_skips": "Skip these checks when I sign in with a passkey",
+    "tfa_prefs_save": "Save verification settings",
+    "tfa_prefs_saved": "Verification settings saved.",
+    "tfa_email": "Email code",
+    "tfa_email_hint": "We email a 6-digit code to your account address.",
+    "tfa_email_needs_mail": "Email codes need a confirmed email address and outgoing mail on this server.",
+    "tfa_magic_skips": "Skip these checks when I sign in with an email link",
+    "tfa_telegram_skips": "Skip these checks when I sign in with Telegram",
+    "forgot_current_password_btn": "I forgot my current password: email me a code"
   },
   "footer": {
     "tmdb": "Show data and images are provided by",
@@ -328,6 +345,7 @@
     "server_host_hint": "Adding another server enables two way sharing of activity and comments across users.",
     "server_connect": "Connect",
     "server_new": "New",
+    "server_name": "Calls itself %s.",
     "server_media": "Pictures load from %s.",
     "server_media_note": "Approving this server lets your visitors' browsers load its comment pictures straight from %s.",
     "server_approve": "Approve",
@@ -426,7 +444,8 @@
       "storage": "Storage (R2 / S3)",
       "metadata": "Show data sources",
       "telegram": "Telegram bot",
-      "branding": "Site identity"
+      "branding": "Site identity",
+      "redis": "Redis"
     },
     "cfg": {
       "smtp_host": "SMTP host",
@@ -452,8 +471,15 @@
       "operator_name": "Operator name",
       "privacy_contact": "Privacy contact",
       "source_url": "Source code URL",
-      "contact_email": "Contact form email"
-    }
+      "contact_email": "Contact form email",
+      "redis_addr": "Redis address (host:port)",
+      "redis_password": "Redis password",
+      "redis_db": "Redis database number"
+    },
+    "avatar": "Server avatar",
+    "avatar_hint": "Shown next to this server's name in the server lists of other servers. A square picture works best.",
+    "avatar_upload": "Upload avatar",
+    "avatar_remove": "Remove avatar"
   },
   "offline": {
     "title": "You are offline",
@@ -477,6 +503,7 @@
     "captcha_failed": "The captcha was not solved or has expired. Please try again.",
     "no_email": "This account has no email address.",
     "config_invalid": "Those settings are not valid",
+    "instance_name_announce": "The name was saved, but the connected servers could not be told about it",
     "test_failed": "The test failed",
     "test_no_email": "Enter an email address to send the test to.",
     "test_not_configured": "Fill in the required fields first.",
@@ -524,12 +551,14 @@
     "import_empty": "The export has no shows or watched episodes in it.",
     "import_busy": "You already have an import running.",
     "import_too_big": "That file is too large.",
+    "import_invalid_youtube": "That does not look like a YouTube watch history from Google Takeout. Export the history as JSON, not HTML.",
     "email_same": "That is already your email address.",
     "telegram_not_linked": "Connect Telegram first.",
     "email_not_verified": "Verify your email address first.",
     "push_not_enabled": "Enable push on this device first.",
     "friend_self": "You cannot add yourself.",
-    "friend_remote": "Could not reach that server or find that person."
+    "friend_remote": "Could not reach that server or find that person.",
+    "tfa_prefs_failed": "Could not save the verification settings. Try again."
   },
   "mail": {
     "login": {
@@ -553,7 +582,35 @@
     "emailchanged": {
       "subject": "Your %s email was changed",
       "body": "The email address on your %s account was changed to %s. If this was not you, reset your password right away."
+    },
+    "tfa": {
+      "subject": "Your %s verification code",
+      "body": "Your %s verification code is %s. It expires in 10 minutes. If you did not try to sign in or change a setting, ignore this email and consider changing your password."
     }
+  },
+  "integrations": {
+    "app_title": "Automatic tracking",
+    "app_intro": "Install the Android app to sync what you watch on this device. Your sign-in cookies for other services never leave your phone: only video ids and episode titles are sent here.",
+    "app_missing": "Open this page in the Android app to turn these on.",
+    "push_title": "Push notifications on this device",
+    "push_text": "Get alerts through a push app such as ntfy, without Google services. This is in addition to your other notification channels.",
+    "push_button": "Enable on this device",
+    "yt_title": "YouTube history",
+    "yt_text": "Marks the videos you watched on YouTube as watched here, for the channels and playlists you follow.",
+    "yt_connect": "Sign in to YouTube",
+    "yt_sync": "Sync now",
+    "scrobble_title": "Streaming apps",
+    "scrobble_text": "Detects episodes you finish in apps like Netflix, Prime Video or Disney+ from the media notification and marks them watched.",
+    "scrobble_access": "Allow notification access",
+    "scrobble_sync": "Send detected episodes",
+    "api_title": "API keys",
+    "api_intro": "Keys let your own scripts and AI agents read your library and mark episodes watched. Each key has only the permissions you pick.",
+    "api_reference": "API reference",
+    "api_label": "Name",
+    "api_scope_library_read": "Read my shows and what is next",
+    "api_scope_watch_write": "Mark episodes watched",
+    "api_create": "Create key",
+    "api_created": "Copy this key now. It is shown only once."
   },
   "js": {
     "network_error": "Network error. Please try again.",
@@ -661,7 +718,23 @@
     "passkey_remove_confirm": "Remove this passkey?",
     "invalid_timing": "Enter a valid number.",
     "telegram_failed": "Telegram sign-in was cancelled or blocked. Please try again.",
-    "telegram_open": "Open Telegram",
+    "int_push_done": "Push is on for this device.",
+    "int_no_distributor": "Install a push app such as ntfy first, then try again.",
+    "int_failed": "That did not work. Please try again.",
+    "int_yt_synced": "YouTube history synced.",
+    "int_yt_signed_in": "Signed in to YouTube.",
+    "int_scrobble_done": "Detected episodes sent.",
+    "int_key_revoked": "Key revoked.",
+    "int_connected": "Connected",
+    "int_not_connected": "Not connected",
+    "int_access_on": "Access granted",
+    "int_access_off": "Access not granted",
+    "int_api_none": "No keys yet.",
+    "int_api_last_used": "Last used",
+    "int_api_never": "never",
+    "int_api_revoke": "Revoke",
+    "int_api_revoke_confirm": "Revoke this key? Anything using it stops working.",
+    "telegram_waiting": "Waiting for you to confirm in Telegram",
     "import_uploading": "Uploading",
     "import_started": "Import started. You can leave this page.",
     "import_pending": "Waiting for its turn",
@@ -674,6 +747,7 @@
     "import_skipped": "Episodes that could not be matched: %d",
     "import_reason_not_found": "not found",
     "import_reason_error": "lookup failed",
+    "import_reason_not_followed": "not followed here",
     "pw_toggle": "Show or hide password",
     "pw_min": "At least 8 characters",
     "pw_upper": "An uppercase letter",
@@ -704,7 +778,8 @@
     "feed_no_friends": "You have no friends yet.",
     "user_blocked": "User blocked.",
     "report_user_reason": "Why are you reporting this person?",
-    "server_forget_confirm": "Forget this server's key? The next time it connects, whatever key it presents will be trusted."
+    "server_forget_confirm": "Forget this server's key? The next time it connects, whatever key it presents will be trusted.",
+    "avatar_announce_failed": "The avatar was saved, but the connected servers could not be told about it."
   },
   "genre": {
     "action_adventure": "Action & Adventure",
@@ -728,7 +803,19 @@
     "code": "Verification code",
     "recovery_hint": "Lost your device? Enter one of your recovery codes instead.",
     "text": "Enter the 6-digit code from your authenticator app.",
-    "title": "Two-step verification"
+    "title": "Two-step verification",
+    "other": "Or use another method",
+    "tg_btn": "Approve in Telegram",
+    "tg_waiting": "Waiting for your approval in Telegram",
+    "tg_denied": "The request was denied in Telegram.",
+    "tg_expired": "The request expired. Try again.",
+    "tg_failed": "Could not send the Telegram message. Use another method.",
+    "email_title": "Confirm with email",
+    "email_btn": "Email me a code",
+    "email_sent": "We sent a 6-digit code to your email address.",
+    "email_wait": "A code was sent a moment ago. Wait a few seconds before asking for another.",
+    "email_failed": "Could not send the email. Use another method.",
+    "email_label": "Email code"
   },
   "notif": {
     "abuse_report": {
@@ -758,8 +845,8 @@
     "email_needs_verified": "Email notifications need a verified email address on your account.",
     "empty": "No notifications yet.",
     "episode_aired": {
-      "body": "{code} {name} is out now.",
-      "title": "New episode: {show}"
+      "body": "{code} {name}",
+      "title": "New {show} episode is out!"
     },
     "episodes_aired": {
       "body": "{count} episodes of season {season} are out now.",
@@ -887,6 +974,10 @@
     "error": "Something went wrong. Please try again.",
     "help": "Commands: /start to check your link status, /stop to turn off notifications, /support to talk to the team.",
     "link_invalid": "That link is invalid or expired. Create a new one in the app settings.",
+    "login_ask": "Someone is trying to sign in to {app} with this Telegram account. Confirm that it is you.",
+    "login_confirm_btn": "Yes, sign me in",
+    "login_done": "Done! You can go back to {app}, you are signed in.",
+    "login_invalid": "That sign-in request is invalid or has expired. Go back to {app} and try again.",
     "linked": "Connected! You can now:\n1. Log in to {app} using Telegram with one click.\n2. Receive {app} notifications via Telegram!\n\nYou can go back to {app} now to configure your notification preferences if you want. Or continue browsing normally.\n\nHappy watching!",
     "dm_enabled": "Notifications are on. You will get new episode alerts, replies to your comments and account security notices right here. Choose what you receive in Notification Settings, or send /stop to turn them off.",
     "private_only": "Please message me in a private chat.",
@@ -906,7 +997,13 @@
     "human_btn": "Talk to a human",
     "faq_intro": "Pick a question, or talk to a person.",
     "faq_back": "Back to questions",
-    "faq_gone": "That question is no longer available."
+    "faq_gone": "That question is no longer available.",
+    "tfa_prompt": "Someone is signing in to your account. Approve only if it was you.",
+    "tfa_approve": "Approve",
+    "tfa_deny": "Deny",
+    "tfa_approved": "Approved. You can go back to the sign-in page.",
+    "tfa_denied": "Denied. If this was not you, change your password.",
+    "tfa_stale": "This request expired or was already answered."
   },
   "privacy": {
     "title": "Privacy policy",
@@ -972,7 +1069,12 @@
     "keeps": "Nothing you already track here is changed or removed. Your file is read on the server to build the import and is not kept afterwards.",
     "file_label": "TV Time export (.zip)",
     "progress": "Import progress",
-    "unmatched": "Shows that could not be matched"
+    "unmatched": "Shows that could not be matched",
+    "yt_title": "Import YouTube watch history",
+    "yt_how_body": "Request your data at takeout.google.com, choose only YouTube and YouTube Music, set the history format to JSON, and upload the zip (or the watch history file inside it) exactly as downloaded.",
+    "yt_what": "First loads the full upload history of every YouTube channel you follow here, which can take a while for big channels, then marks the videos you watched as watched, using the time you watched them. Channels you watch but do not follow are listed afterwards.",
+    "yt_keeps": "Nothing you already track here is changed. Your file is read on the server and not kept afterwards, and nothing is sent to Google.",
+    "yt_file_label": "YouTube history from Google Takeout (.zip or .json)"
   },
   "about": {
     "title": "About",

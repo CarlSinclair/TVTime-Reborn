@@ -52,6 +52,10 @@ func artworkPath(path string) string {
 	switch {
 	case path == "":
 		return ""
+	case strings.HasPrefix(path, "yt:"):
+		return "/ytimg/v/" + strings.TrimPrefix(path, "yt:")
+	case strings.HasPrefix(path, "ytc:"):
+		return "/ytimg/c/" + strings.TrimPrefix(path, "ytc:")
 	case strings.HasPrefix(path, "tvdb:"):
 		return "/tvdbimg/" + base64.RawURLEncoding.EncodeToString([]byte(strings.TrimPrefix(path, "tvdb:")))
 	}

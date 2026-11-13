@@ -150,9 +150,19 @@ CREATE TABLE shows (
   tvmaze_checked_at TEXT,
   trakt_id INTEGER,
   trakt_checked_at TEXT,
+  yt_source TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX idx_shows_tvdb ON shows(tvdb_id);
+CREATE UNIQUE INDEX idx_shows_yt_source ON shows(yt_source) WHERE yt_source IS NOT NULL;
+CREATE TABLE yt_sources (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source TEXT NOT NULL UNIQUE,
+  show_tmdb INTEGER NOT NULL DEFAULT 0,
+  name TEXT NOT NULL DEFAULT '',
+  overview TEXT NOT NULL DEFAULT '',
+  image TEXT NOT NULL DEFAULT ''
+);
 CREATE INDEX idx_shows_imdb ON shows(imdb_id);
 CREATE INDEX idx_shows_needs_sync ON shows(needs_sync);
 
@@ -183,10 +193,12 @@ CREATE TABLE episodes (
   vote_count INTEGER NOT NULL DEFAULT 0,
   air_at TEXT,
   air_source TEXT NOT NULL DEFAULT '',
+  yt_video_id TEXT,
   UNIQUE(show_id, season_number, episode_number)
 );
 CREATE INDEX idx_episodes_air ON episodes(air_date);
 CREATE INDEX idx_episodes_tmdb ON episodes(tmdb_id);
+CREATE UNIQUE INDEX idx_episodes_yt_video ON episodes(show_id, yt_video_id) WHERE yt_video_id IS NOT NULL;
 
 CREATE TABLE follows (
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

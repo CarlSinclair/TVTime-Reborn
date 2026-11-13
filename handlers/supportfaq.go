@@ -103,6 +103,10 @@ func (a *App) handleTelegramCallback(cq *telegram.CallbackQuery) {
 		logger.Error("TELEGRAM callback lookup chat=%s: %v", chat, err)
 	}
 	switch {
+	case strings.HasPrefix(cq.Data, "tg2fa:"):
+		a.telegramTwoFAAnswer(cq, lang)
+	case strings.HasPrefix(cq.Data, tgCallback):
+		a.telegramLoginConfirm(cq, lang)
 	case cq.Data == "human":
 		a.supportBegin(&telegram.Message{From: &cq.From, Chat: cq.Message.Chat}, chat, lang, linked)
 	case cq.Data == "faq":

@@ -247,7 +247,13 @@ func (a *App) apiAdminServer(forget bool) http.HandlerFunc {
 			return
 		}
 		if forget {
+			oldAvatar, _ := a.Store.PeerAvatar(host)
 			err = a.Store.ForgetPeer(host)
+			if err == nil && oldAvatar != "" {
+				if derr := a.deletePeerAvatar(r.Context(), oldAvatar); derr != nil {
+					logger.Warn("MEDIA remove avatar %s of forgotten server %s: %v", oldAvatar, host, derr)
+				}
+			}
 		} else {
 			err = a.Store.SetPeerBlocked(host, in.Blocked)
 		}

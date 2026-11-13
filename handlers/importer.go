@@ -14,19 +14,28 @@ import (
 const maxImportUpload = 64 << 20
 
 var (
-	errImportInvalid = apiErr{http.StatusBadRequest, "err.import_invalid"}
-	errImportEmpty   = apiErr{http.StatusBadRequest, "err.import_empty"}
-	errImportBusy    = apiErr{http.StatusConflict, "err.import_busy"}
-	errImportTooBig  = apiErr{http.StatusRequestEntityTooLarge, "err.import_too_big"}
+	errImportInvalid        = apiErr{http.StatusBadRequest, "err.import_invalid"}
+	errImportInvalidYouTube = apiErr{http.StatusBadRequest, "err.import_invalid_youtube"}
+	errImportEmpty          = apiErr{http.StatusBadRequest, "err.import_empty"}
+	errImportBusy           = apiErr{http.StatusConflict, "err.import_busy"}
+	errImportTooBig         = apiErr{http.StatusRequestEntityTooLarge, "err.import_too_big"}
 )
 
 func (a *App) apiImportTVTime(w http.ResponseWriter, r *http.Request) {
+	a.importUpload(w, r, importer.SourceTVTime)
+}
+
+func (a *App) apiImportYouTube(w http.ResponseWriter, r *http.Request) {
+	a.importUpload(w, r, importer.SourceYouTube)
+}
+
+func (a *App) importUpload(w http.ResponseWriter, r *http.Request, source string) {
 	u, err := a.needUser(r)
 	if err != nil {
 		a.fail(w, r, err)
 		return
 	}
-	if !a.TMDB.Configured() {
+	if source == importer.SourceTVTime && !a.TMDB.Configured() {
 		a.fail(w, r, errTMDBMissing)
 		return
 	}
@@ -55,25 +64,32 @@ func (a *App) apiImportTVTime(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, errImportTooBig)
 		return
 	}
-	data, err := importer.ParseTVTime(file, header.Size)
-	switch {
-	case errors.Is(err, importer.ErrEmpty):
-		a.fail(w, r, errImportEmpty)
-		return
-	case errors.Is(err, importer.ErrNotExport):
-		logger.Warn("IMPORT upload uid=%d rejected: %v", u.ID, err)
-		a.fail(w, r, errImportInvalid)
-		return
-	case err != nil:
-		a.fail(w, r, err)
-		return
+	var payload []byte
+	var shows int
+	if source == importer.SourceYouTube {
+		data, err := importer.ParseYouTubeTakeout(file, header.Size)
+		if err != nil {
+			a.importParseFailed(w, r, u.ID, source, err)
+			return
+		}
+		if payload, err = json.Marshal(data); err != nil {
+			a.fail(w, r, err)
+			return
+		}
+		shows = len(data.Videos)
+	} else {
+		data, err := importer.ParseTVTime(file, header.Size)
+		if err != nil {
+			a.importParseFailed(w, r, u.ID, source, err)
+			return
+		}
+		if payload, err = json.Marshal(data); err != nil {
+			a.fail(w, r, err)
+			return
+		}
+		shows = len(data.Shows)
 	}
-	payload, err := json.Marshal(data)
-	if err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	id, err := a.Store.CreateImportJob(u.ID, importer.SourceTVTime, string(payload), len(data.Shows))
+	id, err := a.Store.CreateImportJob(u.ID, source, string(payload), shows)
 	if errors.Is(err, store.ErrImportBusy) {
 		a.fail(w, r, errImportBusy)
 		return
@@ -82,9 +98,24 @@ func (a *App) apiImportTVTime(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	logger.Info("IMPORT queued job=%d uid=%d shows=%d watches=%d", id, u.ID, len(data.Shows), len(data.Watches))
+	logger.Info("IMPORT queued job=%d uid=%d source=%s items=%d", id, u.ID, source, shows)
 	a.Importer.Start(id)
 	a.okJSON(w, map[string]any{"id": id})
+}
+
+func (a *App) importParseFailed(w http.ResponseWriter, r *http.Request, userID int64, source string, err error) {
+	switch {
+	case errors.Is(err, importer.ErrEmpty):
+		a.fail(w, r, errImportEmpty)
+	case errors.Is(err, importer.ErrNotExport):
+		logger.Warn("IMPORT upload uid=%d rejected: %v", userID, err)
+		a.fail(w, r, errImportInvalid)
+	case errors.Is(err, importer.ErrNotYouTube):
+		logger.Warn("IMPORT upload uid=%d source=%s rejected: %v", userID, source, err)
+		a.fail(w, r, errImportInvalidYouTube)
+	default:
+		a.fail(w, r, err)
+	}
 }
 
 type importStatus struct {

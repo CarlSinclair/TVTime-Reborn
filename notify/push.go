@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -26,6 +27,7 @@ import (
 	"tvt/secretbox"
 	"tvt/store"
 
+	"github.com/CarlSinclair/csuit-libs/apikit"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/hkdf"
 )
@@ -46,11 +48,12 @@ type Pusher struct {
 	Secret  string
 	Subject string
 	http    *http.Client
+	device  *http.Client
 	mu      sync.Mutex
 }
 
 func NewPusher(st *store.Store, secret, subject string) *Pusher {
-	return &Pusher{Store: st, Secret: secret, Subject: subject, http: &http.Client{Timeout: 10 * time.Second}}
+	return &Pusher{Store: st, Secret: secret, Subject: subject, http: &http.Client{Timeout: 10 * time.Second}, device: apikit.NewSafeClient(nil)}
 }
 
 func (p *Pusher) PublicKey() (string, error) {
@@ -157,6 +160,42 @@ func (p *Pusher) sendToUser(userID int64, title, body, link string, unread int, 
 	return delivered, nil
 }
 
+var vendorPushHosts = []string{".googleapis.com", ".push.services.mozilla.com", ".push.apple.com", ".notify.windows.com", ".push.microsoft.com"}
+
+func VendorPushHost(host string) bool {
+	host = strings.ToLower(host)
+	for _, suf := range vendorPushHosts {
+		if strings.HasSuffix(host, suf) || host == strings.TrimPrefix(suf, ".") {
+			return true
+		}
+	}
+	return false
+}
+
+func publicPushURL(raw string) (*url.URL, bool) {
+	if len(raw) > 2048 {
+		return nil, false
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme != "https" || u.User != nil || u.Host == "" {
+		return nil, false
+	}
+	if p := u.Port(); p != "" && p != "443" {
+		return nil, false
+	}
+	return u, true
+}
+
+func ValidBrowserEndpoint(raw string) bool {
+	u, ok := publicPushURL(raw)
+	return ok && VendorPushHost(u.Hostname())
+}
+
+func ValidDeviceEndpoint(raw string) bool {
+	u, ok := publicPushURL(raw)
+	return ok && net.ParseIP(u.Hostname()) == nil && strings.Contains(u.Hostname(), ".")
+}
+
 func hostOf(endpoint string) string {
 	u, err := url.Parse(endpoint)
 	if err != nil {
@@ -195,7 +234,11 @@ func (p *Pusher) send(sub store.PushSub, payload []byte) error {
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("vapid t=%s, k=%s", signed, pub))
 	req.Header.Set("TTL", "86400")
-	resp, err := p.http.Do(req)
+	client := p.device
+	if VendorPushHost(ep.Hostname()) {
+		client = p.http
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}

@@ -9,6 +9,8 @@ import (
 	"tvt/auth"
 	"tvt/logger"
 	"tvt/store"
+
+	"github.com/CarlSinclair/csuit-libs/twofa"
 )
 
 const maxPasskeys = 10
@@ -52,7 +54,7 @@ func (a *App) apiPasskeyLoginFinish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	logger.Info("AUTH passkey first factor ok uid=%d", u.ID)
-	a.finishLogin(w, r, u)
+	a.finishLogin(w, r, u, twofa.ViaPasskey)
 }
 
 func (a *App) apiPasskeyAddBegin(w http.ResponseWriter, r *http.Request) {

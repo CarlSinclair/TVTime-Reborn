@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"tvt/logger"
+	"tvt/syncer"
 	"tvt/tmdb"
 	"tvt/tvdb"
+	"tvt/youtube"
 )
 
 type trendingEntry struct {
@@ -120,15 +122,30 @@ func searchKey(s string) string {
 	return b.String()
 }
 
-// searchTV asks TMDB first. When TheTVDB is configured, shows it knows that TMDB
-// does not (web and YouTube series, for instance) are added after the TMDB ones;
-// a TheTVDB result whose title TMDB already returned is left out.
+// searchTV asks TMDB first. Shows TMDB does not have are added after its
+// results: web series from TheTVDB when configured (YouTube ones are skipped,
+// channels come from YouTube itself) and matching YouTube channels. A result
+// whose title TMDB already returned is left out.
 func (a *App) searchTV(ctx context.Context, q, lang string) (*tmdb.SearchResponse, error) {
 	res, err := a.cachedSearch(ctx, "tv", q, lang, a.TMDB.SearchTV)
-	if err != nil || !a.Sync.TVDBConfigured() {
+	if err != nil {
 		return res, err
 	}
-	extra := a.tvdbSearch(ctx, q)
+	var extra []tmdb.SearchItem
+	if a.Sync.TVDBConfigured() {
+		for _, it := range a.tvdbSearch(ctx, q) {
+			id := it.ID()
+			if id == 0 || strings.EqualFold(it.Network, "YouTube") {
+				continue
+			}
+			poster := ""
+			if p := tvdb.ImagePath(it.ImageURL); p != "" {
+				poster = "tvdb:" + p
+			}
+			extra = append(extra, tmdb.SearchItem{ID: -id, Name: it.Name, OriginalName: it.Name, Overview: it.Overview, FirstAirDate: it.FirstAirTime, PosterPath: poster})
+		}
+	}
+	extra = append(extra, a.youtubeSearch(ctx, q)...)
 	if len(extra) == 0 {
 		return res, nil
 	}
@@ -140,19 +157,93 @@ func (a *App) searchTV(ctx context.Context, q, lang string) (*tmdb.SearchRespons
 	merged := *res
 	merged.Results = append([]tmdb.SearchItem(nil), res.Results...)
 	for _, it := range extra {
-		id := it.ID()
-		if id == 0 || known[searchKey(it.Name)] {
+		if known[searchKey(it.Name)] {
 			continue
 		}
-		poster := ""
-		if p := tvdb.ImagePath(it.ImageURL); p != "" {
-			poster = "tvdb:" + p
-		}
-		merged.Results = append(merged.Results, tmdb.SearchItem{ID: -id, Name: it.Name, OriginalName: it.Name, Overview: it.Overview, FirstAirDate: it.FirstAirTime, PosterPath: poster})
+		merged.Results = append(merged.Results, it)
 		known[searchKey(it.Name)] = true
 		if len(merged.Results) >= 40 {
 			break
 		}
 	}
 	return &merged, nil
+}
+
+type youtubeEntry struct {
+	items []tmdb.SearchItem
+	at    time.Time
+}
+
+var (
+	youtubeMu    sync.Mutex
+	youtubeCache = map[string]youtubeEntry{}
+)
+
+const (
+	youtubeSearchMinChars = 3
+	youtubeCheckWorkers   = 5
+)
+
+// youtubeSearch lists every YouTube channel and playlist whose name matches the
+// query (the name contains the query or the query contains the name), in
+// YouTube's own relevance order. Each is checked against its real feed first, so
+// a result that could not be followed, or whose feed is not what the page said
+// it was, is left out. A result that is really a show already in the catalog
+// gets that show's id.
+func (a *App) youtubeSearch(ctx context.Context, q string) []tmdb.SearchItem {
+	qk := searchKey(q)
+	if !a.Sync.YouTubeConfigured() || len([]rune(qk)) < youtubeSearchMinChars {
+		return nil
+	}
+	youtubeMu.Lock()
+	if e, ok := youtubeCache[qk]; ok && time.Since(e.at) < 10*time.Minute {
+		youtubeMu.Unlock()
+		return e.items
+	}
+	youtubeMu.Unlock()
+	found, err := a.Sync.YouTube.Search(ctx, q)
+	if err != nil {
+		logger.Warn("SEARCH youtube q=%q: %v", q, err)
+	}
+	var cands []youtube.Source
+	for _, src := range found {
+		tk := searchKey(src.Title)
+		if tk != "" && (strings.Contains(tk, qk) || strings.Contains(qk, tk)) {
+			cands = append(cands, src)
+		}
+	}
+	results := make([]*syncer.YouTubeResult, len(cands))
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, youtubeCheckWorkers)
+	for i, src := range cands {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(i int, src youtube.Source) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			res, err := a.Sync.CheckYouTubeSource(ctx, src)
+			if err != nil {
+				logger.Warn("SEARCH youtube q=%q dropped a result: %v", q, err)
+				return
+			}
+			results[i] = res
+		}(i, src)
+	}
+	wg.Wait()
+	var items []tmdb.SearchItem
+	for _, res := range results {
+		if res == nil {
+			continue
+		}
+		items = append(items, tmdb.SearchItem{ID: res.ID, Name: res.Name, OriginalName: res.Name, Overview: res.Overview, PosterPath: res.Poster})
+	}
+	if err == nil || len(found) > 0 {
+		youtubeMu.Lock()
+		if len(youtubeCache) > 500 {
+			youtubeCache = map[string]youtubeEntry{}
+		}
+		youtubeCache[qk] = youtubeEntry{items: items, at: time.Now()}
+		youtubeMu.Unlock()
+	}
+	return items
 }

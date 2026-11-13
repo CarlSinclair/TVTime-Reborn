@@ -838,6 +838,16 @@
       if (data) window.location.reload();
       return;
     }
+    if ("avatarRemove" in d) {
+      const data = await run(el, () => api("/api/admin/avatar/remove"));
+      if (data && data.announced === false) {
+        toast(t("avatar_announce_failed"), "error");
+        setTimeout(() => window.location.reload(), 3000);
+      } else if (data) {
+        window.location.reload();
+      }
+      return;
+    }
     if ("logoRemove" in d) {
       const data = await run(el, () => api("/api/admin/logo/remove"));
       if (data) window.location.reload();
@@ -1138,17 +1148,22 @@
     } else if (el.matches("[data-upload]")) {
       const file = el.files && el.files[0];
       if (!file) return;
-      const target = el.dataset.upload === "logo" ? "/api/admin/logo" : "/api/profile/" + (el.dataset.upload === "avatars" ? "avatar" : "banner");
+      const target = el.dataset.upload === "logo" ? "/api/admin/logo" : el.dataset.upload === "avatar" ? "/api/admin/avatar" : "/api/profile/" + (el.dataset.upload === "avatars" ? "avatar" : "banner");
       const data = await run(null, () => upload(target, file));
       el.value = "";
       if (!data) return;
       toast(t("saved"), "ok");
+      if (data.announced === false) {
+        toast(t("avatar_announce_failed"), "error");
+        setTimeout(() => window.location.reload(), 3000);
+        return;
+      }
       window.location.reload();
     } else if (el.matches("[data-import]")) {
       const file = el.files && el.files[0];
       if (!file) return;
       toast(t("import_uploading"));
-      const data = await run(el, () => upload("/api/import/tvtime", file));
+      const data = await run(el, () => upload(el.dataset.import === "youtube" ? "/api/import/youtube" : "/api/import/tvtime", file));
       el.value = "";
       if (!data) {
         pollImport();
@@ -1171,7 +1186,9 @@
     const list = document.getElementById("import-unmatched");
     const listTitle = document.getElementById("import-un-title");
     const picker = document.getElementById("import-picker");
+    const pickerYT = document.getElementById("import-picker-youtube");
     if (picker) picker.hidden = job.active;
+    if (pickerYT) pickerYT.hidden = job.active;
     const pct = job.total > 0 ? Math.round((job.shows_done / job.total) * 100) : 0;
     bar.value = job.status === "done" ? 100 : pct;
     if (job.status === "pending") line.textContent = t("import_pending");
@@ -2015,59 +2032,256 @@
     reload();
   };
 
-  let telegramScript = null;
-  const loadTelegram = () => {
-    if (window.Telegram && window.Telegram.Login) return Promise.resolve();
-    if (!telegramScript) {
-      telegramScript = new Promise((resolve, reject) => {
-        const s = document.createElement("script");
-        s.src = "https://telegram.org/js/telegram-widget.js?22";
-        s.onload = () => resolve();
-        s.onerror = () => {
-          telegramScript = null;
-          reject(new Error(t("telegram_failed")));
-        };
-        document.head.appendChild(s);
-      });
-    }
-    return telegramScript;
-  };
+  let tgLoginTimer = null;
 
   pageInits.push(() => {
     document.querySelectorAll("[data-telegram-btn]").forEach((btn) => {
       const label = btn.textContent;
+      const reset = () => {
+        clearInterval(tgLoginTimer);
+        btn.disabled = false;
+        btn.textContent = label;
+      };
       btn.addEventListener("click", async () => {
         btn.disabled = true;
+        let start;
         try {
-          await loadTelegram();
+          start = await api("/auth/telegram/start");
         } catch (err) {
-          btn.disabled = false;
+          reset();
           toast(err.message, "error");
           return;
         }
-        btn.disabled = false;
+        btn.textContent = t("telegram_waiting");
         let opened = false;
         const mark = () => {
           opened = true;
         };
         window.addEventListener("blur", mark, { once: true });
         document.addEventListener("visibilitychange", mark, { once: true });
-        window.Telegram.Login.auth({ bot_id: btn.dataset.botId, request_access: "write" }, (data) => {
-          if (!data || !data.hash) {
-            btn.textContent = label;
-            toast(t("telegram_failed"), "error");
-            return;
-          }
-          const q = new URLSearchParams(data);
-          if (btn.dataset.action === "link") q.set("action", "link");
-          window.location.href = "/auth/telegram?" + q.toString();
-        });
+        window.location.href = start.app;
         setTimeout(() => {
           window.removeEventListener("blur", mark);
           document.removeEventListener("visibilitychange", mark);
-          if (!opened) btn.textContent = t("telegram_open");
+          if (!opened) window.open(start.web, "_blank", "noopener");
         }, 1500);
+        const began = Date.now();
+        clearInterval(tgLoginTimer);
+        tgLoginTimer = setInterval(async () => {
+          if (Date.now() - began > 5 * 60 * 1000) {
+            reset();
+            toast(t("telegram_failed"), "error");
+            return;
+          }
+          try {
+            const res = await fetch("/auth/telegram/poll?t=" + encodeURIComponent(start.token), {
+              headers: { "X-Login-Secret": start.secret },
+              credentials: "same-origin",
+            });
+            if (res.redirected) {
+              clearInterval(tgLoginTimer);
+              window.location.href = res.url;
+              return;
+            }
+            const st = await res.json();
+            if (st.status === "expired" || st.status === "rejected") {
+              reset();
+              toast(t("telegram_failed"), "error");
+            }
+          } catch (err) {
+            console.warn("telegram login poll failed", err);
+          }
+        }, 2000);
       });
+    });
+  });
+
+  pageInits.push(() => {
+    const shell = window.NativeShell;
+    const SYNC_KEY = "tvt_native_sync";
+    const callShell = async (plugin, action, args) => {
+      const res = await shell.call(plugin, action, args || {});
+      if (!res || res.ok === false) {
+        const err = new Error(t(res && res.error === "no_distributor" ? "int_no_distributor" : "int_failed"));
+        err.code = res && res.error;
+        throw err;
+      }
+      return res.result || {};
+    };
+
+    const syncYouTube = async () => {
+      const status = await callShell("youtube", "status");
+      if (!status.connected) return 0;
+      const found = await callShell("youtube", "collect");
+      if (!found.ids || !found.ids.length) return 0;
+      const sent = await api("/api/account/integrations/youtube/sync", { video_ids: found.ids });
+      await callShell("youtube", "ack", { ids: sent.handled || [] });
+      return sent.marked || 0;
+    };
+
+    const syncScrobbles = async () => {
+      const queued = await callShell("scrobble", "drain");
+      const events = queued.events || [];
+      const done = [];
+      for (const ev of events) {
+        try {
+          await api("/api/account/integrations/scrobble", ev);
+          done.push(ev.id);
+        } catch (err) {
+          console.warn("scrobble send failed", err);
+          break;
+        }
+      }
+      if (done.length) await callShell("scrobble", "ack", { ids: done });
+      return done.length;
+    };
+
+    const syncPush = async () => {
+      const st = await callShell("push", "state");
+      if (!st.registered || !st.pending) return 0;
+      await api("/api/account/push/device", { endpoint: st.endpoint, keys: { p256dh: st.p256dh, auth: st.auth } });
+      await callShell("push", "ack");
+      return 1;
+    };
+
+    const autoSync = async () => {
+      let last = 0;
+      try {
+        last = parseInt(sessionStorage.getItem(SYNC_KEY) || "0", 10);
+      } catch (err) {
+        last = 0;
+      }
+      if (Date.now() - last < 5 * 60 * 1000) return;
+      try {
+        sessionStorage.setItem(SYNC_KEY, String(Date.now()));
+      } catch (err) {
+        console.warn("sync marker unavailable", err);
+      }
+      for (const job of [syncPush, syncYouTube, syncScrobbles]) {
+        try {
+          await job();
+        } catch (err) {
+          console.warn("background sync failed", err);
+        }
+      }
+    };
+
+    if (shell && document.body.dataset.user === "1") autoSync();
+
+    const root = document.querySelector("[data-integrations]");
+    if (!root) return;
+    if (!shell) return;
+    root.querySelector("[data-app-missing]").hidden = true;
+    root.querySelector("[data-app-only]").hidden = false;
+
+    const showStatus = async () => {
+      try {
+        const yt = await callShell("youtube", "status");
+        root.querySelector('[data-int-status="youtube"]').textContent = t(yt.connected ? "int_connected" : "int_not_connected");
+      } catch (err) {
+        console.warn("youtube status failed", err);
+      }
+      try {
+        const sc = await callShell("scrobble", "status");
+        root.querySelector('[data-int-status="scrobble"]').textContent = t(sc.access ? "int_access_on" : "int_access_off");
+      } catch (err) {
+        console.warn("scrobble status failed", err);
+      }
+    };
+    showStatus();
+
+    root.addEventListener("click", async (event) => {
+      const btn = event.target.closest("[data-int]");
+      if (!btn) return;
+      const kind = btn.dataset.int;
+      await run(btn, async () => {
+        if (kind === "push") {
+          const reg = await callShell("push", "register");
+          await api("/api/account/push/device", { endpoint: reg.endpoint, keys: { p256dh: reg.p256dh, auth: reg.auth } });
+          await callShell("push", "ack");
+          toast(t("int_push_done"), "ok");
+        } else if (kind === "yt-connect") {
+          await callShell("youtube", "signin");
+          toast(t("int_yt_signed_in"), "ok");
+          await showStatus();
+        } else if (kind === "yt-sync") {
+          await syncYouTube();
+          toast(t("int_yt_synced"), "ok");
+        } else if (kind === "scrobble-access") {
+          await callShell("scrobble", "open_access");
+        } else if (kind === "scrobble-sync") {
+          await syncScrobbles();
+          toast(t("int_scrobble_done"), "ok");
+        }
+      });
+    });
+  });
+
+  pageInits.push(() => {
+    const panel = document.querySelector("[data-api-keys]");
+    if (!panel) return;
+    const list = document.getElementById("api-key-list");
+    const form = document.getElementById("api-key-form");
+    const reveal = document.getElementById("api-key-reveal");
+    const value = document.getElementById("api-key-value");
+
+    const render = (keys) => {
+      list.textContent = "";
+      if (!keys.length) {
+        const p = document.createElement("p");
+        p.className = "muted";
+        p.textContent = t("int_api_none");
+        list.appendChild(p);
+        return;
+      }
+      keys.forEach((k) => {
+        const row = document.createElement("div");
+        row.className = "row";
+        const main = document.createElement("div");
+        main.className = "row-main";
+        const name = document.createElement("strong");
+        name.textContent = k.label;
+        const meta = document.createElement("span");
+        meta.className = "muted";
+        meta.textContent = k.prefix + " \u00b7 " + k.scopes.join(", ") + " \u00b7 " + t("int_api_last_used") + ": " + (k.last_used_at || t("int_api_never"));
+        main.append(name, meta);
+        const btn = document.createElement("button");
+        btn.className = "btn danger small";
+        btn.type = "button";
+        btn.dataset.revoke = String(k.id);
+        btn.textContent = t("int_api_revoke");
+        row.append(main, btn);
+        list.appendChild(row);
+      });
+    };
+
+    const load = async () => {
+      const data = await run(null, () => api("/api/account/api-keys", null, "GET"));
+      if (data) render(data.keys || []);
+    };
+    load();
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const scopes = Array.from(form.querySelectorAll('[name="scope"]:checked')).map((c) => c.value);
+      const data = await run(form.querySelector('[type="submit"]'), () => api("/api/account/api-keys", { label: form.elements.label.value, scopes }));
+      if (!data) return;
+      form.reset();
+      value.value = data.key;
+      reveal.hidden = false;
+      load();
+    });
+
+    list.addEventListener("click", async (event) => {
+      const btn = event.target.closest("[data-revoke]");
+      if (!btn) return;
+      if (!(await confirmDialog(t("int_api_revoke_confirm")))) return;
+      const data = await run(btn, () => api("/api/account/api-keys/" + btn.dataset.revoke + "/revoke"));
+      if (data) {
+        toast(t("int_key_revoked"), "ok");
+        reveal.hidden = true;
+        load();
+      }
     });
   });
 

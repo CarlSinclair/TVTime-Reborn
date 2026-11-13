@@ -14,6 +14,7 @@ import (
 	"tvt/auth"
 	"tvt/logger"
 	"tvt/store"
+	"tvt/youtube"
 )
 
 // verify checks a request from another server and returns who sent it and the
@@ -113,6 +114,9 @@ func (s *Service) Inbox(w http.ResponseWriter, r *http.Request) {
 var errBadMessage = errors.New("bad message")
 
 func (s *Service) dispatch(host string, m message) error {
+	if m.Type == "instance" {
+		return s.onInstance(host, m)
+	}
 	if !nameRe.MatchString(m.From.Username) {
 		return errBadMessage
 	}
@@ -241,13 +245,20 @@ func (s *Service) onActivity(host string, m message) error {
 	if !shadow.IsRemote() || shadow.IsDeactivated {
 		return nil
 	}
+	showTMDB, season, episode, found, err := s.localYouTube(m.Event.YT, m.Event.YTV, m.Event.ShowTMDB, m.Event.Show, m.Event.Poster, m.Event.Season, m.Event.Episode)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return nil
+	}
 	at := m.Event.At
 	if _, err := time.Parse("2006-01-02 15:04:05", at); err != nil {
 		at = store.Now()
 	}
 	ev := store.RemoteEvent{
-		Ref: m.Event.Ref, Kind: m.Event.Kind, ShowTMDB: m.Event.ShowTMDB, Show: clip(m.Event.Show, 200), Poster: sanitizePoster(m.Event.Poster),
-		Season: clampInt(m.Event.Season, 0, 5000), Episode: clampInt(m.Event.Episode, 0, 100000), Count: clampInt(m.Event.Count, 1, 10000),
+		Ref: m.Event.Ref, Kind: m.Event.Kind, ShowTMDB: showTMDB, Show: clip(m.Event.Show, 200), Poster: sanitizePoster(m.Event.Poster),
+		Season: clampInt(season, 0, 5000), Episode: clampInt(episode, 0, 100000), Count: clampInt(m.Event.Count, 1, 10000),
 		Stars: clampInt(m.Event.Stars, 0, 5), Excerpt: clip(m.Event.Excerpt, 400), At: at,
 	}
 	return s.Store.SaveRemoteEvent(shadow.ID, ev)
@@ -309,6 +320,14 @@ func sanitizePoster(p string) string {
 	}
 	if strings.HasPrefix(p, "tvdb:/banners/") {
 		return p
+	}
+	if id, ok := strings.CutPrefix(p, "yt:"); ok && youtube.ValidVideoID(id) {
+		return p
+	}
+	if enc, ok := strings.CutPrefix(p, "ytc:"); ok {
+		if _, valid := youtube.AvatarURL(enc); valid {
+			return p
+		}
 	}
 	if len(p) > 4 && p[0] == '/' && !strings.Contains(p[1:], "/") && imgName(p[1:]) {
 		return p

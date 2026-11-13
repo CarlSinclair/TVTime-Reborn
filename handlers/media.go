@@ -177,7 +177,7 @@ func (a *App) removeUserMedia(ctx context.Context, u *store.User) error {
 func (a *App) serveMedia(w http.ResponseWriter, r *http.Request) {
 	kind, file := r.PathValue("kind"), r.PathValue("file")
 	if kind == "branding" {
-		if !logoFileRe.MatchString(file) {
+		if !logoFileRe.MatchString(file) && !ownAvatarRe.MatchString(file) && !peerAvatarRe.MatchString(file) {
 			http.NotFound(w, r)
 			return
 		}

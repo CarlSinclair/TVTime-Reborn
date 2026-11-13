@@ -14,6 +14,8 @@ import (
 	"tvt/auth"
 	"tvt/logger"
 	"tvt/store"
+
+	"github.com/CarlSinclair/csuit-libs/twofa"
 )
 
 func normEmail(e string) (string, bool) {
@@ -132,7 +134,7 @@ func (a *App) apiLogin(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	a.finishLogin(w, r, u)
+	a.finishLogin(w, r, u, twofa.ViaPassword)
 }
 
 func (a *App) apiLogout(w http.ResponseWriter, r *http.Request) {
@@ -290,7 +292,7 @@ func (a *App) apiMagicConsume(w http.ResponseWriter, r *http.Request) {
 	}
 	u.EmailVerified = true
 	a.promoteIfAdmin(uid)
-	a.finishLogin(w, r, u)
+	a.finishLogin(w, r, u, twofa.ViaMagic)
 }
 
 func (a *App) apiResetConsume(w http.ResponseWriter, r *http.Request) {
@@ -349,7 +351,12 @@ func (a *App) apiChangePassword(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	var in struct{ Current, New string }
+	var in struct {
+		Current   string
+		New       string
+		Code      string
+		EmailCode string `json:"email_code"`
+	}
 	if err := decode(r, &in); err != nil {
 		a.fail(w, r, err)
 		return
@@ -358,8 +365,34 @@ func (a *App) apiChangePassword(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	if u.HasPassword() && !a.Auth.CheckPassword(u, in.Current) {
-		a.fail(w, r, apiErr{http.StatusUnauthorized, "err.bad_credentials"})
+	var proven []twofa.Method
+	if u.HasPassword() {
+		switch {
+		case in.Current != "":
+			if !a.Auth.CheckPassword(u, in.Current) {
+				a.fail(w, r, apiErr{http.StatusUnauthorized, "err.bad_credentials"})
+				return
+			}
+		case strings.TrimSpace(in.EmailCode) != "":
+			ok, cerr := a.checkTwoFAEmail(u, in.EmailCode)
+			if cerr != nil {
+				logger.Error("AUTH password change email code check uid=%d: %v", u.ID, cerr)
+				a.fail(w, r, cerr)
+				return
+			}
+			if !ok {
+				logger.Warn("AUTH password change bad email code uid=%d from=%s", u.ID, auth.ClientCountry(r))
+				a.fail(w, r, apiErr{http.StatusUnauthorized, "err.mfa_bad_code"})
+				return
+			}
+			proven = append(proven, twofa.MethodEmail)
+		default:
+			a.fail(w, r, apiErr{http.StatusUnauthorized, "err.bad_credentials"})
+			return
+		}
+	}
+	if err := a.requireSecondFactor(u, in.Code, proven...); err != nil {
+		a.fail(w, r, err)
 		return
 	}
 	hash, err := auth.HashPassword(in.New)

@@ -30,6 +30,9 @@ import (
 	"tvt/telegram"
 	"tvt/tmdb"
 	"tvt/tvdb"
+
+	"github.com/CarlSinclair/csuit-libs/redis"
+	"github.com/CarlSinclair/csuit-libs/redis/embedded"
 )
 
 func fakeTVDB(t *testing.T) *httptest.Server {
@@ -223,6 +226,7 @@ func newEnv(t *testing.T) *env {
 		t.Fatalf("db: %v", err)
 	}
 	t.Cleanup(func() { d.Close() })
+	startTestRedis(t)
 	st := store.New(d)
 	srv := httptest.NewUnstartedServer(nil)
 	cfg := &config.Config{AppName: "TVT", BaseURL: "http://" + srv.Listener.Addr().String(), FedInsecure: true, DevLogMail: true, JWTSecret: "0123456789abcdef0123456789abcdef", DataDir: t.TempDir(), ImageBase: "http://127.0.0.1:1"}
@@ -429,4 +433,22 @@ func TestLoginErrorsAreGeneric(t *testing.T) {
 	if code, out := c.post("/api/auth/login", map[string]string{"email": "dave@example.com", "password": "Passw0rd!x1"}); code != 200 {
 		t.Fatalf("good login: %d %v", code, out)
 	}
+}
+
+func startTestRedis(t *testing.T) {
+	t.Helper()
+	opts, stop, err := embedded.Start("tvt-test:")
+	if err != nil {
+		t.Fatalf("embedded redis: %v", err)
+	}
+	redis.Configure(opts)
+	redis.Init("")
+	if redis.Client() == nil {
+		stop()
+		t.Fatal("embedded redis did not accept the connection")
+	}
+	t.Cleanup(func() {
+		redis.Close()
+		stop()
+	})
 }

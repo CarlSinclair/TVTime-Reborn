@@ -5,6 +5,7 @@ import (
 
 	"tvt/logger"
 	"tvt/store"
+	"tvt/youtube"
 )
 
 const (
@@ -17,17 +18,30 @@ const (
 type RatingMsg struct {
 	Kind     string `json:"kind"`
 	ShowTMDB int64  `json:"show_tmdb"`
+	YT       string `json:"yt,omitempty"`
+	YTV      string `json:"ytv,omitempty"`
 	Season   int    `json:"season,omitempty"`
 	Episode  int    `json:"episode,omitempty"`
 	Rating   int    `json:"rating"`
 	At       string `json:"at,omitempty"`
 }
 
-func ratingMsgs(rs []store.Rating) []RatingMsg {
+func (s *Service) ratingMsgs(rs []store.Rating) []RatingMsg {
 	at := store.Now()
 	out := make([]RatingMsg, 0, len(rs))
 	for _, r := range rs {
 		m := RatingMsg{Kind: r.Kind, ShowTMDB: r.ShowTMDB, Season: r.Season, Episode: r.Episode, Rating: r.Rating, At: at}
+		if m.ShowTMDB < 0 {
+			src, vid, err := s.Store.YouTubeRefs(m.ShowTMDB, m.Season, m.Episode)
+			if err != nil {
+				logger.Error("FEDERATION rating of show=%d s%de%d not shared: %v", m.ShowTMDB, m.Season, m.Episode, err)
+				continue
+			}
+			m.YT = src
+			if m.Kind == "episode" {
+				m.YTV = vid
+			}
+		}
 		if validRating(m) {
 			out = append(out, m)
 		}
@@ -36,7 +50,7 @@ func ratingMsgs(rs []store.Rating) []RatingMsg {
 }
 
 func (s *Service) sendRatings(host string, u *store.User, rs []store.Rating) {
-	msgs := ratingMsgs(rs)
+	msgs := s.ratingMsgs(rs)
 	for len(msgs) > 0 {
 		n := min(len(msgs), ratingBatch)
 		s.enqueue(host, message{Type: "ratings", From: person(u), Ratings: msgs[:n]})
@@ -106,13 +120,20 @@ func (s *Service) BackfillRatings(host string) {
 	logger.Info("FEDERATION queued %d ratings for %s", sent, host)
 }
 
+func validRatingShow(r RatingMsg) bool {
+	if r.YT == "" {
+		return r.YTV == "" && r.ShowTMDB != 0 && r.ShowTMDB <= 1<<40 && r.ShowTMDB > -(1<<41)
+	}
+	return youtube.ValidSourceID(r.YT) && (r.YTV == "" || youtube.ValidVideoID(r.YTV)) && r.ShowTMDB < 0 && r.ShowTMDB > -(1<<42)
+}
+
 func validRating(r RatingMsg) bool {
-	if r.ShowTMDB < 1 || r.ShowTMDB > 1<<40 || r.Rating < 0 || r.Rating > 10 || r.Season < 0 || r.Season > 5000 || r.Episode < 0 || r.Episode > 100000 {
+	if !validRatingShow(r) || r.Rating < 0 || r.Rating > 10 || r.Season < 0 || r.Season > 5000 || r.Episode < 0 || r.Episode > 100000 {
 		return false
 	}
 	switch r.Kind {
 	case "episode":
-		return r.Episode >= 1
+		return r.Episode >= 1 && (r.YT == "" || r.YTV != "")
 	case "season":
 		return r.Episode == 0
 	case "show":
@@ -146,7 +167,14 @@ func (s *Service) onRatings(host string, m message) error {
 		if _, err := time.Parse("2006-01-02 15:04:05", at); err != nil {
 			at = store.Now()
 		}
-		rating := store.Rating{Kind: r.Kind, ShowTMDB: r.ShowTMDB, Season: r.Season, Episode: r.Episode, Rating: r.Rating}
+		showTMDB, season, episode, found, err := s.localYouTube(r.YT, r.YTV, r.ShowTMDB, "", "", r.Season, r.Episode)
+		if err != nil {
+			return err
+		}
+		if !found {
+			continue
+		}
+		rating := store.Rating{Kind: r.Kind, ShowTMDB: showTMDB, Season: season, Episode: episode, Rating: r.Rating}
 		if err := s.Store.SaveRemoteRating(shadow.ID, rating, at); err != nil {
 			return err
 		}

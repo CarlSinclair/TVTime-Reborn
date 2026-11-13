@@ -560,3 +560,7 @@ fieldset.lang-fieldset:has(> legend .tswitch-input:not(:checked)) > :not(legend)
 .slug-status.is-bad { color: var(--danger); }
 
 .faq-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+.tfa-dialog { padding: 20px 24px; max-width: 360px; text-align: center; border-radius: 12px; }
+.tfa-dialog h3 { margin-top: 0; }
+.tfa-dialog::backdrop { background: rgba(0, 0, 0, 0.5); }

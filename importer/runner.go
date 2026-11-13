@@ -186,6 +186,10 @@ func (r *Runner) run(ctx context.Context, jobID int64) {
 	if job.Status != "pending" {
 		return
 	}
+	if job.Source == SourceYouTube {
+		r.runYouTube(job, payload)
+		return
+	}
 	var data Data
 	if err := json.Unmarshal([]byte(payload), &data); err != nil {
 		r.fail(job, fmt.Errorf("decode payload: %w", err))

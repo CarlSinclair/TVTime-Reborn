@@ -111,8 +111,8 @@ func (s *Store) SaveImportProgress(j *ImportJob) error {
 	if len(j.Unmatched) == 0 {
 		un = nil
 	}
-	if _, err := s.DB.Exec(`UPDATE import_jobs SET matched = ?, shows_done = ?, episodes_added = ?, episodes_skipped = ?, follows_added = ?, unmatched = ? WHERE id = ?`,
-		j.Matched, j.ShowsDone, j.EpisodesAdded, j.EpisodesSkipped, j.FollowsAdded, string(un), j.ID); err != nil {
+	if _, err := s.DB.Exec(`UPDATE import_jobs SET total = ?, matched = ?, shows_done = ?, episodes_added = ?, episodes_skipped = ?, follows_added = ?, unmatched = ? WHERE id = ?`,
+		j.Total, j.Matched, j.ShowsDone, j.EpisodesAdded, j.EpisodesSkipped, j.FollowsAdded, string(un), j.ID); err != nil {
 		return fmt.Errorf("save import progress %d: %w", j.ID, err)
 	}
 	return nil

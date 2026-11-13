@@ -67,7 +67,7 @@ func boolField(key, group string, p func(*config.Config) *bool) Field {
 }
 
 // Groups in the order the Config tab shows them.
-var Groups = []string{"mail", "storage", "metadata", "telegram", "branding"}
+var Groups = []string{"mail", "storage", "metadata", "telegram", "branding", "redis"}
 
 var Fields = []Field{
 	field("smtp_host", "mail", false, func(c *config.Config) *string { return &c.SMTPHost }),
@@ -108,18 +108,31 @@ var Fields = []Field{
 	field("source_url", "branding", false, func(c *config.Config) *string { return &c.SourceURL }),
 	field("contact_email", "branding", false, func(c *config.Config) *string { return &c.ContactEmail }),
 
+	field("redis_addr", "redis", false, func(c *config.Config) *string { return &c.RedisAddr }),
+	field("redis_password", "redis", true, func(c *config.Config) *string { return &c.RedisPassword }),
+	{Key: "redis_db", Group: "redis",
+		get: func(c *config.Config) string { return strconv.Itoa(c.RedisDB) },
+		set: func(c *config.Config, v string) error {
+			n, err := strconv.Atoi(v)
+			if err != nil || n < 0 {
+				return fmt.Errorf("the Redis database must be a number, 0 or more")
+			}
+			c.RedisDB = n
+			return nil
+		}},
+
 	boolField("federation", "federation", func(c *config.Config) *bool { return &c.Federation }),
 }
 
 // defaults and examples by key. Anything not listed defaults to blank.
-var defaults = map[string]string{"smtp_port": "587", "app_name": "TVT", "source_url": "https://github.com/CarlSinclair/TVTime-Reborn", "federation": "1"}
+var defaults = map[string]string{"smtp_port": "587", "app_name": "TVT", "source_url": "https://github.com/CarlSinclair/TVTime-Reborn", "federation": "1", "redis_db": "0"}
 
 var examples = map[string]string{
 	"smtp_host": "smtp.example.com", "smtp_port": "587", "smtp_user": "username", "mail_from": "TVT <no-reply@example.com>",
 	"s3_endpoint": "https://ACCOUNT.r2.cloudflarestorage.com", "s3_region": "auto", "s3_bucket": "tvt-media", "s3_prefix": "tvt",
 	"media_public_url": "https://media.example.com", "trakt_client_id": "", "telegram_name": "MyTvtBot", "support_chat_id": "-1001234567890",
 	"app_name": "TVT", "operator_name": "Your name or company", "privacy_contact": "privacy@example.com",
-	"contact_email": "contact@example.com", "source_url": "https://github.com/you/tvt",
+	"contact_email": "contact@example.com", "redis_addr": "127.0.0.1:6379", "source_url": "https://github.com/you/tvt",
 }
 
 func init() {

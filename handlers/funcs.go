@@ -15,13 +15,19 @@ func imgURL(size, path string) string {
 	if strings.HasPrefix(path, "tvdb:") {
 		return "/tvdbimg/" + base64.RawURLEncoding.EncodeToString([]byte(strings.TrimPrefix(path, "tvdb:")))
 	}
+	if strings.HasPrefix(path, "yt:") {
+		return "/ytimg/v/" + strings.TrimPrefix(path, "yt:")
+	}
+	if strings.HasPrefix(path, "ytc:") {
+		return "/ytimg/c/" + strings.TrimPrefix(path, "ytc:")
+	}
 	return "/img/" + size + path
 }
 
 // imgSet builds a srcset for artwork at several widths, so a high-density screen
 // gets a sharper copy. TheTVDB images come in one size and get none.
 func imgSet(path string, sizes ...string) string {
-	if path == "" || strings.HasPrefix(path, "tvdb:") {
+	if path == "" || strings.HasPrefix(path, "tvdb:") || strings.HasPrefix(path, "yt:") || strings.HasPrefix(path, "ytc:") {
 		return ""
 	}
 	parts := make([]string, 0, len(sizes))
