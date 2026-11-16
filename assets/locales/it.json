@@ -925,7 +925,15 @@
     "prev": "Precedente",
     "next": "Successiva",
     "close": "Chiudi",
-    "load_failed": "Impossibile caricare le notifiche. Riprova più tardi."
+    "load_failed": "Impossibile caricare le notifiche. Riprova più tardi.",
+    "login_new_device": {
+      "title": "Nuovo accesso",
+      "body": "Il tuo account è stato acceduto da un dispositivo che non avevamo mai visto. Se non sei stato tu, proteggi subito il tuo account."
+    },
+    "session_revoked": {
+      "title": "Disconnesso ovunque",
+      "body": "Tutte le sessioni del tuo account sono state chiuse. Se non sei stato tu, proteggi subito il tuo account."
+    }
   },
   "profile": {
     "bio": "Bio",

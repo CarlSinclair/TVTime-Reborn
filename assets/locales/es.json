@@ -925,7 +925,15 @@
     "prev": "Anterior",
     "next": "Siguiente",
     "close": "Cerrar",
-    "load_failed": "No se pudieron cargar las notificaciones. Inténtalo de nuevo en breve."
+    "load_failed": "No se pudieron cargar las notificaciones. Inténtalo de nuevo en breve.",
+    "login_new_device": {
+      "title": "Nuevo inicio de sesión",
+      "body": "Se inició sesión en tu cuenta desde un dispositivo que no habíamos visto antes. Si no fuiste tú, protege tu cuenta de inmediato."
+    },
+    "session_revoked": {
+      "title": "Sesión cerrada en todas partes",
+      "body": "Se cerraron todas las sesiones de tu cuenta. Si no fuiste tú, protege tu cuenta de inmediato."
+    }
   },
   "profile": {
     "bio": "Biografía",

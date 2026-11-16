@@ -925,7 +925,15 @@
     "prev": "Anterior",
     "next": "Próximo",
     "close": "Fechar",
-    "load_failed": "Não foi possível carregar as notificações. Tente novamente em instantes."
+    "load_failed": "Não foi possível carregar as notificações. Tente novamente em instantes.",
+    "login_new_device": {
+      "title": "Novo login",
+      "body": "Sua conta foi acessada a partir de um dispositivo que não reconhecemos antes. Se não foi você, proteja sua conta imediatamente."
+    },
+    "session_revoked": {
+      "title": "Sessões encerradas em todos os lugares",
+      "body": "Todas as sessões da sua conta foram encerradas. Se não foi você, proteja sua conta imediatamente."
+    }
   },
   "profile": {
     "bio": "Bio",

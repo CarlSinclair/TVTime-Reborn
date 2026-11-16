@@ -115,8 +115,8 @@ func (r refreshStore) Rotate(ctx context.Context, _ session.RefreshRecord, oldHa
 		return false, nil
 	}
 	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO refresh_tokens (user_id, sid, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)`,
-		userID, sid, newHash, store.Ts(newExpiry), store.Now()); err != nil {
+		`INSERT INTO refresh_tokens (user_id, sid, device, token_hash, expires_at, created_at) VALUES (?, ?, COALESCE((SELECT device FROM refresh_tokens WHERE token_hash = ?), ''), ?, ?, ?)`,
+		userID, sid, oldHash, newHash, store.Ts(newExpiry), store.Now()); err != nil {
 		return false, fmt.Errorf("store successor: %w", err)
 	}
 	if _, err := tx.ExecContext(ctx,

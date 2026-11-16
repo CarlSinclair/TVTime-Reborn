@@ -2248,6 +2248,26 @@
       });
     }
 
+    const passkeyStep = document.getElementById("passkey-step");
+    if (passkeyStep) {
+      if (!passkeysSupported()) {
+        passkeyStep.disabled = true;
+        passkeyStep.textContent = t("passkey_unsupported");
+      }
+      passkeyStep.addEventListener("click", async () => {
+        passkeyStep.disabled = true;
+        try {
+          const begin = await api("/api/auth/passkey/begin");
+          const cred = await navigator.credentials.get({ publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(begin.options.publicKey) });
+          const done = await api("/api/auth/2fa/passkey/finish", cred.toJSON());
+          go(done);
+        } catch (err) {
+          passkeyStep.disabled = false;
+          toast(passkeyError(err), "error");
+        }
+      });
+    }
+
     const passkeyAdd = document.getElementById("passkey-add");
     if (passkeyAdd) {
       if (!passkeysSupported()) {

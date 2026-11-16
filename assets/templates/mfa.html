@@ -34,5 +34,11 @@
   </div>
   <script src="/static/twofa/telegram.js" defer></script>
   {{end}}
+  {{if .Data.Passkey}}
+  {{if or .Data.TOTP .Data.Email .Data.Telegram}}<p class="muted">{{.T "mfa.other"}}</p>{{end}}
+  <div class="stack">
+    <button type="button" class="btn" id="passkey-step">{{.T "auth.passkey_login"}}</button>
+  </div>
+  {{end}}
 </section>
 {{end}}

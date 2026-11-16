@@ -925,7 +925,15 @@
     "prev": "Précédent",
     "next": "Suivant",
     "close": "Fermer",
-    "load_failed": "Impossible de charger les notifications. Réessayez plus tard."
+    "load_failed": "Impossible de charger les notifications. Réessayez plus tard.",
+    "login_new_device": {
+      "title": "Nouvelle connexion",
+      "body": "Votre compte a été connecté depuis un appareil que nous n'avons jamais vu. Si ce n'est pas vous, sécurisez votre compte immédiatement."
+    },
+    "session_revoked": {
+      "title": "Déconnecté partout",
+      "body": "Toutes les sessions de votre compte ont été fermées. Si ce n'est pas vous, sécurisez votre compte immédiatement."
+    }
   },
   "profile": {
     "bio": "Bio",

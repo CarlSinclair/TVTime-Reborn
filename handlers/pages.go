@@ -127,6 +127,7 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/auth/2fa/email/verify", a.apiTwoFAEmailVerify)
 	mux.HandleFunc("POST /api/auth/passkey/begin", a.apiPasskeyLoginBegin)
 	mux.HandleFunc("POST /api/auth/passkey/finish", a.apiPasskeyLoginFinish)
+	mux.HandleFunc("POST /api/auth/2fa/passkey/finish", a.apiPasskeyStepFinish)
 	mux.HandleFunc("POST /api/account/passkey/begin", a.apiPasskeyAddBegin)
 	mux.HandleFunc("POST /api/account/passkey/finish", a.apiPasskeyAddFinish)
 	mux.HandleFunc("POST /api/account/passkey/{id}/delete", a.apiPasskeyDelete)

@@ -83,6 +83,7 @@ func New(cfg *config.Config, st *store.Store, a *auth.Service, sy *syncer.Syncer
 			logger.Error("MAIL log subject=%q: %v", subject, lerr)
 		}
 	}
+	a.OnNewDevice = func(uid int64) { nt.Send(uid, "login_new_device", "/settings?tab=account", nil) }
 	app := &App{
 		Cfg: cfg, Store: st, Auth: a, Sync: sy, TMDB: tm, Mail: ml, I18n: bundle, Notif: nt, Bot: bot, Media: md,
 		mfaLimit:     auth.NewLimiter(8, 10*time.Minute),

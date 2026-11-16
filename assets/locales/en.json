@@ -949,7 +949,15 @@
     "prev": "Previous",
     "next": "Next",
     "close": "Close",
-    "load_failed": "Could not load notifications. Try again shortly."
+    "load_failed": "Could not load notifications. Try again shortly.",
+    "login_new_device": {
+      "title": "New sign-in",
+      "body": "Your account was signed in from a device we have not seen before. If this was not you, secure your account immediately."
+    },
+    "session_revoked": {
+      "title": "Signed out everywhere",
+      "body": "All sessions on your account were signed out. If this was not you, secure your account immediately."
+    }
   },
   "profile": {
     "bio": "Bio",

@@ -43,8 +43,24 @@ func (a *App) twoFAMethods(u *store.User) (twofa.Prefs, []twofa.Method, error) {
 	return p, p.Enabled(u.TOTPEnabled, p.Telegram && twoFAChat(u) != 0 && a.Bot.Configured()), nil
 }
 
-func (a *App) twoFARequired(u *store.User, via twofa.Via) (bool, error) {
+func (a *App) twoFASignInMethods(u *store.User) (twofa.Prefs, []twofa.Method, error) {
 	p, enabled, err := a.twoFAMethods(u)
+	if err != nil {
+		return p, enabled, err
+	}
+	n, err := a.Store.CountPasskeys(u.ID)
+	if err != nil {
+		logger.Error("AUTH 2fa passkey count uid=%d: %v", u.ID, err)
+		return p, enabled, nil
+	}
+	if n > 0 {
+		enabled = append(enabled, twofa.MethodPasskey)
+	}
+	return p, enabled, nil
+}
+
+func (a *App) twoFARequired(u *store.User, via twofa.Via) (bool, error) {
+	p, enabled, err := a.twoFASignInMethods(u)
 	if err != nil {
 		return false, err
 	}
@@ -108,7 +124,7 @@ func (a *App) loadTwoFAStep(r *http.Request) (*twoFAStep, error) {
 	if u.IsDeactivated && !u.SelfDeactivated {
 		return nil, apiErr{http.StatusForbidden, "err.deactivated"}
 	}
-	prefs, enabled, err := a.twoFAMethods(u)
+	prefs, enabled, err := a.twoFASignInMethods(u)
 	if err != nil {
 		logger.Error("AUTH 2fa_step prefs uid=%d: %v", uid, err)
 		return nil, err
@@ -151,6 +167,7 @@ func (a *App) pageMFA(w http.ResponseWriter, r *http.Request) {
 		"TOTP":     s.has(twofa.MethodTOTP) && !s.done[twofa.MethodTOTP],
 		"Telegram": s.has(twofa.MethodTelegram) && !s.done[twofa.MethodTelegram],
 		"Email":    s.has(twofa.MethodEmail) && !s.done[twofa.MethodEmail],
+		"Passkey":  s.has(twofa.MethodPasskey) && !s.done[twofa.MethodPasskey],
 	})
 }
 

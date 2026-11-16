@@ -271,5 +271,6 @@ func (a *App) apiLogoutEverywhere(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.Auth.ClearCookies(w)
+	a.Notif.Send(u.ID, "session_revoked", "/settings?tab=account", nil)
 	a.okJSON(w, map[string]any{"redirect": "/login"})
 }

@@ -66,6 +66,8 @@ var Events = map[string]Event{
 	"twofa_enabled":          {"twofa_enabled", "security"},
 	"twofa_disabled":         {"twofa_disabled", "security"},
 	"telegram_linked":        {"telegram_linked", "security"},
+	"login_new_device":       {"login_new_device", "security"},
+	"session_revoked":        {"session_revoked", "security"},
 	"passkey_added":          {"passkey_added", "security"},
 	"telegram_dropped":       {"telegram_dropped", "system"},
 	"abuse_report":           {"abuse_report", "moderation"},

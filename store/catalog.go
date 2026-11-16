@@ -101,23 +101,6 @@ func (s *Store) ShowByName(name string) (*Show, error) {
 	return scanShow(s.DB.QueryRow(`SELECT `+showCols+` FROM shows WHERE name = ? COLLATE NOCASE OR original_name = ? COLLATE NOCASE ORDER BY vote_count DESC LIMIT 1`, name, name))
 }
 
-func (s *Store) SearchLocal(q string, limit int) ([]Show, error) {
-	rows, err := s.DB.Query(`SELECT `+showCols+` FROM shows WHERE name LIKE ? ESCAPE '\' ORDER BY vote_count DESC LIMIT ?`, "%"+escapeLike(q)+"%", limit)
-	if err != nil {
-		return nil, fmt.Errorf("search local shows q=%q: %w", q, err)
-	}
-	defer rows.Close()
-	var out []Show
-	for rows.Next() {
-		sh, err := scanShow(rows)
-		if err != nil {
-			return nil, fmt.Errorf("scan local show: %w", err)
-		}
-		out = append(out, *sh)
-	}
-	return out, rows.Err()
-}
-
 func escapeLike(q string) string {
 	out := make([]byte, 0, len(q))
 	for i := 0; i < len(q); i++ {
@@ -358,6 +341,7 @@ func (s *Store) SaveShow(sh *Show, seasons []SeasonInput) (int64, error) {
 		return 0, fmt.Errorf("commit save show tmdb=%d: %w", sh.TMDBID, err)
 	}
 	s.refreshUpNextShow(showID)
+	s.reindexShow(showID)
 	return showID, nil
 }
 

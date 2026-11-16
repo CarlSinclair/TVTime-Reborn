@@ -146,6 +146,24 @@ func main() {
 	}
 	go st.RunUpNextMaintenance(ctx)
 	go sy.Run(ctx)
+	go func() {
+		reconcile := func() {
+			if err := st.ReconcileShowIndex(); err != nil {
+				logger.Warn("show search index reconcile: %v", err)
+			}
+		}
+		reconcile()
+		tick := time.NewTicker(24 * time.Hour)
+		defer tick.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-tick.C:
+				reconcile()
+			}
+		}
+	}()
 	go sy.RunYouTube(ctx)
 	nt.Start(ctx)
 	go nt.RunJobs(ctx)

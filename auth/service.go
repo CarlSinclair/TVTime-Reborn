@@ -47,6 +47,8 @@ type Service struct {
 	Sessions  *session.Manager
 	Refresher *session.Refresher
 	pk        *passkeyState
+
+	OnNewDevice func(userID int64)
 }
 
 func New(st *store.Store, secret string, secure bool) *Service {
@@ -200,10 +202,24 @@ func (s *Service) ClearCookies(w http.ResponseWriter) {
 	s.setField(w, fieldRefresh, "")
 }
 
-func (s *Service) storeRefresh(tx *sql.Tx, userID int64, sid, raw string, exp time.Time) error {
-	_, err := tx.Exec(`INSERT INTO refresh_tokens (user_id, sid, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)`,
-		userID, sid, hashToken(raw), store.Ts(exp), store.Now())
+func (s *Service) storeRefresh(tx *sql.Tx, userID int64, sid, device, raw string, exp time.Time) error {
+	_, err := tx.Exec(`INSERT INTO refresh_tokens (user_id, sid, device, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+		userID, sid, device, hashToken(raw), store.Ts(exp), store.Now())
 	return err
+}
+
+func (s *Service) unseenDevice(userID int64, device string) bool {
+	if device == "" {
+		return false
+	}
+	var total, same int
+	err := s.Store.DB.QueryRow(`SELECT COUNT(*), COALESCE(SUM(device = ?), 0) FROM refresh_tokens WHERE user_id = ? AND sid <> '' AND superseded_at IS NULL AND expires_at > ?`,
+		device, userID, store.Now()).Scan(&total, &same)
+	if err != nil {
+		logger.Error("AUTH new-device check failed uid=%d err=%v", userID, err)
+		return false
+	}
+	return total > 0 && same == 0
 }
 
 func (s *Service) StartSession(w http.ResponseWriter, userID int64) error {
@@ -228,7 +244,9 @@ func (s *Service) StartSessionFor(w http.ResponseWriter, r *http.Request, userID
 	if err != nil {
 		return fmt.Errorf("session id uid=%d: %w", userID, err)
 	}
-	refresh, err := s.signSessionToken(userID, "refresh", RefreshTokenDuration, sid, deviceTag(r))
+	device := deviceTag(r)
+	newDevice := s.unseenDevice(userID, device)
+	refresh, err := s.signSessionToken(userID, "refresh", RefreshTokenDuration, sid, device)
 	if err != nil {
 		return fmt.Errorf("sign refresh uid=%d: %w", userID, err)
 	}
@@ -241,7 +259,7 @@ func (s *Service) StartSessionFor(w http.ResponseWriter, r *http.Request, userID
 		return fmt.Errorf("begin session uid=%d: %w", userID, err)
 	}
 	defer tx.Rollback()
-	if err := s.storeRefresh(tx, userID, sid, refresh, time.Now().Add(RefreshTokenDuration)); err != nil {
+	if err := s.storeRefresh(tx, userID, sid, device, refresh, time.Now().Add(RefreshTokenDuration)); err != nil {
 		return fmt.Errorf("store refresh uid=%d: %w", userID, err)
 	}
 	if _, err := tx.Exec(`DELETE FROM refresh_tokens WHERE user_id = ? AND (expires_at < ? OR (superseded_at IS NOT NULL AND superseded_at < ?))`,
@@ -253,6 +271,9 @@ func (s *Service) StartSessionFor(w http.ResponseWriter, r *http.Request, userID
 	}
 	s.setField(w, fieldAccess, access)
 	s.setField(w, fieldRefresh, refresh)
+	if newDevice && s.OnNewDevice != nil {
+		s.OnNewDevice(userID)
+	}
 	return nil
 }
 
