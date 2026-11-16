@@ -119,7 +119,7 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/auth/verify/consume", a.apiVerifyConsume)
 	mux.HandleFunc("POST /api/auth/magic/consume", a.apiMagicConsume)
 	mux.HandleFunc("POST /api/auth/reset/consume", a.apiResetConsume)
-	mux.HandleFunc("GET /api/auth/reset/code", a.apiResetCode)
+	mux.HandleFunc("GET /api/auth/forgot/code", a.apiResetCode)
 	mux.HandleFunc("POST /api/auth/2fa", a.apiMFAVerify)
 	mux.HandleFunc("GET /api/auth/2fa/telegram/start", a.apiTwoFATelegramStart)
 	mux.HandleFunc("GET /api/auth/2fa/telegram/poll", a.apiTwoFATelegramPoll)

@@ -6,12 +6,9 @@
     <input type="hidden" name="token" value="{{.Data.Token}}">
     {{if eq .Data.Purpose "reset"}}
     <label>{{.T "settings.new_password"}}<input type="password" name="password" autocomplete="new-password" minlength="8" maxlength="72" data-pw-rules required></label>
-    <label>{{.T "mfa.reset_label"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="32"></label>
-    <button class="btn ghost" type="button" data-forgot-send="/api/auth/reset/code?token={{.Data.Token}}" data-text-sent="{{.T "mfa.reset_sent"}}" data-text-wait="{{.T "mfa.email_wait"}}" data-text-failed="{{.T "mfa.tg_failed"}}">{{.T "mfa.reset_send"}}</button>
     {{end}}
     <p class="form-error" role="alert" hidden></p>
     <button class="btn" type="submit">{{.T "token.continue"}}</button>
   </form>
 </section>
-<script src="/static/twofa/confirm.js" data-cancel-class="btn ghost" defer></script>
 {{end}}

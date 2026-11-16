@@ -153,7 +153,7 @@ func (a *App) apiForgot(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) emailLinkRequest(w http.ResponseWriter, r *http.Request, purpose string) {
-	var in struct{ Email string }
+	var in struct{ Email, Code string }
 	if err := decode(r, &in); err != nil {
 		a.fail(w, r, err)
 		return
@@ -188,6 +188,13 @@ func (a *App) emailLinkRequest(w http.ResponseWriter, r *http.Request, purpose s
 	if u.IsDeactivated && !u.SelfDeactivated {
 		a.okJSON(w, nil)
 		return
+	}
+	if purpose == auth.PurposeReset {
+		if err := a.resetSecondFactor(u.ID, in.Code); err != nil {
+			logger.Warn("AUTH password reset link withheld uid=%d: %v", u.ID, err)
+			a.okJSON(w, nil)
+			return
+		}
 	}
 	if err := a.sendLink(u, purpose); err != nil {
 		a.fail(w, r, err)
@@ -296,44 +303,10 @@ func (a *App) apiMagicConsume(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) apiResetConsume(w http.ResponseWriter, r *http.Request) {
-	var in struct{ Token, Password, Code string }
-	if err := decode(r, &in); err != nil {
-		a.fail(w, r, err)
+	uid, pw, ok := a.consume(w, r, auth.PurposeReset)
+	if !ok {
 		return
 	}
-	if err := a.allow(a.authLimit, "tok:"+auth.ClientIP(r)); err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	if err := auth.ValidPassword(in.Password); err != nil {
-		a.fail(w, r, apiErr{http.StatusBadRequest, "err.weak_password"})
-		return
-	}
-	peekUID, err := a.Auth.PeekEmailToken(in.Token, auth.PurposeReset)
-	if err != nil {
-		if errors.Is(err, auth.ErrBadToken) {
-			a.fail(w, r, apiErr{http.StatusBadRequest, "err.link_invalid"})
-		} else {
-			logger.Error("AUTH password reset token lookup failed: %v", err)
-			a.fail(w, r, err)
-		}
-		return
-	}
-	if err := a.resetSecondFactor(peekUID, in.Code); err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	uid, err := a.Auth.ConsumeEmailToken(in.Token, auth.PurposeReset)
-	if err != nil {
-		if errors.Is(err, auth.ErrBadToken) {
-			a.fail(w, r, apiErr{http.StatusBadRequest, "err.link_invalid"})
-		} else {
-			logger.Error("AUTH password reset token consume failed uid=%d: %v", peekUID, err)
-			a.fail(w, r, err)
-		}
-		return
-	}
-	pw := in.Password
 	hash, err := auth.HashPassword(pw)
 	if err != nil {
 		a.fail(w, r, err)

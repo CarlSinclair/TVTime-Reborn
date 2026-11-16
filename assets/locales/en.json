@@ -860,9 +860,6 @@
       "body": "Season {season} is out now ({count} episodes).",
       "title": "New season: {show}"
     },
-    "mark_all": "Mark all read",
-    "newer": "Newer",
-    "older": "Older",
     "password_changed": {
       "body": "Your password was changed. If this was not you, secure your account immediately.",
       "title": "Password changed"
@@ -901,7 +898,6 @@
       "body": "Two-step verification is now on for your account.",
       "title": "Two-step verification on"
     },
-    "view_all": "View all",
     "passkey_added": {
       "title": "Passkey added",
       "body": "A new passkey was added to your account. If this was not you, secure your account immediately."

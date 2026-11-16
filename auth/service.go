@@ -365,19 +365,6 @@ func (s *Service) IssueEmailToken(userID int64, purpose string) (string, error) 
 
 // ConsumeEmailToken atomically marks a token used; two concurrent submissions
 // of the same link cannot both succeed.
-func (s *Service) PeekEmailToken(raw, purpose string) (int64, error) {
-	var uid int64
-	err := s.Store.DB.QueryRow(`SELECT user_id FROM email_tokens WHERE token_hash = ? AND purpose = ? AND used_at IS NULL AND expires_at > ?`,
-		hashToken(raw), purpose, store.Now()).Scan(&uid)
-	if errors.Is(err, sql.ErrNoRows) {
-		return 0, ErrBadToken
-	}
-	if err != nil {
-		return 0, fmt.Errorf("peek email token purpose=%s: %w", purpose, err)
-	}
-	return uid, nil
-}
-
 func (s *Service) ConsumeEmailToken(raw, purpose string) (int64, error) {
 	h := hashToken(raw)
 	res, err := s.Store.DB.Exec(`UPDATE email_tokens SET used_at = ? WHERE token_hash = ? AND purpose = ? AND used_at IS NULL AND expires_at > ?`,

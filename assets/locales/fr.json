@@ -836,9 +836,6 @@
       "body": "La saison {season} est disponible ({count} épisodes).",
       "title": "Nouvelle saison : {show}"
     },
-    "mark_all": "Tout marquer comme lu",
-    "newer": "Plus récentes",
-    "older": "Plus anciennes",
     "password_changed": {
       "body": "Votre mot de passe a été modifié. Si ce n'était pas vous, sécurisez immédiatement votre compte.",
       "title": "Mot de passe modifié"
@@ -877,7 +874,6 @@
       "body": "La vérification en deux étapes est maintenant active sur votre compte.",
       "title": "Vérification en deux étapes activée"
     },
-    "view_all": "Tout voir",
     "passkey_added": {
       "title": "Passkey ajoutée",
       "body": "Une nouvelle passkey a été ajoutée à votre compte. Si ce n'était pas vous, sécurisez immédiatement votre compte."
