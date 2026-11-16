@@ -791,7 +791,10 @@
     "email_sent": "Nous avons envoyé un code à 6 chiffres à votre adresse e-mail.",
     "email_wait": "Un code a été envoyé il y a un instant. Patientez quelques secondes avant d'en demander un autre.",
     "email_failed": "Impossible d'envoyer l'e-mail. Utilisez une autre méthode.",
-    "email_label": "Code par e-mail"
+    "email_label": "Code par e-mail",
+    "reset_label": "Code de vérification (uniquement si vous utilisez la vérification en deux étapes)",
+    "reset_send": "Envoyer un code sur mon Telegram",
+    "reset_sent": "Si Telegram est connecté, un code y a été envoyé."
   },
   "notif": {
     "abuse_report": {
@@ -804,7 +807,8 @@
       "moderation": "Modération",
       "security": "Sécurité",
       "social": "Réponses",
-      "system": "Système"
+      "system": "Système",
+      "other": "Autre"
     },
     "categories": "Sujets des notifications",
     "ch": {
@@ -918,7 +922,14 @@
     "user_report": {
       "title": "Nouveau signalement de profil",
       "body": "{user} a signalé un profil. Examinez-le dans la file de modération."
-    }
+    },
+    "history": "Historique",
+    "back": "Retour",
+    "mark_group": "Marquer le groupe comme lu",
+    "prev": "Précédent",
+    "next": "Suivant",
+    "close": "Fermer",
+    "load_failed": "Impossible de charger les notifications. Réessayez plus tard."
   },
   "profile": {
     "bio": "Bio",
@@ -979,7 +990,8 @@
     "tfa_deny": "Refuser",
     "tfa_approved": "Approuvé. Vous pouvez revenir à la page de connexion.",
     "tfa_denied": "Refusé. Si ce n'était pas vous, changez votre mot de passe.",
-    "tfa_stale": "Cette demande a expiré ou a déjà reçu une réponse."
+    "tfa_stale": "Cette demande a expiré ou a déjà reçu une réponse.",
+    "reset_code": "Votre code de réinitialisation du mot de passe {app} est {code}. Si vous n'avez pas demandé de réinitialisation, ignorez ce message."
   },
   "privacy": {
     "title": "Politique de confidentialité",

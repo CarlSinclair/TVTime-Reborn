@@ -791,7 +791,10 @@
     "email_sent": "Enviamos um código de 6 dígitos para o seu endereço de e-mail.",
     "email_wait": "Um código foi enviado há pouco. Aguarde alguns segundos antes de pedir outro.",
     "email_failed": "Não foi possível enviar o e-mail. Use outro método.",
-    "email_label": "Código por e-mail"
+    "email_label": "Código por e-mail",
+    "reset_label": "Código de verificação (somente se você usa verificação em duas etapas)",
+    "reset_send": "Enviar um código para o meu Telegram",
+    "reset_sent": "Se o Telegram estiver conectado, um código foi enviado a ele."
   },
   "notif": {
     "abuse_report": {
@@ -804,7 +807,8 @@
       "moderation": "Moderação",
       "security": "Segurança",
       "social": "Respostas",
-      "system": "Sistema"
+      "system": "Sistema",
+      "other": "Outros"
     },
     "categories": "Sobre o que ser notificado",
     "ch": {
@@ -918,7 +922,14 @@
     "user_report": {
       "title": "Nova denúncia de perfil",
       "body": "{user} denunciou um perfil. Revise na fila de moderação."
-    }
+    },
+    "history": "Histórico",
+    "back": "Voltar",
+    "mark_group": "Marcar grupo como lido",
+    "prev": "Anterior",
+    "next": "Próximo",
+    "close": "Fechar",
+    "load_failed": "Não foi possível carregar as notificações. Tente novamente em instantes."
   },
   "profile": {
     "bio": "Bio",
@@ -979,7 +990,8 @@
     "tfa_deny": "Negar",
     "tfa_approved": "Aprovado. Você já pode voltar à página de login.",
     "tfa_denied": "Negado. Se não foi você, altere sua senha.",
-    "tfa_stale": "Esta solicitação expirou ou já foi respondida."
+    "tfa_stale": "Esta solicitação expirou ou já foi respondida.",
+    "reset_code": "Seu código para redefinir a senha do {app} é {code}. Se você não pediu a redefinição, ignore esta mensagem."
   },
   "privacy": {
     "title": "Política de privacidade",

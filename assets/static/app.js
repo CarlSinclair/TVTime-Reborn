@@ -1628,78 +1628,16 @@
     }
   });
 
-  const bell = document.getElementById("bell");
-  if (bell) {
-    const badge = document.getElementById("bell-badge");
-    const menu = document.getElementById("bell-menu");
-    const list = document.getElementById("bell-list");
-    const setUnread = (n) => {
-      badge.textContent = n > 99 ? "99+" : String(n);
-      badge.hidden = n <= 0;
-    };
-    const renderItems = (items) => {
-      list.textContent = "";
-      if (items.length === 0) {
-        const li = document.createElement("li");
-        li.className = "muted pad";
-        li.textContent = t("notif_empty");
-        list.appendChild(li);
-        return;
-      }
-      items.forEach((n) => {
-        const li = document.createElement("li");
-        if (!n.read) li.className = "unread";
-        const a = document.createElement("a");
-        a.href = n.open;
-        const title = document.createElement("strong");
-        title.textContent = n.title;
-        a.appendChild(title);
-        if (n.body) {
-          const body = document.createElement("span");
-          body.textContent = n.body;
-          a.appendChild(body);
-        }
-        const time = document.createElement("time");
-        time.textContent = localTime(n.created_at);
-        a.appendChild(time);
-        li.appendChild(a);
-        if (n.friend) {
-          const actions = document.createElement("span");
-          actions.className = "notif-actions";
-          actions.setAttribute("data-friend-box", "");
-          friendControls(n.friend, "incoming").forEach((b) => actions.appendChild(b));
-          li.appendChild(actions);
-        }
-        list.appendChild(li);
-      });
-    };
-    const load = async () => {
-      try {
-        const data = await api("/api/notifications/recent", null, "GET");
-        setUnread(data.unread);
-        renderItems(data.items);
-      } catch (err) {
-        toast(err.message, "error");
-      }
-    };
-    bell.addEventListener("click", () => {
-      const open = menu.hidden;
-      menu.hidden = !open;
-      bell.setAttribute("aria-expanded", open ? "true" : "false");
-      if (open) load();
-    });
-    document.addEventListener("click", (event) => {
-      if (!event.target.closest(".bell-wrap")) {
-        menu.hidden = true;
-        bell.setAttribute("aria-expanded", "false");
-      }
-    });
-    document.getElementById("bell-read-all").addEventListener("click", async () => {
-      const data = await run(null, () => api("/api/notifications/read-all"));
-      if (data) {
-        setUnread(0);
-        load();
-      }
+  if (document.querySelector("[data-notifykit]")) {
+    const refreshBell = () => window.dispatchEvent(new Event("notifykit:refresh"));
+    window.addEventListener("notifykit:item", (event) => {
+      const { item, row } = event.detail;
+      if (!item.extra || !item.extra.friend) return;
+      const actions = document.createElement("span");
+      actions.className = "notif-actions";
+      actions.setAttribute("data-friend-box", "");
+      friendControls(item.extra.friend, "incoming").forEach((b) => actions.appendChild(b));
+      row.appendChild(actions);
     });
     if (window.EventSource) {
       const source = new EventSource("/api/notifications/stream");
@@ -1711,15 +1649,14 @@
           console.error("bad notification event", err);
           return;
         }
-        setUnread(msg.unread_count);
-        toast(msg.title + (msg.body ? " - " + msg.body : ""), "", msg.link || "/notifications");
-        if (!menu.hidden) load();
+        toast(msg.title + (msg.body ? " - " + msg.body : ""), "", msg.link || "/");
+        refreshBell();
       });
       source.onerror = () => console.warn("notification stream interrupted, browser will retry");
     }
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.addEventListener("message", (event) => {
-        if (event.data && event.data.type === "tvt-badge" && typeof event.data.unreadCount === "number") setUnread(event.data.unreadCount);
+        if (event.data && event.data.type === "tvt-badge") refreshBell();
       });
     }
   }
@@ -2460,8 +2397,6 @@
     document.querySelectorAll("dialog[open]").forEach((dlg) => dlg.close());
     const menu = document.getElementById("account-menu");
     if (menu) menu.open = false;
-    const bellMenu = document.getElementById("bell-menu");
-    if (bellMenu) bellMenu.hidden = true;
     clearInterval(tgPoll);
     document.title = doc.title;
     const main = document.querySelector("main.container");

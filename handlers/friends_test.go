@@ -196,19 +196,22 @@ func TestProfileActionsAndNotificationButtons(t *testing.T) {
 	}
 	alice.post("/api/friends/request", map[string]string{"username": "bobby"})
 
-	_, notes := bob.get("/notifications")
-	if !strings.Contains(notes, `data-friend-accept="alice"`) || !strings.Contains(notes, `data-friend-decline="alice"`) {
-		t.Fatalf("the request notification must carry accept and decline buttons")
-	}
-	recent := bob.getJSON("/api/notifications/recent")
+	recent := bob.getJSON("/notifications/summary")
 	items, _ := recent["items"].([]any)
-	if len(items) == 0 || items[0].(map[string]any)["friend"] != "alice" {
+	if len(items) == 0 {
+		t.Fatalf("the bell must list the request: %v", recent)
+	}
+	extra, _ := items[0].(map[string]any)["extra"].(map[string]any)
+	if extra["friend"] != "alice" {
 		t.Fatalf("the bell data must name the requester: %v", recent)
 	}
 	bob.post("/api/friends/respond", map[string]any{"username": "alice", "accept": true})
-	_, notes = bob.get("/notifications")
-	if strings.Contains(notes, "data-friend-accept") {
-		t.Fatalf("the buttons must disappear once answered")
+	after := bob.getJSON("/notifications/list?category=social")
+	listed, _ := after["items"].([]any)
+	for _, it := range listed {
+		if e, _ := it.(map[string]any)["extra"].(map[string]any); e["friend"] != nil {
+			t.Fatalf("the buttons must disappear once answered: %v", after)
+		}
 	}
 	_, page = alice.get("/u/bobby")
 	if !strings.Contains(page, `data-friend-remove="bobby"`) || strings.Contains(page, `data-friend-add="bobby"`) {

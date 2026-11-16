@@ -791,7 +791,10 @@
     "email_sent": "Abbiamo inviato un codice di 6 cifre al tuo indirizzo email.",
     "email_wait": "Un codice è stato inviato poco fa. Attendi qualche secondo prima di richiederne un altro.",
     "email_failed": "Impossibile inviare l'email. Usa un altro metodo.",
-    "email_label": "Codice via email"
+    "email_label": "Codice via email",
+    "reset_label": "Codice di verifica (solo se usi la verifica in due passaggi)",
+    "reset_send": "Invia un codice al mio Telegram",
+    "reset_sent": "Se Telegram è collegato, vi è stato inviato un codice."
   },
   "notif": {
     "abuse_report": {
@@ -804,7 +807,8 @@
       "moderation": "Moderazione",
       "security": "Sicurezza",
       "social": "Risposte",
-      "system": "Sistema"
+      "system": "Sistema",
+      "other": "Altro"
     },
     "categories": "Di cosa essere avvisati",
     "ch": {
@@ -918,7 +922,14 @@
     "user_report": {
       "title": "Nuova segnalazione di profilo",
       "body": "{user} ha segnalato un profilo. Controllalo nella coda di moderazione."
-    }
+    },
+    "history": "Cronologia",
+    "back": "Indietro",
+    "mark_group": "Segna gruppo come letto",
+    "prev": "Precedente",
+    "next": "Successiva",
+    "close": "Chiudi",
+    "load_failed": "Impossibile caricare le notifiche. Riprova più tardi."
   },
   "profile": {
     "bio": "Bio",
@@ -979,7 +990,8 @@
     "tfa_deny": "Rifiuta",
     "tfa_approved": "Approvato. Puoi tornare alla pagina di accesso.",
     "tfa_denied": "Rifiutato. Se non sei stato tu, cambia la password.",
-    "tfa_stale": "Questa richiesta è scaduta o ha già ricevuto risposta."
+    "tfa_stale": "Questa richiesta è scaduta o ha già ricevuto risposta.",
+    "reset_code": "Il tuo codice per reimpostare la password di {app} è {code}. Se non hai richiesto la reimpostazione, ignora questo messaggio."
   },
   "privacy": {
     "title": "Informativa sulla privacy",

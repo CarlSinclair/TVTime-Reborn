@@ -296,10 +296,44 @@ func (a *App) apiMagicConsume(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) apiResetConsume(w http.ResponseWriter, r *http.Request) {
-	uid, pw, ok := a.consume(w, r, auth.PurposeReset)
-	if !ok {
+	var in struct{ Token, Password, Code string }
+	if err := decode(r, &in); err != nil {
+		a.fail(w, r, err)
 		return
 	}
+	if err := a.allow(a.authLimit, "tok:"+auth.ClientIP(r)); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	if err := auth.ValidPassword(in.Password); err != nil {
+		a.fail(w, r, apiErr{http.StatusBadRequest, "err.weak_password"})
+		return
+	}
+	peekUID, err := a.Auth.PeekEmailToken(in.Token, auth.PurposeReset)
+	if err != nil {
+		if errors.Is(err, auth.ErrBadToken) {
+			a.fail(w, r, apiErr{http.StatusBadRequest, "err.link_invalid"})
+		} else {
+			logger.Error("AUTH password reset token lookup failed: %v", err)
+			a.fail(w, r, err)
+		}
+		return
+	}
+	if err := a.resetSecondFactor(peekUID, in.Code); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	uid, err := a.Auth.ConsumeEmailToken(in.Token, auth.PurposeReset)
+	if err != nil {
+		if errors.Is(err, auth.ErrBadToken) {
+			a.fail(w, r, apiErr{http.StatusBadRequest, "err.link_invalid"})
+		} else {
+			logger.Error("AUTH password reset token consume failed uid=%d: %v", peekUID, err)
+			a.fail(w, r, err)
+		}
+		return
+	}
+	pw := in.Password
 	hash, err := auth.HashPassword(pw)
 	if err != nil {
 		a.fail(w, r, err)

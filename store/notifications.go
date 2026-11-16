@@ -81,14 +81,6 @@ func (s *Store) NotificationByID(userID, id int64) (*Notification, error) {
 	return &n, nil
 }
 
-func (s *Store) CountNotifications(userID int64) (int, error) {
-	var n int
-	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM notifications WHERE user_id = ?`, userID).Scan(&n); err != nil {
-		return 0, fmt.Errorf("count notifications uid=%d: %w", userID, err)
-	}
-	return n, nil
-}
-
 func (s *Store) UnreadCount(userID int64) (int, error) {
 	var n int
 	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read = 0`, userID).Scan(&n); err != nil {
@@ -108,11 +100,69 @@ func (s *Store) MarkNotificationRead(userID, id int64) error {
 	return nil
 }
 
-func (s *Store) MarkAllNotificationsRead(userID int64) error {
-	if _, err := s.DB.Exec(`UPDATE notifications SET read = 1 WHERE user_id = ? AND read = 0`, userID); err != nil {
-		return fmt.Errorf("mark all notifications read uid=%d: %w", userID, err)
+type NotificationCount struct {
+	Category string
+	Total    int
+	Unread   int
+}
+
+func (s *Store) NotificationCounts(userID int64) ([]NotificationCount, error) {
+	rows, err := s.DB.Query(`SELECT COALESCE(NULLIF(category, ''), 'other'), COUNT(*), COALESCE(SUM(CASE WHEN read = 0 THEN 1 ELSE 0 END), 0) FROM notifications WHERE user_id = ? GROUP BY 1`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("notification counts uid=%d: %w", userID, err)
 	}
-	return nil
+	defer rows.Close()
+	var out []NotificationCount
+	for rows.Next() {
+		var c NotificationCount
+		if err := rows.Scan(&c.Category, &c.Total, &c.Unread); err != nil {
+			return nil, fmt.Errorf("scan notification counts uid=%d: %w", userID, err)
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) NotificationsFiltered(userID int64, category string, unreadOnly bool, limit, offset int) ([]Notification, int, error) {
+	where := `user_id = ?`
+	args := []any{userID}
+	if category != "" {
+		where += ` AND COALESCE(NULLIF(category, ''), 'other') = ?`
+		args = append(args, category)
+	}
+	if unreadOnly {
+		where += ` AND read = 0`
+	}
+	var total int
+	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM notifications WHERE `+where, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count notifications uid=%d category=%q: %w", userID, category, err)
+	}
+	rows, err := s.DB.Query(`SELECT `+notifCols+` FROM notifications WHERE `+where+` ORDER BY id DESC LIMIT ? OFFSET ?`, append(args, limit, offset)...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list notifications uid=%d category=%q: %w", userID, category, err)
+	}
+	defer rows.Close()
+	var out []Notification
+	for rows.Next() {
+		n, err := scanNotification(rows)
+		if err != nil {
+			return nil, 0, err
+		}
+		out = append(out, n)
+	}
+	return out, total, rows.Err()
+}
+
+func (s *Store) MarkCategoryRead(userID int64, category string) (int64, error) {
+	res, err := s.DB.Exec(`UPDATE notifications SET read = 1 WHERE user_id = ? AND read = 0 AND COALESCE(NULLIF(category, ''), 'other') = ?`, userID, category)
+	if err != nil {
+		return 0, fmt.Errorf("mark category read uid=%d category=%s: %w", userID, category, err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("mark category read rows uid=%d category=%s: %w", userID, category, err)
+	}
+	return n, nil
 }
 
 func (s *Store) PruneNotifications(olderThan time.Time) (int64, error) {

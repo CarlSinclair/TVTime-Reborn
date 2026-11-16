@@ -92,7 +92,10 @@ func (a *App) registerAPIV1(mux *http.ServeMux) {
 	reg.Handle(apikit.Op{Method: http.MethodPost, Path: "/api/v1/watches", Scope: apiScopeWatchWrite, Summary: "Mark an episode watched. Identify it by tmdb_id + season + episode, by title + season + episode (exact title only), or by youtube_video_id. Following the show is implied.", Tag: "Watches",
 		Request: apiWatchIn{}, Response: apiWatchOut{}, Status: http.StatusCreated, Tool: "mark_watched"}, a.apiV1Watch)
 	reg.CheckScopes(apiScopes)
-	mux.Handle("/mcp", &mcpkit.Server{Name: "tvt-tracker", Version: "1.0.0", Tools: reg.MCPTools(), Visible: a.apiAuth.MCPVisible()})
+	mcpServer := &mcpkit.Server{Name: "tvt-tracker", Version: "1.0.0", Tools: reg.MCPTools(), Visible: a.apiAuth.MCPVisible()}
+	for _, m := range []string{"GET", "POST", "DELETE", "OPTIONS"} {
+		mux.Handle(m+" /mcp", mcpServer)
+	}
 	mux.Handle("GET /api/v1/openapi.json", reg.SpecHandler("TVT API", "1.0.0"))
 }
 

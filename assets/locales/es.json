@@ -791,7 +791,10 @@
     "email_sent": "Enviamos un código de 6 dígitos a tu dirección de correo electrónico.",
     "email_wait": "Se envió un código hace un momento. Espera unos segundos antes de pedir otro.",
     "email_failed": "No se pudo enviar el correo. Usa otro método.",
-    "email_label": "Código por correo"
+    "email_label": "Código por correo",
+    "reset_label": "Código de verificación (solo si usas verificación en dos pasos)",
+    "reset_send": "Enviar un código a mi Telegram",
+    "reset_sent": "Si Telegram está conectado, se le envió un código."
   },
   "notif": {
     "abuse_report": {
@@ -804,7 +807,8 @@
       "moderation": "Moderación",
       "security": "Seguridad",
       "social": "Respuestas",
-      "system": "Sistema"
+      "system": "Sistema",
+      "other": "Otros"
     },
     "categories": "Sobre qué recibir avisos",
     "ch": {
@@ -918,7 +922,14 @@
     "user_report": {
       "title": "Nueva denuncia de perfil",
       "body": "{user} denunció un perfil. Revísalo en la cola de moderación."
-    }
+    },
+    "history": "Historial",
+    "back": "Atrás",
+    "mark_group": "Marcar grupo como leído",
+    "prev": "Anterior",
+    "next": "Siguiente",
+    "close": "Cerrar",
+    "load_failed": "No se pudieron cargar las notificaciones. Inténtalo de nuevo en breve."
   },
   "profile": {
     "bio": "Biografía",
@@ -979,7 +990,8 @@
     "tfa_deny": "Rechazar",
     "tfa_approved": "Aprobado. Puedes volver a la página de inicio de sesión.",
     "tfa_denied": "Rechazado. Si no fuiste tú, cambia tu contraseña.",
-    "tfa_stale": "Esta solicitud expiró o ya fue respondida."
+    "tfa_stale": "Esta solicitud expiró o ya fue respondida.",
+    "reset_code": "Tu código para restablecer la contraseña de {app} es {code}. Si no pediste el restablecimiento, ignora este mensaje."
   },
   "privacy": {
     "title": "Política de privacidad",

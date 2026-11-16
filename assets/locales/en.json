@@ -815,7 +815,10 @@
     "email_sent": "We sent a 6-digit code to your email address.",
     "email_wait": "A code was sent a moment ago. Wait a few seconds before asking for another.",
     "email_failed": "Could not send the email. Use another method.",
-    "email_label": "Email code"
+    "email_label": "Email code",
+    "reset_label": "Verification code (only if you use two-step verification)",
+    "reset_send": "Send a code to my Telegram",
+    "reset_sent": "If Telegram is connected, a code was sent to it."
   },
   "notif": {
     "abuse_report": {
@@ -828,7 +831,8 @@
       "moderation": "Moderation",
       "security": "Security",
       "social": "Replies",
-      "system": "System"
+      "system": "System",
+      "other": "Other"
     },
     "categories": "What to be notified about",
     "ch": {
@@ -942,7 +946,14 @@
     "user_report": {
       "title": "New profile report",
       "body": "{user} reported a profile. Review it in the moderation queue."
-    }
+    },
+    "history": "History",
+    "back": "Back",
+    "mark_group": "Mark group as read",
+    "prev": "Previous",
+    "next": "Next",
+    "close": "Close",
+    "load_failed": "Could not load notifications. Try again shortly."
   },
   "profile": {
     "bio": "Bio",
@@ -1003,7 +1014,8 @@
     "tfa_deny": "Deny",
     "tfa_approved": "Approved. You can go back to the sign-in page.",
     "tfa_denied": "Denied. If this was not you, change your password.",
-    "tfa_stale": "This request expired or was already answered."
+    "tfa_stale": "This request expired or was already answered.",
+    "reset_code": "Your {app} password reset code is {code}. If you did not ask for a reset, ignore this message."
   },
   "privacy": {
     "title": "Privacy policy",

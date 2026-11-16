@@ -791,7 +791,10 @@
     "email_sent": "我们已向您的邮箱地址发送了一个 6 位数验证码。",
     "email_wait": "验证码刚刚已发送。请稍等几秒后再申请新的验证码。",
     "email_failed": "无法发送邮件。请使用其他方式。",
-    "email_label": "邮箱验证码"
+    "email_label": "邮箱验证码",
+    "reset_label": "验证码(仅在使用两步验证时填写)",
+    "reset_send": "向我的 Telegram 发送验证码",
+    "reset_sent": "如果已连接 Telegram,验证码已发送到该处。"
   },
   "notif": {
     "abuse_report": {
@@ -804,7 +807,8 @@
       "moderation": "审核",
       "security": "安全",
       "social": "回复",
-      "system": "系统"
+      "system": "系统",
+      "other": "其他"
     },
     "categories": "通知内容",
     "ch": {
@@ -918,7 +922,14 @@
     "user_report": {
       "title": "新的资料举报",
       "body": "{user} 举报了一个资料。请在审核队列中查看。"
-    }
+    },
+    "history": "历史记录",
+    "back": "返回",
+    "mark_group": "将分组标记为已读",
+    "prev": "上一页",
+    "next": "下一页",
+    "close": "关闭",
+    "load_failed": "无法加载通知，请稍后重试。"
   },
   "profile": {
     "bio": "简介",
@@ -979,7 +990,8 @@
     "tfa_deny": "拒绝",
     "tfa_approved": "已批准。您可以返回登录页面。",
     "tfa_denied": "已拒绝。如果不是您本人操作，请修改密码。",
-    "tfa_stale": "该请求已过期或已被处理。"
+    "tfa_stale": "该请求已过期或已被处理。",
+    "reset_code": "你的 {app} 密码重置验证码是 {code}。如果不是你申请的重置,请忽略此消息。"
   },
   "privacy": {
     "title": "隐私政策",

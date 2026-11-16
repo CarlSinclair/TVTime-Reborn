@@ -124,7 +124,6 @@ type View struct {
 	Title   string
 	Path    string
 	Data    map[string]any
-	Unread  int
 	Friends int
 	// AdminOpen is the number of admin items waiting, shown beside the Admin link.
 	AdminOpen int
@@ -266,11 +265,6 @@ func (a *App) render(w http.ResponseWriter, r *http.Request, name string, status
 	u := auth.UserFrom(r.Context())
 	v := &View{App: a, Lang: a.lang(w, r, u), User: u, CSRF: a.Auth.CSRFToken(w, r), Title: title, Path: r.URL.Path, Data: data}
 	if u != nil {
-		if n, err := a.Store.UnreadCount(u.ID); err != nil {
-			logger.Error("RENDER unread count uid=%d: %v", u.ID, err)
-		} else {
-			v.Unread = n
-		}
 		if n, err := a.Store.PendingFriendCount(u.ID); err != nil {
 			logger.Error("RENDER friend requests uid=%d: %v", u.ID, err)
 		} else {

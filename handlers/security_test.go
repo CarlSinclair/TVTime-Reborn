@@ -338,7 +338,7 @@ func TestNotificationsPreferencesAndPages(t *testing.T) {
 	if n != 1 {
 		t.Fatalf("expected an in-app notification, unread=%d", n)
 	}
-	_, raw := c.get("/api/notifications/recent")
+	_, raw := c.get("/notifications/summary")
 	if !strings.Contains(raw, "New Fake Show episode is out!") {
 		t.Fatalf("notification not rendered: %s", raw)
 	}
@@ -359,8 +359,8 @@ func TestNotificationsPreferencesAndPages(t *testing.T) {
 	if code, out := c.post("/api/notifications/test", map[string]string{"channel": "telegram"}); code != 400 || out["key"] != "err.notify_no_telegram" {
 		t.Fatalf("telegram test without a link: %d %v", code, out)
 	}
-	if status, body := c.get("/notifications"); status != 200 || !strings.Contains(body, "Password changed") {
-		t.Fatalf("notifications page: %d", status)
+	if status, body := c.get("/notifications/list?category=security"); status != 200 || !strings.Contains(body, "Password changed") {
+		t.Fatalf("notifications list: %d", status)
 	}
 	for _, p := range []string{"/settings?tab=account", "/settings?tab=profile", "/settings?tab=notifications"} {
 		if status, _ := c.get(p); status != 200 {

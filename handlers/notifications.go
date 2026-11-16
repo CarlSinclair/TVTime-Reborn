@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -14,156 +14,129 @@ import (
 	"tvt/logger"
 	"tvt/notify"
 	"tvt/store"
+
+	"github.com/CarlSinclair/csuit-libs/notifykit"
 )
 
-type notifView struct {
-	ID        int64  `json:"id"`
-	Title     string `json:"title"`
-	Body      string `json:"body"`
-	Link      string `json:"link"`
-	Read      bool   `json:"read"`
-	CreatedAt string `json:"created_at"`
-	Open      string `json:"open"`
-	Friend    string `json:"friend,omitempty"`
+type notifStore struct {
+	app    *App
+	lang   string
+	userID int64
 }
 
-func (a *App) notifViews(viewer *store.User, lang string, list []store.Notification) []notifView {
-	out := make([]notifView, 0, len(list))
-	for _, n := range list {
-		title, body := a.Notif.Text(lang, n.Event, n.Data)
-		v := notifView{ID: n.ID, Title: title, Body: body, Link: n.Link, Read: n.Read, CreatedAt: n.CreatedAt, Open: "/notifications/" + itoa(n.ID) + "/open"}
-		if n.Event == "friend_request" {
-			if name, _ := n.Data["username"].(string); name != "" && viewer != nil {
-				if p, err := a.Store.UserByUsername(name); err == nil {
-					if state, err := a.Store.FriendState(viewer.ID, p.ID); err == nil && state == "incoming" {
-						v.Friend = p.Username
+func (s notifStore) Counts(userID int64) ([]notifykit.CategoryCount, error) {
+	rows, err := s.app.Store.NotificationCounts(userID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]notifykit.CategoryCount, 0, len(rows))
+	for _, r := range rows {
+		cc := notifykit.CategoryCount{Category: r.Category, Total: r.Total, Unread: r.Unread}
+		latest, _, lerr := s.app.Store.NotificationsFiltered(userID, r.Category, false, 1, 0)
+		if lerr != nil {
+			logger.Warn("notification latest lookup uid=%d category=%s: %v", userID, r.Category, lerr)
+		} else if len(latest) == 1 {
+			cc.LatestTitle, _ = s.app.Notif.Text(s.lang, latest[0].Event, latest[0].Data)
+			cc.LatestAt = parseNotifTime(latest[0].CreatedAt)
+		}
+		out = append(out, cc)
+	}
+	return out, nil
+}
+
+func (s notifStore) item(n store.Notification) notifykit.Item {
+	title, body := s.app.Notif.Text(s.lang, n.Event, n.Data)
+	it := notifykit.Item{ID: n.ID, Event: n.Event, Category: n.Category, Title: title, Body: body, Link: n.Link, Read: n.Read, CreatedAt: parseNotifTime(n.CreatedAt)}
+	if n.Event == "friend_request" {
+		if name, _ := n.Data["username"].(string); name != "" {
+			if viewer, err := s.app.Store.UserByID(s.userID); err == nil {
+				if p, err := s.app.Store.UserByUsername(name); err == nil {
+					if state, err := s.app.Store.FriendState(viewer.ID, p.ID); err == nil && state == "incoming" {
+						it.Extra = map[string]string{"friend": p.Username}
 					}
 				}
 			}
 		}
-		out = append(out, v)
 	}
-	return out
+	return it
 }
 
-func (a *App) apiNotificationsRecent(w http.ResponseWriter, r *http.Request) {
-	u, err := a.needUser(r)
-	if err != nil {
-		a.fail(w, r, err)
-		return
+func (s notifStore) List(userID int64, f notifykit.Filter) ([]notifykit.Item, int, error) {
+	limit := f.Limit
+	if limit <= 0 {
+		limit = notifykit.PageSize
 	}
-	list, err := a.Store.Notifications(u.ID, 8, 0)
+	list, total, err := s.app.Store.NotificationsFiltered(userID, f.Category, f.UnreadOnly, limit, f.Offset)
 	if err != nil {
-		a.fail(w, r, err)
-		return
+		return nil, 0, err
 	}
-	unread, err := a.Store.UnreadCount(u.ID)
-	if err != nil {
-		a.fail(w, r, err)
-		return
+	out := make([]notifykit.Item, 0, len(list))
+	for _, n := range list {
+		out = append(out, s.item(n))
 	}
-	a.okJSON(w, map[string]any{"unread": unread, "items": a.notifViews(u, a.lang(w, r, u), list)})
+	return out, total, nil
 }
 
-func (a *App) pageNotifications(w http.ResponseWriter, r *http.Request) {
-	u := auth.UserFrom(r.Context())
-	if u == nil {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	if page < 1 {
-		page = 1
-	}
-	const per = 20
-	list, err := a.Store.Notifications(u.ID, per, (page-1)*per)
+func (s notifStore) Get(userID, id int64) (notifykit.Item, error) {
+	n, err := s.app.Store.NotificationByID(userID, id)
 	if err != nil {
-		logger.Error("PAGE notifications uid=%d: %v", u.ID, err)
-		a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
-		return
+		return notifykit.Item{}, err
 	}
-	total, err := a.Store.CountNotifications(u.ID)
-	if err != nil {
-		logger.Error("PAGE notifications count uid=%d: %v", u.ID, err)
-		a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
-		return
-	}
-	views := a.notifViews(u, a.lang(w, r, u), list)
-	if err := a.Store.MarkAllNotificationsRead(u.ID); err != nil {
-		logger.Error("PAGE notifications mark read uid=%d: %v", u.ID, err)
-	}
-	a.page(w, r, "notifications", "nav.notifications", map[string]any{
-		"Items": views, "Page": page, "HasPrev": page > 1, "HasNext": page*per < total, "Prev": page - 1, "Next": page + 1,
-	})
+	return s.item(*n), nil
 }
 
-func safeLocalPath(p string) bool {
-	return strings.HasPrefix(p, "/") && !strings.HasPrefix(p, "//") && !strings.Contains(p, "\\")
+func (s notifStore) MarkRead(userID, id int64) error {
+	return s.app.Store.MarkNotificationRead(userID, id)
 }
 
-func (a *App) pageNotificationOpen(w http.ResponseWriter, r *http.Request) {
-	u := auth.UserFrom(r.Context())
-	if u == nil {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil {
-		http.Redirect(w, r, "/notifications", http.StatusSeeOther)
-		return
-	}
-	n, err := a.Store.NotificationByID(u.ID, id)
-	if err != nil {
-		if !errors.Is(err, store.ErrNotFound) {
-			logger.Error("PAGE notification open id=%d uid=%d: %v", id, u.ID, err)
+func (s notifStore) MarkCategoryRead(userID int64, category string) (int64, error) {
+	return s.app.Store.MarkCategoryRead(userID, category)
+}
+
+func parseNotifTime(raw string) time.Time {
+	raw = strings.TrimSpace(raw)
+	for _, layout := range []string{time.RFC3339Nano, time.RFC3339, "2006-01-02 15:04:05", "2006-01-02T15:04:05"} {
+		if t, err := time.ParseInLocation(layout, raw, time.UTC); err == nil {
+			return t
 		}
-		http.Redirect(w, r, "/notifications", http.StatusSeeOther)
-		return
 	}
-	if err := a.Store.MarkNotificationRead(u.ID, id); err != nil {
-		logger.Error("PAGE notification mark read id=%d uid=%d: %v", id, u.ID, err)
-	}
-	target := "/notifications"
-	if safeLocalPath(n.Link) {
-		target = n.Link
-	}
-	http.Redirect(w, r, target, http.StatusSeeOther)
+	return time.Time{}
 }
 
-func (a *App) apiNotificationRead(w http.ResponseWriter, r *http.Request) {
-	u, err := a.needUser(r)
-	if err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil {
-		a.fail(w, r, errNotFound)
-		return
-	}
-	if err := a.Store.MarkNotificationRead(u.ID, id); err != nil {
-		if errors.Is(err, store.ErrNotFound) {
-			a.fail(w, r, errNotFound)
-		} else {
-			a.fail(w, r, err)
-		}
-		return
-	}
-	unread, _ := a.Store.UnreadCount(u.ID)
-	a.okJSON(w, map[string]any{"unread": unread})
+func (a *App) notifykitHandler(w http.ResponseWriter, r *http.Request) {
+	u := auth.UserFrom(r.Context())
+	lang := a.lang(w, r, u)
+	notifykit.New(notifykit.Config{
+		Store:    notifStore{app: a, lang: lang, userID: notifUserID(u)},
+		Prefix:   "/notifications",
+		Fallback: "/",
+		UserID: func(r *http.Request) (int64, bool) {
+			u := auth.UserFrom(r.Context())
+			if u == nil {
+				return 0, false
+			}
+			return u.ID, true
+		},
+	}).ServeHTTP(w, r)
 }
 
-func (a *App) apiNotificationsReadAll(w http.ResponseWriter, r *http.Request) {
-	u, err := a.needUser(r)
-	if err != nil {
-		a.fail(w, r, err)
-		return
+func (v *View) NotifBell() template.HTML {
+	cats := map[string]string{}
+	for _, c := range []string{notifykit.CatSecurity, notifykit.CatEpisodes, notifykit.CatSocial, notifykit.CatModeration, notifykit.CatSystem, notifykit.CatOther} {
+		cats[c] = v.T("notif.cat." + c)
 	}
-	if err := a.Store.MarkAllNotificationsRead(u.ID); err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	a.okJSON(w, map[string]any{"unread": 0})
+	return template.HTML(notifykit.BellHTML("/notifications", v.CSRF, "/static/icons.svg?v="+assetVersion+"#fa-bell", notifykit.Labels{
+		Title:      v.T("nav.notifications"),
+		Empty:      v.T("notif.empty"),
+		History:    v.T("notif.history"),
+		Back:       v.T("notif.back"),
+		MarkGroup:  v.T("notif.mark_group"),
+		Prev:       v.T("notif.prev"),
+		Next:       v.T("notif.next"),
+		Close:      v.T("notif.close"),
+		Error:      v.T("notif.load_failed"),
+		Categories: cats,
+	}))
 }
 
 // apiNotificationsStream delivers notifications to open tabs over SSE with no
@@ -432,4 +405,11 @@ func (a *App) apiNotificationTiming(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.okJSON(w, nil)
+}
+
+func notifUserID(u *store.User) int64 {
+	if u == nil {
+		return 0
+	}
+	return u.ID
 }

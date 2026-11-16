@@ -391,6 +391,110 @@ func (a *App) requireSecondFactor(u *store.User, code string, proven ...twofa.Me
 	return nil
 }
 
+const twoFAResetTenant = twoFATenant + "-reset"
+
+func (a *App) resetSecondFactor(uid int64, code string) error {
+	u, err := a.Store.UserByID(uid)
+	if err != nil {
+		logger.Error("AUTH password reset user lookup uid=%d: %v", uid, err)
+		return err
+	}
+	_, enabled, err := a.twoFAMethods(u)
+	if err != nil {
+		logger.Error("AUTH password reset 2fa methods uid=%d: %v", uid, err)
+		return err
+	}
+	if len(enabled) == 0 {
+		return nil
+	}
+	if err := a.allow(a.mfaLimit, "mfa-reset:"+itoa(uid)); err != nil {
+		return err
+	}
+	var proven []twofa.Method
+	if len(enabled) == 1 && enabled[0] == twofa.MethodEmail {
+		proven = append(proven, twofa.MethodEmail)
+	}
+	code = strings.TrimSpace(code)
+	for _, m := range enabled {
+		if m == twofa.MethodTelegram && code != "" {
+			ok, cerr := twofa.CheckEmailCode(twoFAResetTenant, uid, code)
+			if cerr != nil {
+				logger.Error("AUTH password reset telegram code check uid=%d: %v", uid, cerr)
+				return cerr
+			}
+			if ok {
+				proven = append(proven, twofa.MethodTelegram)
+			}
+		}
+	}
+	if err := a.requireSecondFactor(u, code, proven...); err != nil {
+		logger.Warn("AUTH password reset second factor refused uid=%d: %v", uid, err)
+		return err
+	}
+	return nil
+}
+
+func (a *App) apiResetCode(w http.ResponseWriter, r *http.Request) {
+	if err := a.allow(a.authLimit, "tok:"+auth.ClientIP(r)); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	uid, err := a.Auth.PeekEmailToken(r.URL.Query().Get("token"), auth.PurposeReset)
+	if err != nil {
+		if errors.Is(err, auth.ErrBadToken) {
+			a.fail(w, r, apiErr{http.StatusBadRequest, "err.link_invalid"})
+		} else {
+			logger.Error("AUTH password reset code token lookup failed: %v", err)
+			a.fail(w, r, err)
+		}
+		return
+	}
+	u, err := a.Store.UserByID(uid)
+	if err != nil {
+		logger.Error("AUTH password reset code user lookup uid=%d: %v", uid, err)
+		a.fail(w, r, err)
+		return
+	}
+	_, enabled, err := a.twoFAMethods(u)
+	if err != nil {
+		logger.Error("AUTH password reset code methods uid=%d: %v", uid, err)
+		a.fail(w, r, err)
+		return
+	}
+	hasTG := false
+	for _, m := range enabled {
+		hasTG = hasTG || m == twofa.MethodTelegram
+	}
+	if !hasTG {
+		a.okJSON(w, nil)
+		return
+	}
+	if err := a.allow(a.mfaLimit, "mfa-reset-send:"+itoa(uid)); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	code, err := twofa.NewEmailCode(twoFAResetTenant, uid)
+	if err != nil {
+		if errors.Is(err, twofa.ErrEmailCooldown) {
+			a.fail(w, r, apiErr{http.StatusTooManyRequests, "mfa.email_wait"})
+			return
+		}
+		logger.Error("AUTH password reset code create uid=%d: %v", uid, err)
+		a.fail(w, r, err)
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+	text := a.tgT(u.Locale, "tg.reset_code", map[string]string{"code": code})
+	if err := a.Bot.SendMessage(ctx, strconv.FormatInt(twoFAChat(u), 10), text); err != nil {
+		twofa.DiscardEmailCode(twoFAResetTenant, uid)
+		logger.Error("AUTH password reset telegram code send uid=%d: %v", uid, err)
+		a.fail(w, r, apiErr{http.StatusBadGateway, "mfa.tg_failed"})
+		return
+	}
+	a.okJSON(w, nil)
+}
+
 var twoFAConfirmErrKeys = map[string]string{
 	"unauthorized":              "err.login_required",
 	"bad_request":               "err.bad_request",

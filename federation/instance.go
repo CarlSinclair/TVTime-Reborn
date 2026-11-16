@@ -34,7 +34,7 @@ func CleanInstanceName(in string) (string, error) {
 			return "", fmt.Errorf("%w: %q is not allowed", ErrInstanceName, string(r))
 		}
 	}
-	if !(unicode.IsLetter(runes[0]) || unicode.IsDigit(runes[0])) || !(unicode.IsLetter(runes[n-1]) || unicode.IsDigit(runes[n-1]) || runes[n-1] == ')' || runes[n-1] == '!') {
+	if !(unicode.IsLetter(runes[0]) || unicode.IsDigit(runes[0])) || !(unicode.IsLetter(runes[n-1]) || unicode.IsDigit(runes[n-1]) || runes[n-1] == ')' || runes[n-1] == '!' || runes[n-1] == '.') {
 		return "", fmt.Errorf("%w: must start and end with a letter or digit", ErrInstanceName)
 	}
 	return name, nil

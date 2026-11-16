@@ -12,6 +12,8 @@
 <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
 <script src="/static/theme.js?v={{assetV}}"></script>
 <link rel="stylesheet" href="/static/app.css?v={{assetV}}">
+<link rel="stylesheet" href="/notifykit/notifykit.css?v={{assetV}}">
+<script src="/notifykit/notifykit.js?v={{assetV}}" defer></script>
 </head>
 <body data-user="{{if .User}}1{{else}}0{{end}}">
 <header class="topbar">
@@ -37,17 +39,7 @@
       </label>
     </div>
     {{if .User}}
-    <div class="bell-wrap">
-      <button class="icon-btn bell" type="button" id="bell" aria-label="{{.T "nav.notifications"}}" aria-expanded="false">
-        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5.5-6.84V3.5a1.5 1.5 0 0 0-3 0v.66A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z"/></svg>
-        <span class="badge" id="bell-badge" {{if eq .Unread 0}}hidden{{end}}>{{.Unread}}</span>
-      </button>
-      <div class="dropdown" id="bell-menu" hidden>
-        <div class="dropdown-head"><strong>{{.T "nav.notifications"}}</strong><button class="link-btn" type="button" id="bell-read-all">{{.T "notif.mark_all"}}</button></div>
-        <ul class="dropdown-list" id="bell-list"></ul>
-        <a class="dropdown-foot" href="/notifications">{{.T "notif.view_all"}}</a>
-      </div>
-    </div>
+    {{.NotifBell}}
     <details class="account-menu" id="account-menu">
       <summary aria-label="{{.T "nav.account"}}">
         {{if .User.AvatarPath}}<img class="avatar xs" src="{{avatar .User.AvatarPath}}" alt="">{{else}}<span class="avatar xs fallback">{{initial .User.Name}}</span>{{end}}

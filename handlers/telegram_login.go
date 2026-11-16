@@ -130,7 +130,7 @@ func (a *App) telegramLoginHTTP() telegramlogin.HTTPConfig {
 			u, ok := s.Payload.(*store.User)
 			if !ok {
 				logger.Error("AUTH telegram sign-in: unexpected subject payload uid=%d", s.ID)
-				http.Redirect(w, r, "/login?error=internal", http.StatusSeeOther)
+				a.okJSON(w, map[string]any{"status": "rejected"})
 				return
 			}
 			a.finishLoginRedirect(w, r, u)

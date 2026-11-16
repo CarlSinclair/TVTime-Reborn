@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/CarlSinclair/csuit-libs/notifykit"
 	"github.com/CarlSinclair/csuit-libs/pwa"
 	"github.com/CarlSinclair/csuit-libs/twofa"
 	"tvt/assets"
@@ -64,8 +65,9 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /shows", a.pageMyShows)
 	mux.HandleFunc("GET /calendar", a.pageCalendar)
 	mux.HandleFunc("GET /settings", a.pageSettings)
-	mux.HandleFunc("GET /notifications", a.pageNotifications)
-	mux.HandleFunc("GET /notifications/{id}/open", a.pageNotificationOpen)
+	mux.HandleFunc("GET /notifications/", a.notifykitHandler)
+	mux.HandleFunc("POST /notifications/", a.notifykitHandler)
+	mux.Handle("GET /notifykit/", notifykit.AssetHandler())
 	mux.HandleFunc("GET /u/{username}", a.pageProfile)
 	mux.HandleFunc("GET /profile", a.pageOwnProfile)
 	mux.HandleFunc("GET /media/{kind}/{file}", a.serveMedia)
@@ -117,6 +119,7 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/auth/verify/consume", a.apiVerifyConsume)
 	mux.HandleFunc("POST /api/auth/magic/consume", a.apiMagicConsume)
 	mux.HandleFunc("POST /api/auth/reset/consume", a.apiResetConsume)
+	mux.HandleFunc("GET /api/auth/reset/code", a.apiResetCode)
 	mux.HandleFunc("POST /api/auth/2fa", a.apiMFAVerify)
 	mux.HandleFunc("GET /api/auth/2fa/telegram/start", a.apiTwoFATelegramStart)
 	mux.HandleFunc("GET /api/auth/2fa/telegram/poll", a.apiTwoFATelegramPoll)
@@ -155,16 +158,13 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/profile/banner", a.apiUploadMedia("banners"))
 	mux.HandleFunc("POST /api/profile/avatar/remove", a.apiRemoveMedia("avatars"))
 	mux.HandleFunc("POST /api/profile/banner/remove", a.apiRemoveMedia("banners"))
-	mux.HandleFunc("GET /api/notifications/recent", a.apiNotificationsRecent)
 	mux.HandleFunc("GET /api/notifications/stream", a.apiNotificationsStream)
-	mux.HandleFunc("POST /api/notifications/read-all", a.apiNotificationsReadAll)
 	mux.HandleFunc("POST /api/notifications/settings", a.apiNotificationSettings)
 	mux.HandleFunc("POST /api/import/tvtime", a.apiImportTVTime)
 	mux.HandleFunc("POST /api/import/youtube", a.apiImportYouTube)
 	mux.HandleFunc("GET /api/import/status", a.apiImportStatus)
 	mux.HandleFunc("POST /api/notifications/test", a.apiNotificationTest)
 	mux.HandleFunc("POST /api/notifications/timing", a.apiNotificationTiming)
-	mux.HandleFunc("POST /api/notifications/{id}/read", a.apiNotificationRead)
 	mux.HandleFunc("GET /api/push/key", a.apiPushKey)
 	mux.HandleFunc("POST /api/push/subscribe", a.apiPushSubscribe)
 	mux.HandleFunc("POST /api/account/push/device", a.apiPushDevice)

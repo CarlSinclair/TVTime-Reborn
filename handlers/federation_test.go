@@ -49,9 +49,13 @@ func TestFriendsAcrossServers(t *testing.T) {
 	if len(notes) == 0 || notes[0].Event != "friend_request" {
 		t.Fatalf("the request must notify bob: %+v", notes)
 	}
-	_, page := bob.get("/notifications")
-	if !strings.Contains(page, `data-friend-accept="`+aliceHandle+`"`) {
-		t.Fatalf("the notification needs accept and decline for the remote person")
+	bell := bob.getJSON("/notifications/summary")
+	bellItems, _ := bell["items"].([]any)
+	if len(bellItems) == 0 {
+		t.Fatalf("the bell must list the request: %v", bell)
+	}
+	if e, _ := bellItems[0].(map[string]any)["extra"].(map[string]any); e["friend"] != aliceHandle {
+		t.Fatalf("the notification needs accept and decline for the remote person: %v", bell)
 	}
 
 	if code, out := bob.post("/api/friends/respond", map[string]any{"username": aliceHandle, "accept": true}); code != 200 || out["state"] != "friends" {

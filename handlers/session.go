@@ -48,10 +48,16 @@ func (a *App) twoFARequiredAfterTelegram(u *store.User) (bool, error) {
 }
 
 func (a *App) finishLoginRedirect(w http.ResponseWriter, r *http.Request, u *store.User) {
+	next := func(path string) {
+		a.okJSON(w, map[string]any{"status": "approved", "next": path})
+	}
+	fail := func() {
+		a.okJSON(w, map[string]any{"status": "rejected"})
+	}
 	need, err := a.twoFARequiredAfterTelegram(u)
 	if err != nil {
 		logger.Error("AUTH 2fa requirement check uid=%d: %v", u.ID, err)
-		http.Redirect(w, r, "/login?error=internal", http.StatusSeeOther)
+		fail()
 		return
 	}
 	if need {
@@ -62,18 +68,18 @@ func (a *App) finishLoginRedirect(w http.ResponseWriter, r *http.Request, u *sto
 		if err != nil {
 			logger.Error("AUTH begin mfa uid=%d: %v", u.ID, err)
 			a.Auth.ClearMFA(w)
-			http.Redirect(w, r, "/login?error=internal", http.StatusSeeOther)
+			fail()
 			return
 		}
-		http.Redirect(w, r, "/login/2fa", http.StatusSeeOther)
+		next("/login/2fa")
 		return
 	}
 	if err := a.Auth.StartSessionFor(w, r, u.ID); err != nil {
 		logger.Error("AUTH start session uid=%d: %v", u.ID, err)
-		http.Redirect(w, r, "/login?error=internal", http.StatusSeeOther)
+		fail()
 		return
 	}
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	next("/")
 }
 
 func (a *App) apiMFAVerify(w http.ResponseWriter, r *http.Request) {
