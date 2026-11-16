@@ -173,9 +173,9 @@
     </label>
     <label class="check"><input type="checkbox" name="email" {{if .Data.TwoFAPrefs.Email}}checked{{end}} {{if not .Data.MailOn}}disabled{{end}}> {{.T "settings.tfa_email"}}</label>
     <p class="muted">{{if .Data.MailOn}}{{.T "settings.tfa_email_hint"}}{{else}}{{.T "settings.tfa_email_needs_mail"}}{{end}}</p>
-    <label class="check"><input type="checkbox" name="passkey_skips" {{if .Data.TwoFAPrefs.PasskeySkips}}checked{{end}}> {{.T "settings.tfa_passkey_skips"}}</label>
-    <label class="check"><input type="checkbox" name="magic_skips" {{if .Data.TwoFAPrefs.MagicSkips}}checked{{end}}> {{.T "settings.tfa_magic_skips"}}</label>
-    <label class="check"><input type="checkbox" name="telegram_skips" {{if .Data.TwoFAPrefs.TelegramSkips}}checked{{end}}> {{.T "settings.tfa_telegram_skips"}}</label>
+    <label class="check"><input type="checkbox" name="passkey_requires" {{if .Data.TwoFAPrefs.PasskeyRequires}}checked{{end}}> {{.T "settings.tfa_passkey_requires"}}</label>
+    <label class="check"><input type="checkbox" name="magic_requires" {{if .Data.TwoFAPrefs.MagicRequires}}checked{{end}}> {{.T "settings.tfa_magic_requires"}}</label>
+    <label class="check"><input type="checkbox" name="telegram_requires" {{if .Data.TwoFAPrefs.TelegramRequires}}checked{{end}}> {{.T "settings.tfa_telegram_requires"}}</label>
     {{if .User.HasPassword}}<label>{{.T "auth.password"}}<input type="password" name="password" autocomplete="current-password" required></label>{{end}}
     {{if .User.TOTPEnabled}}<label>{{.T "mfa.code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>{{end}}
     <p class="form-error" role="alert" hidden></p>
@@ -437,5 +437,5 @@
   </div>
 </section>
 {{end}}
-<script src="/static/twofa_confirm.js?v={{assetV}}" defer></script>
+<script src="/static/twofa/confirm.js" data-cancel-class="btn ghost" defer></script>
 {{end}}

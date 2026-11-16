@@ -8,8 +8,6 @@ import (
 	"tvt/logger"
 	"tvt/notify"
 	"tvt/store"
-
-	"github.com/CarlSinclair/csuit-libs/twofa"
 )
 
 var timezones = []string{
@@ -95,13 +93,13 @@ func (a *App) pageSettings(w http.ResponseWriter, r *http.Request) {
 		data["Passkeys"] = passkeys
 		data["Blocked"] = blocked
 		data["RecoveryLeft"] = left
-		prefsRaw, err := a.Store.TwoFAPrefs(u.ID)
+		prefs, err := a.Store.TwoFAPrefs(u.ID)
 		if err != nil {
 			logger.Error("PAGE settings 2fa prefs uid=%d: %v", u.ID, err)
 			a.errorPage(w, r, http.StatusInternalServerError, "err.internal")
 			return
 		}
-		data["TwoFAPrefs"] = twofa.ParsePrefs(prefsRaw)
+		data["TwoFAPrefs"] = prefs
 		data["TelegramLinked"] = twoFAChat(u) != 0 && a.Bot.Configured()
 		data["MailOn"] = a.mailOK() && strings.TrimSpace(u.Email) != ""
 	case "notifications":

@@ -227,14 +227,14 @@
     "tfa_mode_title": "When more than one method is on",
     "tfa_mode_any": "Any one method is enough, and you can pick another way when signing in",
     "tfa_mode_all": "Require every enabled method",
-    "tfa_passkey_skips": "Skip these checks when I sign in with a passkey",
+    "tfa_passkey_requires": "Ask for 2FA when I sign in with a passkey",
     "tfa_prefs_save": "Save verification settings",
     "tfa_prefs_saved": "Verification settings saved.",
     "tfa_email": "Email code",
     "tfa_email_hint": "We email a 6-digit code to your account address.",
     "tfa_email_needs_mail": "Email codes need a confirmed email address and outgoing mail on this server.",
-    "tfa_magic_skips": "Skip these checks when I sign in with an email link",
-    "tfa_telegram_skips": "Skip these checks when I sign in with Telegram",
+    "tfa_magic_requires": "Ask for 2FA when I sign in with an email link",
+    "tfa_telegram_requires": "Ask for 2FA when I sign in with Telegram",
     "forgot_current_password_btn": "I forgot my current password: email me a code"
   },
   "footer": {

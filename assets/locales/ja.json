@@ -227,14 +227,14 @@
     "tfa_mode_title": "複数の方法が有効な場合",
     "tfa_mode_any": "いずれか1つの方法で十分です。ログイン時に別の方法を選ぶこともできます",
     "tfa_mode_all": "有効なすべての方法を必須にする",
-    "tfa_passkey_skips": "パスキーでログインするときは、これらの確認をスキップする",
+    "tfa_passkey_requires": "パスキーでログインするときに2FAを求める",
     "tfa_prefs_save": "確認設定を保存",
     "tfa_prefs_saved": "確認設定を保存しました。",
     "tfa_email": "メールコード",
     "tfa_email_hint": "6桁のコードをアカウントのメールアドレスに送信します。",
     "tfa_email_needs_mail": "メールコードを利用するには、確認済みのメールアドレスと、このサーバーからの送信メールが必要です。",
-    "tfa_magic_skips": "メールのリンクでサインインするときは、これらの確認を省略する",
-    "tfa_telegram_skips": "Telegramでサインインするときは、これらの確認を省略する",
+    "tfa_magic_requires": "メールのリンクでログインするときに2FAを求める",
+    "tfa_telegram_requires": "Telegramでログインするときに2FAを求める",
     "forgot_current_password_btn": "現在のパスワードを忘れました: メールでコードを送信"
   },
   "footer": {

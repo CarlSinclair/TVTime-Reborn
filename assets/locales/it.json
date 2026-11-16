@@ -227,14 +227,14 @@
     "tfa_mode_title": "Quando è attivo più di un metodo",
     "tfa_mode_any": "È sufficiente un metodo e puoi sceglierne un altro al momento dell'accesso",
     "tfa_mode_all": "Richiedi tutti i metodi attivi",
-    "tfa_passkey_skips": "Salta questi controlli quando accedo con una passkey",
+    "tfa_passkey_requires": "Chiedi la 2FA quando accedo con una passkey",
     "tfa_prefs_save": "Salva impostazioni di verifica",
     "tfa_prefs_saved": "Impostazioni di verifica salvate.",
     "tfa_email": "Codice via email",
     "tfa_email_hint": "Inviamo via email un codice di 6 cifre all'indirizzo del tuo account.",
     "tfa_email_needs_mail": "I codici via email richiedono un indirizzo email confermato e la posta in uscita attiva su questo server.",
-    "tfa_magic_skips": "Salta questi controlli quando accedo con un link via email",
-    "tfa_telegram_skips": "Salta questi controlli quando accedo con Telegram",
+    "tfa_magic_requires": "Chiedi la 2FA quando accedo con un link via e-mail",
+    "tfa_telegram_requires": "Chiedi la 2FA quando accedo con Telegram",
     "forgot_current_password_btn": "Ho dimenticato la password attuale: inviami un codice via email"
   },
   "footer": {

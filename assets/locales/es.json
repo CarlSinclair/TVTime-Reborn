@@ -227,14 +227,14 @@
     "tfa_mode_title": "Cuando hay más de un método activado",
     "tfa_mode_any": "Basta con un método, y puedes elegir otro al iniciar sesión",
     "tfa_mode_all": "Requerir todos los métodos activados",
-    "tfa_passkey_skips": "Omitir estas comprobaciones cuando inicie sesión con una clave de acceso",
+    "tfa_passkey_requires": "Pedir 2FA cuando inicie sesión con una clave de acceso",
     "tfa_prefs_save": "Guardar configuración de verificación",
     "tfa_prefs_saved": "Configuración de verificación guardada.",
     "tfa_email": "Código por correo",
     "tfa_email_hint": "Enviamos un código de 6 dígitos a la dirección de correo de tu cuenta.",
     "tfa_email_needs_mail": "Los códigos por correo requieren una dirección de correo confirmada y envío de correo saliente en este servidor.",
-    "tfa_magic_skips": "Omitir estas comprobaciones cuando inicie sesión con un enlace de correo",
-    "tfa_telegram_skips": "Omitir estas comprobaciones cuando inicie sesión con Telegram",
+    "tfa_magic_requires": "Pedir 2FA cuando inicie sesión con un enlace de correo",
+    "tfa_telegram_requires": "Pedir 2FA cuando inicie sesión con Telegram",
     "forgot_current_password_btn": "Olvidé mi contraseña actual: enviarme un código por correo"
   },
   "footer": {

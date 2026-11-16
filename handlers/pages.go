@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/CarlSinclair/csuit-libs/pwa"
+	"github.com/CarlSinclair/csuit-libs/twofa"
 	"tvt/assets"
 	"tvt/auth"
 	"tvt/logger"
@@ -27,8 +28,11 @@ func (a *App) routes(mux *http.ServeMux) {
 	}
 	files := http.FileServerFS(sub)
 	mux.Handle("GET /static/", http.StripPrefix("/static/", cacheControl(files)))
+	mux.Handle("GET "+twofa.ConfirmJSPath, twofa.ConfirmJSHandler())
+	mux.Handle("GET "+twofa.TelegramJSPath, twofa.TelegramJSHandler())
 	mux.HandleFunc("GET /sw.js", a.serviceWorker)
 	mux.HandleFunc("GET /manifest.webmanifest", a.manifest)
+	mux.HandleFunc("/.well-known/security.txt", HandleSecurityTxt)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		if err := a.Store.DB.PingContext(r.Context()); err != nil {
 			logger.Error("HEALTH db ping: %v", err)

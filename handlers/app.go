@@ -387,7 +387,7 @@ var publicPages = map[string]bool{
 // Everything else needs an account.
 func (a *App) publicRoute(p string) bool {
 	return isStatic(p) || publicPages[p] || p == "/" || p == "/welcome" || p == "/api/contact" || strings.HasPrefix(p, "/api/captcha/") || a.isContactSlug(p) || a.isPageSlug(p) || isMachineAPI(p) || strings.HasPrefix(p, "/t/") || strings.HasPrefix(p, "/api/auth/") || p == "/api/telegram/webhook" ||
-		p == "/.well-known/tvt" || strings.HasPrefix(p, "/federation/")
+		p == "/.well-known/tvt" || p == "/.well-known/security.txt" || strings.HasPrefix(p, "/federation/")
 }
 
 // SetMedia swaps the object store (used by tests).

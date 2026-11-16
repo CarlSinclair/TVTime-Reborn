@@ -227,14 +227,14 @@
     "tfa_mode_title": "Quando mais de um método estiver ativado",
     "tfa_mode_any": "Um método é suficiente, e você pode escolher outro ao fazer login",
     "tfa_mode_all": "Exigir todos os métodos ativados",
-    "tfa_passkey_skips": "Pular essas verificações quando eu entrar com uma chave de acesso",
+    "tfa_passkey_requires": "Pedir 2FA quando eu entrar com uma chave de acesso",
     "tfa_prefs_save": "Salvar configurações de verificação",
     "tfa_prefs_saved": "Configurações de verificação salvas.",
     "tfa_email": "Código por e-mail",
     "tfa_email_hint": "Enviamos um código de 6 dígitos para o endereço de e-mail da sua conta.",
     "tfa_email_needs_mail": "Os códigos por e-mail exigem um endereço de e-mail confirmado e envio de e-mails habilitado neste servidor.",
-    "tfa_magic_skips": "Pular estas verificações ao entrar com um link de e-mail",
-    "tfa_telegram_skips": "Pular estas verificações ao entrar com o Telegram",
+    "tfa_magic_requires": "Pedir 2FA quando eu entrar com um link por e-mail",
+    "tfa_telegram_requires": "Pedir 2FA quando eu entrar com o Telegram",
     "forgot_current_password_btn": "Esqueci minha senha atual: enviar um código por e-mail"
   },
   "footer": {

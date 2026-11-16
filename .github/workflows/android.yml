@@ -37,6 +37,10 @@ jobs:
           ref: ${{ env.LIBS_REF }}
           path: libs
           persist-credentials: false
+      - name: jdk
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_21_X64" >> "$GITHUB_ENV"
+          echo "$JAVA_HOME_21_X64/bin" >> "$GITHUB_PATH"
       - name: gradle
         run: |
           curl -fsSL "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -o "$RUNNER_TEMP/gradle.zip"

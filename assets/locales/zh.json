@@ -227,14 +227,14 @@
     "tfa_mode_title": "启用多种方式时",
     "tfa_mode_any": "任选一种即可，登录时也可以改用其他方式",
     "tfa_mode_all": "要求启用的所有方式",
-    "tfa_passkey_skips": "使用通行密钥登录时跳过这些验证",
+    "tfa_passkey_requires": "使用通行密钥登录时要求 2FA",
     "tfa_prefs_save": "保存验证设置",
     "tfa_prefs_saved": "验证设置已保存。",
     "tfa_email": "邮箱验证码",
     "tfa_email_hint": "我们会向您账户的邮箱地址发送一个 6 位数验证码。",
     "tfa_email_needs_mail": "邮箱验证码需要已确认的邮箱地址，并且本服务器已启用外发邮件。",
-    "tfa_magic_skips": "使用邮件链接登录时跳过这些验证",
-    "tfa_telegram_skips": "使用 Telegram 登录时跳过这些验证",
+    "tfa_magic_requires": "使用邮件链接登录时要求 2FA",
+    "tfa_telegram_requires": "使用Telegram登录时要求 2FA",
     "forgot_current_password_btn": "我忘记了当前密码：向邮箱发送验证码"
   },
   "footer": {

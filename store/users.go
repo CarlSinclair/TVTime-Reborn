@@ -8,8 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"tvt/logger"
 )
 
 type User struct {
@@ -364,9 +362,6 @@ func (s *Store) SetBanned(userID int64, banned bool) error {
 func (s *Store) DeleteUser(userID int64) error {
 	if err := s.exec("delete user", userID, `DELETE FROM users WHERE id = ?`, userID); err != nil {
 		return err
-	}
-	if err := s.KVDelete(twoFAPrefsKey(userID)); err != nil {
-		logger.Error("STORE delete user uid=%d: leftover 2fa prefs not removed: %v", userID, err)
 	}
 	return nil
 }
