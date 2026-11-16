@@ -1400,6 +1400,9 @@
         suggest.hidden = data.results.length === 0;
       }, 250);
     });
+    suggest.addEventListener("click", (event) => {
+      if (event.target.closest("a")) suggest.hidden = true;
+    });
     document.addEventListener("click", (event) => {
       if (!event.target.closest(".search")) hide();
     });
