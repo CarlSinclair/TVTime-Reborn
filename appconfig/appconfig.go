@@ -24,10 +24,11 @@ const (
 )
 
 type Field struct {
-	Key    string
-	Group  string
-	Secret bool
-	Bool   bool
+	Key     string
+	Group   string
+	Secret  bool
+	Bool    bool
+	Choices []string
 	// Default is what applies while nothing is saved; Example is a suggestion
 	// shown as the field's placeholder.
 	Default string
@@ -67,7 +68,9 @@ func boolField(key, group string, p func(*config.Config) *bool) Field {
 }
 
 // Groups in the order the Config tab shows them.
-var Groups = []string{"mail", "storage", "metadata", "telegram", "branding", "redis"}
+var Groups = []string{"mail", "storage", "metadata", "telegram", "captcha", "branding", "redis"}
+
+var CaptchaProviders = []string{"cproof", "turnstile", "hcaptcha", "recaptcha"}
 
 var Fields = []Field{
 	field("smtp_host", "mail", false, func(c *config.Config) *string { return &c.SMTPHost }),
@@ -101,6 +104,20 @@ var Fields = []Field{
 	field("telegram_name", "telegram", false, func(c *config.Config) *string { return &c.TelegramName }),
 	boolField("support_to_group", "telegram", func(c *config.Config) *bool { return &c.SupportToGroup }),
 	field("support_chat_id", "telegram", false, func(c *config.Config) *string { return &c.SupportChatID }),
+
+	{Key: "captcha_provider", Group: "captcha", Choices: CaptchaProviders,
+		get: func(c *config.Config) string { return c.CaptchaProvider },
+		set: func(c *config.Config, v string) error {
+			for _, p := range CaptchaProviders {
+				if p == v {
+					c.CaptchaProvider = v
+					return nil
+				}
+			}
+			return fmt.Errorf("the captcha provider must be one of %s", strings.Join(CaptchaProviders, ", "))
+		}},
+	field("captcha_site_key", "captcha", false, func(c *config.Config) *string { return &c.CaptchaSiteKey }),
+	field("captcha_key", "captcha", true, func(c *config.Config) *string { return &c.CaptchaKey }),
 
 	field("app_name", "branding", false, func(c *config.Config) *string { return &c.AppName }),
 	field("operator_name", "branding", false, func(c *config.Config) *string { return &c.OperatorName }),
@@ -350,6 +367,7 @@ type Value struct {
 	Key     string
 	Secret  bool
 	Bool    bool
+	Choices []string
 	Text    string
 	Example string
 }
@@ -361,7 +379,7 @@ func (m *Manager) Values(group string) ([]Value, error) {
 	}
 	var out []Value
 	for _, f := range InGroup(group) {
-		out = append(out, Value{Key: f.Key, Secret: f.Secret, Bool: f.Bool, Text: f.get(c), Example: f.Example})
+		out = append(out, Value{Key: f.Key, Secret: f.Secret, Bool: f.Bool, Choices: f.Choices, Text: f.get(c), Example: f.Example})
 	}
 	return out, nil
 }

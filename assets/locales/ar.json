@@ -445,7 +445,8 @@
       "metadata": "مصادر بيانات المسلسلات",
       "telegram": "بوت تيليغرام",
       "branding": "هوية الموقع",
-      "redis": "Redis"
+      "redis": "Redis",
+      "captcha": "كابتشا"
     },
     "cfg": {
       "smtp_host": "خادم SMTP",
@@ -474,12 +475,22 @@
       "contact_email": "بريد نموذج الاتصال",
       "redis_addr": "عنوان Redis (المضيف:المنفذ)",
       "redis_password": "كلمة مرور Redis",
-      "redis_db": "رقم قاعدة بيانات Redis"
+      "redis_db": "رقم قاعدة بيانات Redis",
+      "captcha_provider": "مزوّد الكابتشا",
+      "captcha_site_key": "مفتاح الموقع (Turnstile وhCaptcha وreCAPTCHA)",
+      "captcha_key": "المفتاح السري أو ترخيص CProof"
     },
     "avatar": "صورة الخادم",
     "avatar_hint": "تظهر بجانب اسم هذا الخادم في قوائم الخوادم على الخوادم الأخرى. الصورة المربعة هي الأفضل.",
     "avatar_upload": "رفع الصورة",
-    "avatar_remove": "إزالة الصورة"
+    "avatar_remove": "إزالة الصورة",
+    "captcha": {
+      "default": "CProof (الافتراضي)",
+      "cproof": "CProof",
+      "turnstile": "Cloudflare Turnstile",
+      "hcaptcha": "hCaptcha",
+      "recaptcha": "Google reCAPTCHA v2"
+    }
   },
   "offline": {
     "title": "أنت غير متصل",
@@ -558,7 +569,8 @@
     "push_not_enabled": "فعّل الإشعارات الفورية على هذا الجهاز أولًا.",
     "friend_self": "لا يمكنك إضافة نفسك.",
     "friend_remote": "تعذّر الوصول إلى ذلك الخادم أو العثور على ذلك الشخص.",
-    "tfa_prefs_failed": "تعذر حفظ إعدادات التحقق. حاول مرة أخرى."
+    "tfa_prefs_failed": "تعذر حفظ إعدادات التحقق. حاول مرة أخرى.",
+    "captcha_unavailable": "خدمة الكابتشا غير متاحة حاليًا. حاول مرة أخرى لاحقًا."
   },
   "mail": {
     "login": {

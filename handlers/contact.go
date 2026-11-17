@@ -9,7 +9,6 @@ import (
 
 	"github.com/CarlSinclair/csuit-libs/legalpages"
 	"tvt/auth"
-	"tvt/captcha"
 	"tvt/logger"
 )
 
@@ -81,43 +80,9 @@ func (a *App) pageContact(w http.ResponseWriter, r *http.Request) {
 	formOK := mailOK || len(a.contactChats()) > 0
 	data := map[string]any{"Email": email, "Bot": bot, "TelegramURL": template.URL("tg://resolve?domain=" + url.QueryEscape(bot) + "&start=support"), "FormAvailable": formOK, "PrivacyContact": a.Cfg.PrivacyContact}
 	if formOK {
-		ip := auth.ClientIP(r)
-		id, img, _, err := captcha.Generate(a.Auth.CSRFToken(w, r), ip)
-		if err != nil {
-			logger.Error("CONTACT captcha: %v", err)
-			data["FormAvailable"] = false
-		} else {
-			data["CaptchaID"], data["CaptchaImage"] = id, template.URL(img)
-		}
+		a.captchaPageData(data)
 	}
 	a.page(w, r, "contact", "contact.title", data)
-}
-
-func (a *App) apiCaptchaNew(w http.ResponseWriter, r *http.Request) {
-	id, img, _, err := captcha.Generate(a.Auth.CSRFToken(w, r), auth.ClientIP(r))
-	if err != nil || img == "" {
-		logger.Error("CAPTCHA new: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"id": id, "image": img})
-}
-
-func (a *App) apiCaptchaVerify(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, 8<<10)
-	if err := r.ParseForm(); err != nil {
-		writeJSON(w, http.StatusOK, map[string]any{"success": false, "expired": true})
-		return
-	}
-	id := strings.TrimSpace(r.FormValue("captcha_id"))
-	if id == "" {
-		writeJSON(w, http.StatusOK, map[string]any{"success": false, "expired": true})
-		return
-	}
-	committed := strings.TrimSpace(r.FormValue("committed")) != "0"
-	ok, expired := captcha.Verify(id, strings.TrimSpace(r.FormValue("captcha_solution")), r.Header.Get("X-CSRF-Token"),
-		strings.TrimSpace(r.FormValue("pow_nonce")), auth.ClientIP(r), committed)
-	writeJSON(w, http.StatusOK, map[string]any{"success": ok, "expired": expired})
 }
 
 // contactChats are the Telegram chats a contact form message goes to: the
@@ -154,7 +119,12 @@ func (a *App) apiContact(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	if !captcha.IsSolved(in.CaptchaID) {
+	ok, cerr := a.captchaPass(r.Context(), in.CaptchaID)
+	if cerr != nil {
+		a.fail(w, r, cerr)
+		return
+	}
+	if !ok {
 		a.fail(w, r, apiErr{http.StatusBadRequest, "err.captcha_failed"})
 		return
 	}

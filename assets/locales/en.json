@@ -445,7 +445,8 @@
       "metadata": "Show data sources",
       "telegram": "Telegram bot",
       "branding": "Site identity",
-      "redis": "Redis"
+      "redis": "Redis",
+      "captcha": "Captcha"
     },
     "cfg": {
       "smtp_host": "SMTP host",
@@ -474,12 +475,22 @@
       "contact_email": "Contact form email",
       "redis_addr": "Redis address (host:port)",
       "redis_password": "Redis password",
-      "redis_db": "Redis database number"
+      "redis_db": "Redis database number",
+      "captcha_provider": "Captcha provider",
+      "captcha_site_key": "Site key (Turnstile, hCaptcha, reCAPTCHA)",
+      "captcha_key": "Secret key or CProof license key"
     },
     "avatar": "Server avatar",
     "avatar_hint": "Shown next to this server's name in the server lists of other servers. A square picture works best.",
     "avatar_upload": "Upload avatar",
-    "avatar_remove": "Remove avatar"
+    "avatar_remove": "Remove avatar",
+    "captcha": {
+      "default": "CProof (default)",
+      "cproof": "CProof",
+      "turnstile": "Cloudflare Turnstile",
+      "hcaptcha": "hCaptcha",
+      "recaptcha": "Google reCAPTCHA v2"
+    }
   },
   "offline": {
     "title": "You are offline",
@@ -558,7 +569,8 @@
     "push_not_enabled": "Enable push on this device first.",
     "friend_self": "You cannot add yourself.",
     "friend_remote": "Could not reach that server or find that person.",
-    "tfa_prefs_failed": "Could not save the verification settings. Try again."
+    "tfa_prefs_failed": "Could not save the verification settings. Try again.",
+    "captcha_unavailable": "The captcha service is not available right now. Try again later."
   },
   "mail": {
     "login": {

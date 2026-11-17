@@ -445,7 +445,8 @@
       "metadata": "番組データの取得元",
       "telegram": "Telegram ボット",
       "branding": "サイト情報",
-      "redis": "Redis"
+      "redis": "Redis",
+      "captcha": "Captcha"
     },
     "cfg": {
       "smtp_host": "SMTPホスト",
@@ -474,12 +475,22 @@
       "contact_email": "お問い合わせフォームの宛先メール",
       "redis_addr": "Redis のアドレス（ホスト:ポート）",
       "redis_password": "Redis のパスワード",
-      "redis_db": "Redis のデータベース番号"
+      "redis_db": "Redis のデータベース番号",
+      "captcha_provider": "Captchaプロバイダー",
+      "captcha_site_key": "サイトキー（Turnstile、hCaptcha、reCAPTCHA）",
+      "captcha_key": "シークレットキーまたはCProofライセンスキー"
     },
     "avatar": "サーバーのアバター",
     "avatar_hint": "他のサーバーのサーバー一覧で、このサーバー名の横に表示されます。正方形の画像が最適です。",
     "avatar_upload": "アバターをアップロード",
-    "avatar_remove": "アバターを削除"
+    "avatar_remove": "アバターを削除",
+    "captcha": {
+      "default": "CProof（デフォルト）",
+      "cproof": "CProof",
+      "turnstile": "Cloudflare Turnstile",
+      "hcaptcha": "hCaptcha",
+      "recaptcha": "Google reCAPTCHA v2"
+    }
   },
   "offline": {
     "title": "オフラインです",
@@ -558,7 +569,8 @@
     "push_not_enabled": "先にこの端末でプッシュを有効にしてください。",
     "friend_self": "自分自身は追加できません。",
     "friend_remote": "そのサーバーに接続できないか、その人が見つかりません。",
-    "tfa_prefs_failed": "確認設定を保存できませんでした。もう一度お試しください。"
+    "tfa_prefs_failed": "確認設定を保存できませんでした。もう一度お試しください。",
+    "captcha_unavailable": "Captchaサービスは現在利用できません。後でもう一度お試しください。"
   },
   "mail": {
     "login": {

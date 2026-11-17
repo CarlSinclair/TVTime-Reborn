@@ -445,7 +445,8 @@
       "metadata": "Источники данных о сериалах",
       "telegram": "Бот Telegram",
       "branding": "Сведения о сайте",
-      "redis": "Redis"
+      "redis": "Redis",
+      "captcha": "Капча"
     },
     "cfg": {
       "smtp_host": "SMTP-сервер",
@@ -474,12 +475,22 @@
       "contact_email": "Почта формы обратной связи",
       "redis_addr": "Адрес Redis (хост:порт)",
       "redis_password": "Пароль Redis",
-      "redis_db": "Номер базы данных Redis"
+      "redis_db": "Номер базы данных Redis",
+      "captcha_provider": "Провайдер капчи",
+      "captcha_site_key": "Ключ сайта (Turnstile, hCaptcha, reCAPTCHA)",
+      "captcha_key": "Секретный ключ или лицензия CProof"
     },
     "avatar": "Аватар сервера",
     "avatar_hint": "Показывается рядом с названием этого сервера в списках серверов на других серверах. Лучше всего подходит квадратное изображение.",
     "avatar_upload": "Загрузить аватар",
-    "avatar_remove": "Удалить аватар"
+    "avatar_remove": "Удалить аватар",
+    "captcha": {
+      "default": "CProof (по умолчанию)",
+      "cproof": "CProof",
+      "turnstile": "Cloudflare Turnstile",
+      "hcaptcha": "hCaptcha",
+      "recaptcha": "Google reCAPTCHA v2"
+    }
   },
   "offline": {
     "title": "Вы не в сети",
@@ -558,7 +569,8 @@
     "push_not_enabled": "Сначала включите push на этом устройстве.",
     "friend_self": "Нельзя добавить самого себя.",
     "friend_remote": "Не удалось связаться с этим сервером или найти этого человека.",
-    "tfa_prefs_failed": "Не удалось сохранить настройки подтверждения. Попробуйте еще раз."
+    "tfa_prefs_failed": "Не удалось сохранить настройки подтверждения. Попробуйте еще раз.",
+    "captcha_unavailable": "Сервис капчи сейчас недоступен. Попробуйте позже."
   },
   "mail": {
     "login": {

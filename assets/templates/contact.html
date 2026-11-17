@@ -17,24 +17,33 @@
     <label>{{.T "contact.email"}}<input type="email" name="email" autocomplete="email" value="{{if .User}}{{.User.Email}}{{end}}"></label>
     <label>{{.T "contact.message"}}<textarea name="message" rows="7" maxlength="5000" required></textarea></label>
     <label class="hp" aria-hidden="true">Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
-    <div class="captcha-game-container" data-i18n-expired="{{.T "captcha.expired"}}" data-i18n-securing="{{.T "captcha.securing"}}" data-i18n-secured="{{.T "captcha.secured"}}" data-i18n-complete-first="{{.T "captcha.complete_first"}}">
+    {{if eq .Data.CaptchaProvider "cproof"}}
+    <div class="captcha-game-container cproof-widget" data-captcha="cproof" data-base="{{.Data.CaptchaBase}}" data-unavailable="{{.T "err.captcha_unavailable"}}" data-captcha-required="1" data-start-angle="0" data-tooltip-disabled="{{.T "captcha.complete_first"}}" data-wait-label="{{.T "captcha.securing"}}" data-expired-label="{{.T "captcha.expired"}}" aria-live="polite">
       <div class="captcha-game-view">
-        <div class="captcha-image-wrapper"><img src="{{.Data.CaptchaImage}}" class="captcha-image-main" alt=""></div>
-        <div class="captcha-instructions"><p>{{.T "captcha.instructions"}}</p></div>
-        <div class="captcha-slider-container">
-          <input type="range" min="0" max="360" value="0" class="captcha-slider" aria-label="{{.T "captcha.instructions"}}">
-          <button class="icon-btn refresh-captcha-btn" type="button" aria-label="{{.T "captcha.refresh"}}" title="{{.T "captcha.refresh"}}">&#8635;</button>
+        <div class="captcha-game-card">
+          <div class="captcha-instructions">
+            <p>{{.T "captcha.instructions"}}</p>
+            <button type="button" class="icon-btn refresh-captcha-btn" aria-label="{{.T "captcha.refresh"}}" title="{{.T "captcha.refresh"}}">&#8635;</button>
+          </div>
+          <div class="captcha-game-controls">
+            <div class="captcha-image-wrapper"><img class="captcha-image-main" alt=""></div>
+            <div class="captcha-slider-container"><input type="range" min="0" max="360" value="0" class="captcha-slider" aria-label="{{.T "captcha.instructions"}}"></div>
+            <input type="hidden" name="captcha_id" value="">
+            <input type="hidden" name="captcha_answer" value="">
+          </div>
         </div>
       </div>
       <div class="captcha-success-view" aria-hidden="true">
-        <svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-check-circle"></use></svg>
+        <div class="icon" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-check-circle"></use></svg></div>
         <p>{{.T "captcha.secured"}}</p>
       </div>
-      <input type="hidden" name="captcha_id" value="{{.Data.CaptchaID}}">
-      <input type="hidden" name="pow_nonce" value="">
     </div>
+    {{else if .Data.CaptchaProvider}}
+    <div class="captcha-ext" data-captcha="{{.Data.CaptchaProvider}}" data-src="{{.Data.CaptchaScript}}" data-site="{{.Data.CaptchaSite}}" data-unavailable="{{.T "err.captcha_unavailable"}}"></div>
+    <input type="hidden" name="captcha_id" value="">
+    {{end}}
     <p class="form-error" role="alert" hidden></p>
-    <div><button class="btn" type="submit" disabled title="{{.T "captcha.complete_first"}}">{{.T "contact.send"}}</button></div>
+    <div><button class="btn" type="submit"{{if .Data.CaptchaProvider}} disabled title="{{.T "captcha.complete_first"}}"{{end}}>{{.T "contact.send"}}</button></div>
   </form>
   {{else if not (or .Data.Email .Data.Bot)}}
   <p class="muted">{{.T "contact.unavailable"}}</p>

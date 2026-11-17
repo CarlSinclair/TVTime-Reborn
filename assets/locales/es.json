@@ -445,7 +445,8 @@
       "metadata": "Fuentes de datos de series",
       "telegram": "Bot de Telegram",
       "branding": "Identidad del sitio",
-      "redis": "Redis"
+      "redis": "Redis",
+      "captcha": "Captcha"
     },
     "cfg": {
       "smtp_host": "Servidor SMTP",
@@ -474,12 +475,22 @@
       "contact_email": "Correo del formulario de contacto",
       "redis_addr": "Dirección de Redis (host:puerto)",
       "redis_password": "Contraseña de Redis",
-      "redis_db": "Número de base de datos de Redis"
+      "redis_db": "Número de base de datos de Redis",
+      "captcha_provider": "Proveedor de captcha",
+      "captcha_site_key": "Clave del sitio (Turnstile, hCaptcha, reCAPTCHA)",
+      "captcha_key": "Clave secreta o licencia de CProof"
     },
     "avatar": "Avatar del servidor",
     "avatar_hint": "Se muestra junto al nombre de este servidor en las listas de servidores de otros servidores. Una imagen cuadrada funciona mejor.",
     "avatar_upload": "Subir avatar",
-    "avatar_remove": "Quitar avatar"
+    "avatar_remove": "Quitar avatar",
+    "captcha": {
+      "default": "CProof (predeterminado)",
+      "cproof": "CProof",
+      "turnstile": "Cloudflare Turnstile",
+      "hcaptcha": "hCaptcha",
+      "recaptcha": "Google reCAPTCHA v2"
+    }
   },
   "offline": {
     "title": "Sin conexión",
@@ -558,7 +569,8 @@
     "push_not_enabled": "Activa las notificaciones push en este dispositivo primero.",
     "friend_self": "No puedes añadirte a ti mismo.",
     "friend_remote": "No se pudo contactar con ese servidor ni encontrar a esa persona.",
-    "tfa_prefs_failed": "No se pudo guardar la configuración de verificación. Inténtalo de nuevo."
+    "tfa_prefs_failed": "No se pudo guardar la configuración de verificación. Inténtalo de nuevo.",
+    "captcha_unavailable": "El servicio de captcha no está disponible ahora. Inténtalo más tarde."
   },
   "mail": {
     "login": {

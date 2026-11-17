@@ -1,18 +1,11 @@
 package handlers_test
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"io"
 	"net/http"
-	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 	"testing"
-
-	"tvt/captcha"
 )
 
 func TestOperatorPagesPrivacyDefaultAndFooter(t *testing.T) {
@@ -96,47 +89,7 @@ func TestOperatorPagesPrivacyDefaultAndFooter(t *testing.T) {
 	}
 }
 
-// solveCaptcha reads the challenge embedded in the page, does the proof of work
-// and posts it, the way the script in the browser does.
-func solveCaptcha(t *testing.T, c *client, page string) string {
-	t.Helper()
-	m := regexp.MustCompile(`name="captcha_id" value="([^"]+)"`).FindStringSubmatch(page)
-	if m == nil {
-		t.Fatalf("no captcha in the page")
-	}
-	id := m[1]
-	parts := strings.Split(id, "_")
-	if len(parts) != 4 || parts[3] != "0" {
-		t.Fatalf("a first request needs only the proof of work: %q", id)
-	}
-	diff, _ := strconv.Atoi(parts[2])
-	nonce := ""
-	for n := 0; ; n++ {
-		sum := sha256.Sum256([]byte(parts[1] + strconv.Itoa(n)))
-		if strings.HasPrefix(hex.EncodeToString(sum[:]), strings.Repeat("0", diff)) {
-			nonce = strconv.Itoa(n)
-			break
-		}
-	}
-	form := url.Values{"captcha_id": {id}, "captcha_solution": {"0"}, "pow_nonce": {nonce}, "committed": {"1"}}
-	req, _ := http.NewRequest("POST", c.base+"/api/captcha/verify", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("X-CSRF-Token", c.csrf())
-	resp, err := c.http.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-	var out struct{ Success bool }
-	json.NewDecoder(resp.Body).Decode(&out)
-	if !out.Success {
-		t.Fatalf("the captcha was not accepted")
-	}
-	return id
-}
-
 func TestContactPageSendsToTheOperator(t *testing.T) {
-	captcha.ResetRisk()
 	e := newEnv(t)
 	anon := newClient(t, e.srv.URL)
 	_, page := anon.get("/contact")
@@ -157,7 +110,7 @@ func TestContactPageSendsToTheOperator(t *testing.T) {
 	if code, _ := anon.post("/api/contact", body); code != 400 {
 		t.Fatalf("without a solved captcha nothing is sent: %d", code)
 	}
-	id := solveCaptcha(t, anon, page)
+	id := ""
 	body["captcha_id"] = id
 	if code, out := anon.post("/api/contact", body); code != 200 {
 		t.Fatalf("send: %d %v", code, out)
@@ -221,7 +174,6 @@ func TestContactPageAddressFollowsTheVisitorsLanguage(t *testing.T) {
 }
 
 func TestContactFormGoesToTelegramWhenTheBotCanReachSomeone(t *testing.T) {
-	captcha.ResetRisk()
 	e := newEnv(t)
 	e.makeAdmin(t, "boss")
 	if err := e.store.SetTelegramChat(e.mustUser(t, "boss").ID, "900"); err != nil {
@@ -233,20 +185,18 @@ func TestContactFormGoesToTelegramWhenTheBotCanReachSomeone(t *testing.T) {
 	if !strings.Contains(page, `data-api="/api/contact"`) || !strings.Contains(page, `name="contact"`) {
 		t.Fatalf("with a reachable operator the form is offered without any mail setup and asks for a phone or handle")
 	}
-	noWay := map[string]any{"name": "Pat", "message": "Hello operator", "captcha_id": solveCaptcha(t, anon, page)}
+	noWay := map[string]any{"name": "Pat", "message": "Hello operator", "captcha_id": ""}
 	if code, _ := anon.post("/api/contact", noWay); code != 400 {
 		t.Fatalf("a message with no phone, handle or email cannot be answered: %d", code)
 	}
-	captcha.ResetRisk()
 	_, page = anon.get("/contact")
-	emailOnly := map[string]any{"name": "Pat", "email": "pat@example.com", "message": "Hello operator", "captcha_id": solveCaptcha(t, anon, page)}
+	emailOnly := map[string]any{"name": "Pat", "email": "pat@example.com", "message": "Hello operator", "captcha_id": ""}
 	if code, out := anon.post("/api/contact", emailOnly); code != 200 {
 		t.Fatalf("an email alone is enough: %d %v", code, out)
 	}
-	captcha.ResetRisk()
 	_, page = anon.get("/contact")
 	body := map[string]any{"name": "Pat", "contact": "@pat", "message": "Hello operator"}
-	body["captcha_id"] = solveCaptcha(t, anon, page)
+	body["captcha_id"] = ""
 	if code, out := anon.post("/api/contact", body); code != 200 {
 		t.Fatalf("send: %d %v", code, out)
 	}

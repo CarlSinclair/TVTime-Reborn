@@ -47,8 +47,6 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /welcome", a.pageLanding)
 	mux.HandleFunc("GET /{slug}", a.pagePublic)
 	mux.HandleFunc("POST /api/contact", a.apiContact)
-	mux.HandleFunc("GET /api/captcha/new", a.apiCaptchaNew)
-	mux.HandleFunc("POST /api/captcha/verify", a.apiCaptchaVerify)
 	mux.HandleFunc("POST /api/admin/pages", a.apiAdminPages)
 	mux.HandleFunc("GET /api/admin/pages/resolve-lang", a.apiAdminPageLangResolve)
 	mux.HandleFunc("POST /api/admin/faq", a.apiAdminFAQ)

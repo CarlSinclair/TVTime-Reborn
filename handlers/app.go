@@ -381,7 +381,7 @@ var publicPages = map[string]bool{
 // recovery pages, the legal pages, static files and the machine endpoints.
 // Everything else needs an account.
 func (a *App) publicRoute(p string) bool {
-	return isStatic(p) || publicPages[p] || p == "/" || p == "/welcome" || p == "/api/contact" || strings.HasPrefix(p, "/api/captcha/") || a.isContactSlug(p) || a.isPageSlug(p) || isMachineAPI(p) || strings.HasPrefix(p, "/t/") || strings.HasPrefix(p, "/api/auth/") || p == "/api/telegram/webhook" ||
+	return isStatic(p) || publicPages[p] || p == "/" || p == "/welcome" || p == "/api/contact" || a.isContactSlug(p) || a.isPageSlug(p) || isMachineAPI(p) || strings.HasPrefix(p, "/t/") || strings.HasPrefix(p, "/api/auth/") || p == "/api/telegram/webhook" ||
 		p == "/.well-known/tvt" || p == "/.well-known/security.txt" || strings.HasPrefix(p, "/federation/")
 }
 
@@ -441,7 +441,7 @@ func (a *App) middleware(next http.Handler) http.Handler {
 		if a.Cfg.CookieSecure {
 			sw.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		}
-		sw.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:"+a.publicMediaOrigin()+a.peerImageOrigins()+"; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+		sw.Header().Set("Content-Security-Policy", a.contentSecurityPolicy())
 		ctx := r.Context()
 		if !isStatic(r.URL.Path) {
 			u, err := a.Auth.Authenticate(sw, r)

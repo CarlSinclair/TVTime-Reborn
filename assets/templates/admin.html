@@ -191,6 +191,8 @@
   {{range .Values}}
     {{if .Bool}}
     <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="cfg-{{.Key}}" name="{{.Key}}" {{if eq .Text "1"}}checked{{end}}><label for="cfg-{{.Key}}" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="cfg-{{.Key}}">{{$.T (printf "admin.cfg.%s" .Key)}}</label></div>
+    {{else if .Choices}}
+    <label>{{$.T (printf "admin.cfg.%s" .Key)}}<select name="{{.Key}}"><option value="">{{$.T "admin.captcha.default"}}</option>{{$v := .Text}}{{range .Choices}}<option value="{{.}}"{{if eq . $v}} selected{{end}}>{{$.T (printf "admin.captcha.%s" .)}}</option>{{end}}</select></label>
     {{else if .Secret}}
     <label>{{$.T (printf "admin.cfg.%s" .Key)}}<input type="password" name="{{.Key}}" value="{{.Text}}" autocomplete="new-password" spellcheck="false"></label>
     {{else}}

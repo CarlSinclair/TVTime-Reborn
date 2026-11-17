@@ -10,43 +10,46 @@ import (
 )
 
 type Config struct {
-	AppName        string
-	Addr           string
-	BaseURL        string
-	DBPath         string
-	JWTSecret      string
-	TMDBKey        string
-	CookieSecure   bool
-	SMTPHost       string
-	SMTPPort       int
-	SMTPUser       string
-	SMTPPass       string
-	MailFrom       string
-	DevLogMail     bool
-	AdminEmail     string
-	DataDir        string
-	TelegramBot    string
-	TelegramName   string
-	SupportToGroup bool
-	SupportChatID  string
-	ClientIPHeader string
-	ImageBase      string
-	S3             media.S3Config
-	RedisAddr      string
-	RedisPassword  string
-	RedisDB        int
-	TraktClientID  string
-	TVDBKey        string
-	Federation     bool
-	FedInsecure    bool
-	FedBlock       []string
-	FedAllow       []string
-	TVDBImageBase  string
-	SourceURL      string
-	MediaPublicURL string
-	OperatorName   string
-	PrivacyContact string
-	ContactEmail   string
+	AppName         string
+	Addr            string
+	BaseURL         string
+	DBPath          string
+	JWTSecret       string
+	TMDBKey         string
+	CookieSecure    bool
+	SMTPHost        string
+	SMTPPort        int
+	SMTPUser        string
+	SMTPPass        string
+	MailFrom        string
+	DevLogMail      bool
+	AdminEmail      string
+	DataDir         string
+	TelegramBot     string
+	CaptchaProvider string
+	CaptchaSiteKey  string
+	CaptchaKey      string
+	TelegramName    string
+	SupportToGroup  bool
+	SupportChatID   string
+	ClientIPHeader  string
+	ImageBase       string
+	S3              media.S3Config
+	RedisAddr       string
+	RedisPassword   string
+	RedisDB         int
+	TraktClientID   string
+	TVDBKey         string
+	Federation      bool
+	FedInsecure     bool
+	FedBlock        []string
+	FedAllow        []string
+	TVDBImageBase   string
+	SourceURL       string
+	MediaPublicURL  string
+	OperatorName    string
+	PrivacyContact  string
+	ContactEmail    string
 }
 
 func env(key, def string) string {
@@ -67,37 +70,40 @@ func envAny(keys ...string) string {
 
 func Load() (*Config, error) {
 	c := &Config{
-		AppName:        env("TVT_APP_NAME", "TVT"),
-		Addr:           env("TVT_ADDR", "127.0.0.1:9911"),
-		BaseURL:        strings.TrimRight(env("TVT_BASE_URL", "http://127.0.0.1:9911"), "/"),
-		DBPath:         env("TVT_DB", "tvt.db"),
-		JWTSecret:      env("TVT_JWT_SECRET", ""),
-		TMDBKey:        env("TVT_TMDB_KEY", ""),
-		SMTPHost:       env("TVT_SMTP_HOST", ""),
-		MailFrom:       env("TVT_MAIL_FROM", ""),
-		SMTPUser:       env("TVT_SMTP_USER", ""),
-		SMTPPass:       env("TVT_SMTP_PASS", ""),
-		DevLogMail:     env("TVT_DEV_LOG_MAIL", "") == "1",
-		AdminEmail:     strings.ToLower(env("TVT_ADMIN_EMAIL", "")),
-		DataDir:        env("TVT_DATA_DIR", "data"),
-		RedisAddr:      env("TVT_REDIS_ADDR", ""),
-		RedisPassword:  env("TVT_REDIS_PASSWORD", ""),
-		TelegramBot:    env("TVT_TELEGRAM_BOT_TOKEN", ""),
-		TelegramName:   env("TVT_TELEGRAM_BOT_USERNAME", ""),
-		ClientIPHeader: env("TVT_CLIENT_IP_HEADER", "X-Forwarded-For"),
-		ImageBase:      strings.TrimRight(env("TVT_IMAGE_BASE", "https://image.tmdb.org/t/p"), "/"),
-		TraktClientID:  env("TVT_TRAKT_CLIENT_ID", ""),
-		TVDBKey:        env("TVT_TVDB_KEY", ""),
-		Federation:     env("TVT_FEDERATION", "1") != "0",
-		FedInsecure:    env("TVT_FEDERATION_INSECURE", "") == "1",
-		FedBlock:       strings.Split(env("TVT_FEDERATION_BLOCK", ""), ","),
-		FedAllow:       strings.Split(env("TVT_FEDERATION_ALLOW", ""), ","),
-		TVDBImageBase:  strings.TrimRight(env("TVT_TVDB_IMAGE_BASE", "https://artworks.thetvdb.com"), "/"),
-		MediaPublicURL: strings.TrimRight(env("TVT_MEDIA_PUBLIC_URL", ""), "/"),
-		SourceURL:      env("TVT_SOURCE_URL", "https://github.com/CarlSinclair/TVTime-Reborn"),
-		OperatorName:   env("TVT_OPERATOR_NAME", ""),
-		PrivacyContact: env("TVT_PRIVACY_CONTACT", ""),
-		ContactEmail:   env("TVT_CONTACT_EMAIL", ""),
+		AppName:         env("TVT_APP_NAME", "TVT"),
+		Addr:            env("TVT_ADDR", "127.0.0.1:9911"),
+		BaseURL:         strings.TrimRight(env("TVT_BASE_URL", "http://127.0.0.1:9911"), "/"),
+		DBPath:          env("TVT_DB", "tvt.db"),
+		JWTSecret:       env("TVT_JWT_SECRET", ""),
+		TMDBKey:         env("TVT_TMDB_KEY", ""),
+		SMTPHost:        env("TVT_SMTP_HOST", ""),
+		MailFrom:        env("TVT_MAIL_FROM", ""),
+		SMTPUser:        env("TVT_SMTP_USER", ""),
+		SMTPPass:        env("TVT_SMTP_PASS", ""),
+		DevLogMail:      env("TVT_DEV_LOG_MAIL", "") == "1",
+		AdminEmail:      strings.ToLower(env("TVT_ADMIN_EMAIL", "")),
+		DataDir:         env("TVT_DATA_DIR", "data"),
+		RedisAddr:       env("TVT_REDIS_ADDR", ""),
+		RedisPassword:   env("TVT_REDIS_PASSWORD", ""),
+		TelegramBot:     env("TVT_TELEGRAM_BOT_TOKEN", ""),
+		CaptchaProvider: env("TVT_CAPTCHA_PROVIDER", ""),
+		CaptchaSiteKey:  env("TVT_CAPTCHA_SITE_KEY", ""),
+		CaptchaKey:      env("TVT_CAPTCHA_KEY", ""),
+		TelegramName:    env("TVT_TELEGRAM_BOT_USERNAME", ""),
+		ClientIPHeader:  env("TVT_CLIENT_IP_HEADER", "X-Forwarded-For"),
+		ImageBase:       strings.TrimRight(env("TVT_IMAGE_BASE", "https://image.tmdb.org/t/p"), "/"),
+		TraktClientID:   env("TVT_TRAKT_CLIENT_ID", ""),
+		TVDBKey:         env("TVT_TVDB_KEY", ""),
+		Federation:      env("TVT_FEDERATION", "1") != "0",
+		FedInsecure:     env("TVT_FEDERATION_INSECURE", "") == "1",
+		FedBlock:        strings.Split(env("TVT_FEDERATION_BLOCK", ""), ","),
+		FedAllow:        strings.Split(env("TVT_FEDERATION_ALLOW", ""), ","),
+		TVDBImageBase:   strings.TrimRight(env("TVT_TVDB_IMAGE_BASE", "https://artworks.thetvdb.com"), "/"),
+		MediaPublicURL:  strings.TrimRight(env("TVT_MEDIA_PUBLIC_URL", ""), "/"),
+		SourceURL:       env("TVT_SOURCE_URL", "https://github.com/CarlSinclair/TVTime-Reborn"),
+		OperatorName:    env("TVT_OPERATOR_NAME", ""),
+		PrivacyContact:  env("TVT_PRIVACY_CONTACT", ""),
+		ContactEmail:    env("TVT_CONTACT_EMAIL", ""),
 		S3: media.S3Config{
 			Endpoint: envAny("TVT_S3_ENDPOINT"), Region: envAny("TVT_S3_REGION"),
 			Bucket: envAny("TVT_S3_BUCKET"), AccessKeyID: envAny("TVT_S3_ACCESS_KEY_ID"),

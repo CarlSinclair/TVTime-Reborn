@@ -445,7 +445,8 @@
       "metadata": "剧集数据来源",
       "telegram": "Telegram 机器人",
       "branding": "站点信息",
-      "redis": "Redis"
+      "redis": "Redis",
+      "captcha": "验证码"
     },
     "cfg": {
       "smtp_host": "SMTP 主机",
@@ -474,12 +475,22 @@
       "contact_email": "联系表单邮箱",
       "redis_addr": "Redis 地址（主机:端口）",
       "redis_password": "Redis 密码",
-      "redis_db": "Redis 数据库编号"
+      "redis_db": "Redis 数据库编号",
+      "captcha_provider": "验证码提供商",
+      "captcha_site_key": "站点密钥（Turnstile、hCaptcha、reCAPTCHA）",
+      "captcha_key": "私密密钥或 CProof 许可证密钥"
     },
     "avatar": "服务器头像",
     "avatar_hint": "显示在其他服务器的服务器列表中，位于此服务器名称旁。正方形图片效果最佳。",
     "avatar_upload": "上传头像",
-    "avatar_remove": "移除头像"
+    "avatar_remove": "移除头像",
+    "captcha": {
+      "default": "CProof（默认）",
+      "cproof": "CProof",
+      "turnstile": "Cloudflare Turnstile",
+      "hcaptcha": "hCaptcha",
+      "recaptcha": "Google reCAPTCHA v2"
+    }
   },
   "offline": {
     "title": "你已离线",
@@ -558,7 +569,8 @@
     "push_not_enabled": "请先在此设备上启用推送。",
     "friend_self": "不能添加自己。",
     "friend_remote": "无法连接到该服务器或找不到此人。",
-    "tfa_prefs_failed": "无法保存验证设置，请重试。"
+    "tfa_prefs_failed": "无法保存验证设置，请重试。",
+    "captcha_unavailable": "验证码服务暂时不可用，请稍后再试。"
   },
   "mail": {
     "login": {

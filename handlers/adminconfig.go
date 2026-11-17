@@ -115,6 +115,9 @@ func (a *App) candidate(in map[string]any) (*config.Config, map[string]*string, 
 		changes["app_name"] = &clean
 	}
 	c.AppName = clean
+	if group == "captcha" && c.CaptchaProvider != "" && c.CaptchaProvider != "cproof" && (c.CaptchaSiteKey == "" || c.CaptchaKey == "") {
+		return nil, nil, group, fmt.Errorf("this captcha provider needs both a site key and a secret key")
+	}
 	return c, changes, group, nil
 }
 
