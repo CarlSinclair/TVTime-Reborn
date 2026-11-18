@@ -5,7 +5,7 @@ go 1.27.0
 toolchain go1.27.4
 
 require (
-	github.com/CarlSinclair/csuit-libs v1.9.3
+	github.com/CarlSinclair/csuit-libs v1.9.4
 	github.com/dop251/goja v0.0.0-20261012212121-0c308c5ed11b
 	github.com/go-webauthn/webauthn v0.18.2
 	github.com/golang-jwt/jwt/v5 v5.3.1

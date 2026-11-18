@@ -45,6 +45,17 @@ if git ls-files --error-unmatch tvt.env >/dev/null 2>&1 || git diff --cached --n
   exit 1
 fi
 
+if command -v go >/dev/null 2>&1; then
+  unresolved="$(GOWORK=off GOFLAGS=-buildvcs=false go list -e -deps -f '{{if .Error}}{{.Error}}{{end}}' ./... 2>&1 | { grep -v '^$' || true; } | sort -u | head -10)"
+  if [ -n "$unresolved" ]; then
+    echo "ship: imports do not resolve against the versions pinned in go.mod, CI would fail:" >&2
+    echo "$unresolved" | cut -c1-200 | sed 's/^/  /' >&2
+    echo "ship: tag the shared lib and bump the pin (go get github.com/CarlSinclair/csuit-libs@<tag>), then run again" >&2
+    git reset -q
+    exit 1
+  fi
+fi
+
 git fetch --quiet origin "$BRANCH"
 
 if ! git diff --cached --quiet; then
