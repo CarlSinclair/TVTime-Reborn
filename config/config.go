@@ -32,6 +32,8 @@ type Config struct {
 	TelegramName    string
 	SupportToGroup  bool
 	SupportChatID   string
+	TelegramAPIBase string
+	AlertChatID     string
 	ClientIPHeader  string
 	ImageBase       string
 	S3              media.S3Config

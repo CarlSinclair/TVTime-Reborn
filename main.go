@@ -86,6 +86,12 @@ func main() {
 	if err != nil {
 		logger.Fatal("locales: %v", err)
 	}
+	logger.SetTelegramBaseOverride(func() string { return cfg.TelegramAPIBase })
+	logger.SetTelegramBotToken(func() string { return cfg.TelegramBot })
+	logger.SetTelegramChatID(func() string { return cfg.AlertChatID })
+	if cfg.TelegramBot != "" && cfg.AlertChatID == "" {
+		logger.Warn("TELEGRAM alert chat id is not set (Admin > Config > Telegram): error alerts are not delivered")
+	}
 	ml := mailer.New(cfg)
 	hook := hmac.New(sha256.New, []byte(cfg.JWTSecret))
 	hook.Write([]byte("telegram-webhook"))

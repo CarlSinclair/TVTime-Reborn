@@ -469,6 +469,8 @@
       "telegram_name": "Nombre de usuario del bot",
       "support_to_group": "Enviar los mensajes de soporte a un chat de grupo",
       "support_chat_id": "ID del chat de grupo de soporte",
+      "telegram_api_base": "URL base de la API de Telegram",
+      "alert_chat_id": "ID del chat de alertas",
       "app_name": "Nombre del sitio",
       "operator_name": "Nombre del operador",
       "privacy_contact": "Contacto de privacidad",

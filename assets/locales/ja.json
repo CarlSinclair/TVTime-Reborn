@@ -469,6 +469,8 @@
       "telegram_name": "ボットのユーザー名",
       "support_to_group": "サポートメッセージをグループチャットに送る",
       "support_chat_id": "サポート用グループチャット ID",
+      "telegram_api_base": "Telegram API のベース URL",
+      "alert_chat_id": "アラート用チャット ID",
       "app_name": "サイト名",
       "operator_name": "運営者名",
       "privacy_contact": "プライバシー連絡先",

@@ -469,6 +469,8 @@
       "telegram_name": "机器人用户名",
       "support_to_group": "将支持消息发送到群聊",
       "support_chat_id": "支持群聊 ID",
+      "telegram_api_base": "Telegram API 基础 URL",
+      "alert_chat_id": "告警聊天 ID",
       "app_name": "站点名称",
       "operator_name": "运营者名称",
       "privacy_contact": "隐私联系方式",

@@ -469,6 +469,8 @@
       "telegram_name": "봇 사용자 이름",
       "support_to_group": "지원 메시지를 그룹 채팅으로 보내기",
       "support_chat_id": "지원 그룹 채팅 ID",
+      "telegram_api_base": "Telegram API 기본 URL",
+      "alert_chat_id": "알림 채팅 ID",
       "app_name": "사이트 이름",
       "operator_name": "운영자 이름",
       "privacy_contact": "개인정보 문의처",

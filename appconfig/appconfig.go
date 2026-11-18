@@ -105,6 +105,8 @@ var Fields = []Field{
 	field("telegram_name", "telegram", false, func(c *config.Config) *string { return &c.TelegramName }),
 	boolField("support_to_group", "telegram", func(c *config.Config) *bool { return &c.SupportToGroup }),
 	field("support_chat_id", "telegram", false, func(c *config.Config) *string { return &c.SupportChatID }),
+	field("telegram_api_base", "telegram", false, func(c *config.Config) *string { return &c.TelegramAPIBase }),
+	field("alert_chat_id", "telegram", false, func(c *config.Config) *string { return &c.AlertChatID }),
 
 	{Key: "captcha_provider", Group: "captcha", Choices: CaptchaProviders,
 		get: func(c *config.Config) string { return c.CaptchaProvider },

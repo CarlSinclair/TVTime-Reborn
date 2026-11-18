@@ -469,6 +469,8 @@
       "telegram_name": "اسم مستخدم البوت",
       "support_to_group": "إرسال رسائل الدعم إلى محادثة جماعية",
       "support_chat_id": "معرّف المحادثة الجماعية للدعم",
+      "telegram_api_base": "عنوان Telegram API الأساسي",
+      "alert_chat_id": "معرّف محادثة التنبيهات",
       "app_name": "اسم الموقع",
       "operator_name": "اسم المشغّل",
       "privacy_contact": "جهة اتصال الخصوصية",
