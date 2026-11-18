@@ -3,9 +3,13 @@ package handlers_test
 import (
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
+
+	"tvt/handlers"
 )
 
 func TestOperatorPagesPrivacyDefaultAndFooter(t *testing.T) {
@@ -97,6 +101,20 @@ func TestContactPageSendsToTheOperator(t *testing.T) {
 		t.Fatalf("no form until mail and a contact address are configured")
 	}
 	e.cfg.SMTPHost, e.cfg.MailFrom, e.cfg.ContactEmail = "smtp.test", "no-reply@test.example", "owner@test.example"
+	e.cfg.CaptchaKey = "test-key"
+	var spent sync.Map
+	verify := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		id := r.PostForm.Get("captcha_id")
+		_, used := spent.LoadOrStore(id, true)
+		if id == "solved-1" && !used {
+			io.WriteString(w, `{"solved":true}`)
+			return
+		}
+		io.WriteString(w, `{"solved":false}`)
+	}))
+	defer verify.Close()
+	defer handlers.SetCaptchaVerifyURLForTest("cproof", verify.URL)()
 	_, page = anon.get("/contact")
 	for _, want := range []string{`data-api="/api/contact"`, `href="mailto:owner@test.example"`, `tg://resolve?domain=tvt_test_bot&amp;start=support`, `class="or-divider"`, `captcha-game-container`} {
 		if !strings.Contains(page, want) {
@@ -110,8 +128,7 @@ func TestContactPageSendsToTheOperator(t *testing.T) {
 	if code, _ := anon.post("/api/contact", body); code != 400 {
 		t.Fatalf("without a solved captcha nothing is sent: %d", code)
 	}
-	id := ""
-	body["captcha_id"] = id
+	body["captcha_id"] = "solved-1"
 	if code, out := anon.post("/api/contact", body); code != 200 {
 		t.Fatalf("send: %d %v", code, out)
 	}
