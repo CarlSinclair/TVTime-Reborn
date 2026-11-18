@@ -292,6 +292,10 @@ func (s *Syncer) startChannelBackfill(showID int64, tmdbID int64, source string)
 	if youtube.UploadsPlaylist(source) == "" || s.Store.KVGet(backfillKey(showID)) != "" {
 		return
 	}
+	if until, blocked := s.ytBlockedUntil(showID); blocked {
+		logger.Debug("SYNC youtube backfill show=%d skipped until %s", showID, until.Format(time.RFC3339))
+		return
+	}
 	s.backfillMu.Lock()
 	if s.backfilling == nil {
 		s.backfilling = map[int64]bool{}
@@ -311,7 +315,8 @@ func (s *Syncer) startChannelBackfill(showID int64, tmdbID int64, source string)
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Hour)
 		defer cancel()
 		if _, err := s.BackfillYouTubeChannel(ctx, showID, source); err != nil {
-			logger.Error("SYNC youtube background backfill show=%d source=%s, will retry on a later poll: %v", showID, source, err)
+			until := s.ytShowFailed(showID)
+			logger.Error("SYNC youtube background backfill show=%d source=%s, next try after %s: %v", showID, source, until.Format(time.RFC3339), err)
 			if e := s.Store.RecordSyncError(tmdbID, trunc("backfill: "+err.Error(), 300)); e != nil {
 				logger.Error("SYNC %v", e)
 			}
@@ -320,7 +325,7 @@ func (s *Syncer) startChannelBackfill(showID int64, tmdbID int64, source string)
 }
 
 const (
-	youtubeDateWorkers = 8
+	youtubeDateWorkers = 4
 	youtubeDateRetries = 2
 )
 
@@ -361,6 +366,14 @@ func (s *Syncer) BackfillYouTubeChannel(ctx context.Context, showID int64, sourc
 		err error
 	}
 	results := make([]result, len(todo))
+	var pending []int
+	for i, e := range todo {
+		if at, ok := s.ytCachedDate(e.ID); ok {
+			results[i] = result{at: at}
+			continue
+		}
+		pending = append(pending, i)
+	}
 	jobs := make(chan int)
 	var wg sync.WaitGroup
 	for w := 0; w < youtubeDateWorkers; w++ {
@@ -368,10 +381,14 @@ func (s *Syncer) BackfillYouTubeChannel(ctx context.Context, showID int64, sourc
 		go func() {
 			defer wg.Done()
 			for i := range jobs {
+				if s.ytThrottled() {
+					results[i] = result{err: errYouTubeThrottled}
+					continue
+				}
 				var at time.Time
 				var err error
 				for try := 0; try <= youtubeDateRetries; try++ {
-					if at, err = s.YouTube.PublishedAt(ctx, todo[i].ID); err == nil || ctx.Err() != nil {
+					if at, err = s.YouTube.PublishedAt(ctx, todo[i].ID); err == nil || ctx.Err() != nil || youtube.IsThrottled(err) {
 						break
 					}
 					select {
@@ -379,11 +396,23 @@ func (s *Syncer) BackfillYouTubeChannel(ctx context.Context, showID int64, sourc
 					case <-time.After(time.Duration(try+1) * time.Second):
 					}
 				}
+				if err == nil {
+					s.ytStoreDate(todo[i].ID, at)
+				} else if youtube.IsThrottled(err) {
+					if tripped, until := s.ytTripThrottle(); tripped {
+						logger.Warn("SYNC youtube is throttling date requests, pausing all backfills until %s: %v", until.Format(time.RFC3339), err)
+					}
+					err = fmt.Errorf("%w: %v", errYouTubeThrottled, err)
+				}
 				results[i] = result{at, err}
+				select {
+				case <-ctx.Done():
+				case <-time.After(youtubeDateGap):
+				}
 			}
 		}()
 	}
-	for i := range todo {
+	for _, i := range pending {
 		select {
 		case jobs <- i:
 		case <-ctx.Done():
@@ -398,17 +427,33 @@ func (s *Syncer) BackfillYouTubeChannel(ctx context.Context, showID int64, sourc
 		return 0, fmt.Errorf("youtube backfill show=%d source=%s stopped: %w", showID, source, err)
 	}
 	vids := make([]store.YouTubeVideo, 0, len(todo))
-	failed := 0
+	failed, throttled := 0, 0
+	var sample []string
+	var firstErr error
 	for i, r := range results {
 		if r.err != nil {
 			failed++
-			logger.Warn("SYNC youtube backfill show=%d video=%s date unreadable: %v", showID, todo[i].ID, r.err)
+			if errors.Is(r.err, errYouTubeThrottled) {
+				throttled++
+			}
+			if firstErr == nil {
+				firstErr = r.err
+			}
+			if len(sample) < 3 {
+				sample = append(sample, todo[i].ID)
+			}
 			continue
 		}
 		vids = append(vids, store.YouTubeVideo{ID: todo[i].ID, Title: todo[i].Title, Published: r.at})
 	}
+	if failed > 0 {
+		logger.Warn("SYNC youtube backfill show=%d source=%s: %d of %d dates unreadable (%d throttled), kept %d for the next run, e.g. %v, first error: %v", showID, source, failed, len(todo), throttled, len(vids), sample, firstErr)
+	}
 	if failed*50 > len(todo) {
-		return 0, fmt.Errorf("youtube backfill show=%d source=%s: could not read the date of %d of %d videos", showID, source, failed, len(todo))
+		if throttled > 0 {
+			return 0, fmt.Errorf("youtube backfill show=%d source=%s: could not read the date of %d of %d videos (%d throttled): %w", showID, source, failed, len(todo), throttled, errYouTubeThrottled)
+		}
+		return 0, fmt.Errorf("youtube backfill show=%d source=%s: could not read the date of %d of %d videos: %w", showID, source, failed, len(todo), firstErr)
 	}
 	n, err := s.Store.BackfillYouTubeChannel(showID, vids)
 	if err != nil {
@@ -417,6 +462,12 @@ func (s *Syncer) BackfillYouTubeChannel(ctx context.Context, showID int64, sourc
 	if err := s.Store.KVSet(backfillKey(showID), "1"); err != nil {
 		logger.Error("SYNC youtube show=%d source=%s backfill done but not recorded, it will run again: %v", showID, source, err)
 	}
+	ids := make([]string, len(todo))
+	for i, e := range todo {
+		ids[i] = e.ID
+	}
+	s.ytForgetDates(ids)
+	s.ytShowSucceeded(showID)
 	logger.Info("SYNC youtube show=%d source=%s backfilled %d of %d uploads (%d dates unreadable)", showID, source, n, len(entries), failed)
 	return n, nil
 }

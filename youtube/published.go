@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -101,4 +102,20 @@ func (c *Client) publishedFromPage(ctx context.Context, videoID string) (time.Ti
 		}
 	}
 	return time.Time{}, fmt.Errorf("youtube published %s: no publish date in the reply or the page", videoID)
+}
+
+// IsThrottled reports whether err means YouTube is rate limiting or bot
+// checking this client: an HTTP/2 GOAWAY with ENHANCE_YOUR_CALM, a 429/403, or
+// a redirect to the consent or bot-check page.
+func IsThrottled(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	for _, marker := range []string{"ENHANCE_YOUR_CALM", "server sent GOAWAY", "status 429", "status 403", "status 302"} {
+		if strings.Contains(msg, marker) {
+			return true
+		}
+	}
+	return false
 }

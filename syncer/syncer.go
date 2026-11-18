@@ -38,6 +38,10 @@ type Syncer struct {
 	shortMu     sync.Mutex
 	backfillMu  sync.Mutex
 	backfilling map[int64]bool
+	ytMu        sync.Mutex
+	ytDates     map[string]time.Time
+	ytRetry     map[int64]*ytBackoff
+	ytThrottle  ytBackoff
 	shorts      map[string]bool
 	feedMu      sync.Mutex
 	feeds       map[string]cachedFeed
