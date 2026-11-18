@@ -19,7 +19,7 @@ var migrationFS embed.FS
 const TimeFormat = "2006-01-02 15:04:05"
 
 func Open(path string) (*sql.DB, error) {
-	dsn := fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)&_pragma=synchronous(NORMAL)", path)
+	dsn := fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)&_pragma=synchronous(NORMAL)&_txlock=immediate", path)
 	sqlretry.Logf = logger.Warn
 	sqlretry.ErrorLogf = logger.Error
 	d, err := sqlretry.Open(dsn)

@@ -60,6 +60,7 @@ func main() {
 		logger.Error("settings saved in the admin UI were ignored, using the environment: %v", err)
 	}
 	stopRedis := startRedis(cfg)
+	useAlertState(cfg)
 	defer stopRedis()
 	if cfg.OperatorName == "" || cfg.PrivacyContact == "" {
 		logger.Warn("The operator name and privacy contact are not both set (TVT_OPERATOR_NAME, TVT_PRIVACY_CONTACT or Admin > Config): the privacy page will not say who runs this site or how to reach them")

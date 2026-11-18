@@ -51,6 +51,8 @@ var (
 	SentryRecover              = shared.SentryRecover
 	SentryFlush                = shared.SentryFlush
 	Setup                      = shared.Setup
+	SetAlertStateStore         = shared.SetAlertStateStore
+	FileAlertStore             = shared.FileAlertStore
 	SetTelegramBaseOverride    = shared.SetTelegramBaseOverride
 	SetTelegramBotToken        = shared.SetTelegramBotToken
 	SetTelegramChatID          = shared.SetTelegramChatID
