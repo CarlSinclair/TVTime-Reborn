@@ -1,8 +1,9 @@
-// Package youtube reads public YouTube data without the Data API: the Atom
+// Package youtube reads public YouTube data without needing the Data API: the Atom
 // upload feed of a channel or playlist, the channel and playlist search pages,
 // and whether an upload is a Short. Everything here is best effort scraping of
 // public pages, so callers must treat every error as retryable and never as
-// proof that a video, channel or playlist is gone.
+// proof that a video, channel or playlist is gone. api.go is the optional
+// Data API client used instead of scraping when a key is configured.
 package youtube
 
 import (

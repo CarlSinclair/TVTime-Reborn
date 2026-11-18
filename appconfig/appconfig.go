@@ -98,6 +98,7 @@ var Fields = []Field{
 
 	field("tmdb_key", "metadata", true, func(c *config.Config) *string { return &c.TMDBKey }),
 	field("tvdb_key", "metadata", true, func(c *config.Config) *string { return &c.TVDBKey }),
+	field("youtube_key", "metadata", true, func(c *config.Config) *string { return &c.YouTubeKey }),
 	field("trakt_client_id", "metadata", false, func(c *config.Config) *string { return &c.TraktClientID }),
 
 	field("telegram_bot", "telegram", true, func(c *config.Config) *string { return &c.TelegramBot }),

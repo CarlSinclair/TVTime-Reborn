@@ -9,6 +9,7 @@ Licensed under the [GNU AGPL v3](LICENSE); see [NOTICE](NOTICE) for attribution,
 ## Features
 
 - Exact per-episode air times from TVmaze, then Trakt if configured, where a real broadcast time is known (placeholders are ignored); otherwise the air date at midday in the user's own time zone. Users never have to enter an air time; they only choose how long before or after it to be alerted.
+- YouTube channel history is read with an optional YouTube Data API key (Admin > Config): 50 videos and their exact publish times per request. Without a key TVT falls back to scraping public pages, which YouTube rate limits when a channel has many videos.
 - Second catalog from TheTVDB (optional, key in Admin > Config) for shows TMDB lacks, such as YouTube and web series. TheTVDB requires attribution, which TVT shows on the About page.
 - Show catalogue from TMDB: synopses, ratings, posters and per-episode stills, kept fresh by a changes-feed poller; titles and synopses are always stored in each user's own language: every followed show is fetched in the language of each user who follows it, in the background, and refreshed weekly.
 - Import from TV Time: upload the GDPR export zip in Settings. Shows are matched through TMDB's TVDB lookup, watched episodes keep their original dates, followed, favorite and saved-for-later shows come across, and nothing you already track is changed. Movies are not imported. The zip is read in memory and not kept.

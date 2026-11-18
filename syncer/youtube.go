@@ -344,21 +344,50 @@ func (s *Syncer) BackfillYouTubeChannel(ctx context.Context, showID int64, sourc
 	if uploads == "" {
 		return 0, fmt.Errorf("youtube backfill show=%d: %q is not a channel", showID, source)
 	}
-	entries, err := s.YouTube.PlaylistVideos(ctx, uploads, 0)
-	if err != nil {
-		return 0, fmt.Errorf("youtube backfill show=%d source=%s listing: %w", showID, source, err)
+	var entries []youtube.PlaylistEntry
+	var err error
+	viaAPI := s.YouTubeAPI != nil
+	if viaAPI {
+		var dates map[string]time.Time
+		entries, dates, err = s.YouTubeAPI.PlaylistVideos(ctx, uploads)
+		if err != nil {
+			return 0, fmt.Errorf("youtube backfill show=%d source=%s api listing: %w", showID, source, err)
+		}
+		for id, t := range dates {
+			s.ytStoreDate(id, t)
+		}
+	} else {
+		entries, err = s.YouTube.PlaylistVideos(ctx, uploads, 0)
+		if err != nil {
+			return 0, fmt.Errorf("youtube backfill show=%d source=%s listing: %w", showID, source, err)
+		}
 	}
 	known, err := s.Store.KnownYouTubeVideos(showID)
 	if err != nil {
 		return 0, err
 	}
 	var todo []youtube.PlaylistEntry
+	undated := 0
 	for _, e := range entries {
-		if !known[e.ID] {
-			todo = append(todo, e)
+		if known[e.ID] {
+			continue
 		}
+		if viaAPI {
+			if _, ok := s.ytCachedDate(e.ID); !ok {
+				undated++
+				continue
+			}
+		}
+		todo = append(todo, e)
+	}
+	if undated > 0 {
+		logger.Info("SYNC youtube backfill show=%d source=%s: %d videos have no publish date in the API (private or deleted), skipped", showID, source, undated)
 	}
 	if len(todo) == 0 {
+		if err := s.Store.KVSet(backfillKey(showID), "1"); err != nil {
+			logger.Error("SYNC youtube show=%d source=%s backfill found nothing new but could not record it, it will run again: %v", showID, source, err)
+		}
+		s.ytShowSucceeded(showID)
 		return 0, nil
 	}
 	type result struct {

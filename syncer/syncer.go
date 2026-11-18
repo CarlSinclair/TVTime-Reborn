@@ -30,6 +30,7 @@ type Syncer struct {
 	Trakt       *trakt.Client
 	TVDB        *tvdb.Client
 	YouTube     *youtube.Client
+	YouTubeAPI  *youtube.API
 	Now         func() time.Time
 	mu          sync.Mutex
 	locks       map[string]*sync.Mutex

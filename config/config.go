@@ -40,6 +40,7 @@ type Config struct {
 	RedisDB         int
 	TraktClientID   string
 	TVDBKey         string
+	YouTubeKey      string
 	Federation      bool
 	FedInsecure     bool
 	FedBlock        []string
@@ -94,6 +95,7 @@ func Load() (*Config, error) {
 		ImageBase:       strings.TrimRight(env("TVT_IMAGE_BASE", "https://image.tmdb.org/t/p"), "/"),
 		TraktClientID:   env("TVT_TRAKT_CLIENT_ID", ""),
 		TVDBKey:         env("TVT_TVDB_KEY", ""),
+		YouTubeKey:      env("TVT_YOUTUBE_KEY", ""),
 		Federation:      env("TVT_FEDERATION", "1") != "0",
 		FedInsecure:     env("TVT_FEDERATION_INSECURE", "") == "1",
 		FedBlock:        strings.Split(env("TVT_FEDERATION_BLOCK", ""), ","),

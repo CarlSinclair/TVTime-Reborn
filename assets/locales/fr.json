@@ -463,6 +463,7 @@
       "media_public_url": "URL publique du bucket (https)",
       "tmdb_key": "Clé API TMDB",
       "tvdb_key": "Clé API TheTVDB",
+      "youtube_key": "Clé API YouTube Data",
       "trakt_client_id": "ID client Trakt",
       "telegram_bot": "Jeton du bot",
       "telegram_name": "Nom d'utilisateur du bot",

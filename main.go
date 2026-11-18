@@ -76,6 +76,9 @@ func main() {
 		sy.TVDB = tvdb.New(cfg.TVDBKey)
 	}
 	sy.YouTube = youtube.New()
+	if cfg.YouTubeKey != "" {
+		sy.YouTubeAPI = youtube.NewAPI(cfg.YouTubeKey)
+	}
 	if cfg.TraktClientID != "" {
 		sy.Trakt = trakt.New(cfg.TraktClientID)
 	}

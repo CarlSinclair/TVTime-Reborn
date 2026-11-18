@@ -463,6 +463,7 @@
       "media_public_url": "عنوان الحاوية العام (https)",
       "tmdb_key": "مفتاح واجهة TMDB",
       "tvdb_key": "مفتاح واجهة TheTVDB",
+      "youtube_key": "مفتاح واجهة YouTube Data",
       "trakt_client_id": "معرّف عميل Trakt",
       "telegram_bot": "رمز البوت",
       "telegram_name": "اسم مستخدم البوت",
