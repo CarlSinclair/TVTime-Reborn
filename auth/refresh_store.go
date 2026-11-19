@@ -125,6 +125,9 @@ func (r refreshStore) Rotate(ctx context.Context, _ session.RefreshRecord, oldHa
 		return false, fmt.Errorf("prune old tokens: %w", err)
 	}
 	if err := tx.Commit(); err != nil {
+		if errors.Is(err, sql.ErrTxDone) && ctx.Err() != nil {
+			return false, fmt.Errorf("commit rotation: %w", ctx.Err())
+		}
 		return false, fmt.Errorf("commit rotation: %w", err)
 	}
 	return true, nil

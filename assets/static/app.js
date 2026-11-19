@@ -2024,6 +2024,11 @@
               return;
             }
             const st = await res.json();
+            if (st.status === "approved" && st.next) {
+              clearInterval(tgLoginTimer);
+              window.location.href = st.next;
+              return;
+            }
             if (st.status === "expired" || st.status === "rejected") {
               reset();
               toast(t("telegram_failed"), "error");
