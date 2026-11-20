@@ -166,13 +166,12 @@
 
 {{else if eq .Data.Tab "config"}}
 {{template "pending" .}}
-<p class="muted">{{.T "admin.config_hint"}}</p>
 <section class="panel stack">
   <h2>{{.T "admin.logo"}}</h2>
   <p><img class="logo-preview" src="{{logoURL}}" alt=""></p>
   <p class="muted">{{.T "admin.logo_hint"}}</p>
   <div class="upload-row">
-    <label class="btn ghost small">{{.T "admin.logo_upload"}}<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-upload="logo" hidden></label>
+    <label class="upload-dropzone"><svg class="icon upload-icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-upload"></use></svg><span>{{.T "admin.logo_upload"}}</span><input type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-upload="logo"></label>
     <button class="btn ghost small" type="button" data-logo-remove>{{.T "admin.logo_remove"}}</button>
   </div>
 </section>
@@ -180,7 +179,7 @@
   <h2>{{.T "admin.avatar"}}</h2>
   <p class="muted">{{.T "admin.avatar_hint"}}</p>
   <div class="upload-row">
-    <label class="btn ghost small">{{.T "admin.avatar_upload"}}<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-upload="avatar" hidden></label>
+    <label class="upload-dropzone"><svg class="icon upload-icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-upload"></use></svg><span>{{.T "admin.avatar_upload"}}</span><input type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-upload="avatar"></label>
     <button class="btn ghost small" type="button" data-avatar-remove>{{.T "admin.avatar_remove"}}</button>
   </div>
 </section>

@@ -351,7 +351,7 @@
     "server_approve": "Approve",
     "server_pending": "Pending approval",
     "logo": "Logo",
-    "logo_hint": "Shown in the top bar instead of the site name. JPEG, PNG, GIF or WebP up to 2 MB, scaled to fit 640 by 160 pixels. Transparent PNGs work best.",
+    "logo_hint": "JPEG, PNG, GIF or WebP, up to 2 MB, scaled to fit 640 by 160 pixels.",
     "logo_upload": "Upload logo",
     "logo_remove": "Use the default logo",
     "pages": "Pages",
@@ -432,11 +432,10 @@
     "comments_hide": "Hide their comments",
     "comments_delete": "Delete their comments",
     "config": "Config",
-    "config_hint": "These are the live settings. They were imported once from the environment file, which is no longer read for them, so those lines can be removed from it. Changes apply after a restart.",
     "config_saved": "Saved. Restart to apply.",
     "pending": "Saved settings differ from what is running. They apply after a restart.",
     "restart": "Restart now",
-    "restart_confirm": "Stop the server now? Your service manager must start it again (systemd does this when the unit has Restart=on-failure).",
+    "restart_confirm": "Restart the server now? It will be unavailable for a few seconds.",
     "cfg_test_to": "Send the test email to",
     "cfg_test": "Test",
     "cfg_group": {
@@ -484,7 +483,7 @@
       "captcha_key": "Secret key or CProof license key"
     },
     "avatar": "Server avatar",
-    "avatar_hint": "Shown next to this server's name in the server lists of other servers. A square picture works best.",
+    "avatar_hint": "JPEG, PNG, GIF or WebP, up to 3 MB, scaled to 256 by 256 pixels.",
     "avatar_upload": "Upload avatar",
     "avatar_remove": "Remove avatar",
     "captcha": {

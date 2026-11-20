@@ -351,7 +351,7 @@
     "server_approve": "Aprovar",
     "server_pending": "Aguardando aprovação",
     "logo": "Logotipo",
-    "logo_hint": "Exibido na barra superior no lugar do nome do site. JPEG, PNG, GIF ou WebP até 2 MB, ajustado para caber em 640 por 160 pixels. PNGs transparentes funcionam melhor.",
+    "logo_hint": "JPEG, PNG, GIF ou WebP, até 2 MB, ajustado para caber em 640 por 160 pixels.",
     "logo_upload": "Enviar logotipo",
     "logo_remove": "Usar o logotipo padrão",
     "pages": "Páginas",
@@ -432,11 +432,10 @@
     "comments_hide": "Ocultar os comentários",
     "comments_delete": "Excluir os comentários",
     "config": "Configuração",
-    "config_hint": "Estas são as configurações em uso. Foram importadas uma vez do arquivo de ambiente, que não é mais lido para elas, então essas linhas podem ser removidas dele. As alterações valem após reiniciar.",
     "config_saved": "Salvo. Reinicie para aplicar.",
     "pending": "As configurações salvas diferem das que estão em execução. Elas valem após reiniciar.",
     "restart": "Reiniciar agora",
-    "restart_confirm": "Parar o servidor agora? O gerenciador de serviços precisa iniciá-lo de novo (o systemd faz isso quando a unidade tem Restart=on-failure).",
+    "restart_confirm": "Reiniciar o servidor agora? Ele ficará indisponível por alguns segundos.",
     "cfg_test_to": "Enviar o e-mail de teste para",
     "cfg_test": "Testar",
     "cfg_group": {
@@ -484,7 +483,7 @@
       "captcha_key": "Chave secreta ou licença CProof"
     },
     "avatar": "Avatar do servidor",
-    "avatar_hint": "Mostrado ao lado do nome deste servidor nas listas de servidores de outros servidores. Uma imagem quadrada funciona melhor.",
+    "avatar_hint": "JPEG, PNG, GIF ou WebP, até 3 MB, ajustado para 256 por 256 pixels.",
     "avatar_upload": "Enviar avatar",
     "avatar_remove": "Remover avatar",
     "captcha": {

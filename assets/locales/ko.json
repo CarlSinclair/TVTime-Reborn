@@ -351,7 +351,7 @@
     "server_approve": "승인",
     "server_pending": "승인 대기",
     "logo": "로고",
-    "logo_hint": "사이트 이름 대신 상단 바에 표시됩니다. 최대 2 MB의 JPEG, PNG, GIF, WebP이며 640×160픽셀에 맞게 축소됩니다. 투명 PNG가 가장 좋습니다.",
+    "logo_hint": "JPEG, PNG, GIF, WebP, 최대 2 MB, 640×160픽셀에 맞게 축소됩니다.",
     "logo_upload": "로고 업로드",
     "logo_remove": "기본 로고 사용",
     "pages": "페이지",
@@ -432,11 +432,10 @@
     "comments_hide": "댓글 숨기기",
     "comments_delete": "댓글 삭제",
     "config": "설정",
-    "config_hint": "현재 적용 중인 설정입니다. 환경 파일에서 한 번 가져왔고 이후 해당 파일은 읽지 않으므로 그 줄들은 지워도 됩니다. 변경 사항은 재시작 후 적용됩니다.",
     "config_saved": "저장했습니다. 적용하려면 재시작하세요.",
     "pending": "저장된 설정이 실행 중인 설정과 다릅니다. 재시작 후 적용됩니다.",
     "restart": "지금 재시작",
-    "restart_confirm": "지금 서버를 중지할까요? 서비스 관리자가 다시 시작해야 합니다(유닛에 Restart=on-failure가 있으면 systemd가 처리합니다).",
+    "restart_confirm": "지금 서버를 재시작할까요? 몇 초 동안 사용할 수 없습니다.",
     "cfg_test_to": "테스트 이메일 받는 사람",
     "cfg_test": "테스트",
     "cfg_group": {
@@ -484,7 +483,7 @@
       "captcha_key": "비밀 키 또는 CProof 라이선스 키"
     },
     "avatar": "서버 아바타",
-    "avatar_hint": "다른 서버의 서버 목록에서 이 서버 이름 옆에 표시됩니다. 정사각형 이미지가 가장 좋습니다.",
+    "avatar_hint": "JPEG, PNG, GIF, WebP, 최대 3 MB, 256×256픽셀로 축소됩니다.",
     "avatar_upload": "아바타 업로드",
     "avatar_remove": "아바타 삭제",
     "captcha": {

@@ -351,7 +351,7 @@
     "server_approve": "Approuver",
     "server_pending": "En attente d'approbation",
     "logo": "Logo",
-    "logo_hint": "Affiché dans la barre du haut à la place du nom du site. JPEG, PNG, GIF ou WebP jusqu'à 2 Mo, ajusté à 640 par 160 pixels. Les PNG transparents donnent le meilleur résultat.",
+    "logo_hint": "JPEG, PNG, GIF ou WebP, jusqu'à 2 Mo, ajusté à 640 par 160 pixels.",
     "logo_upload": "Téléverser un logo",
     "logo_remove": "Utiliser le logo par défaut",
     "pages": "Pages",
@@ -432,11 +432,10 @@
     "comments_hide": "Masquer les commentaires",
     "comments_delete": "Supprimer les commentaires",
     "config": "Configuration",
-    "config_hint": "Ce sont les réglages en vigueur. Ils ont été importés une fois depuis le fichier d'environnement, qui n'est plus lu pour eux : ces lignes peuvent y être supprimées. Les changements s'appliquent après un redémarrage.",
     "config_saved": "Enregistré. Redémarrez pour appliquer.",
     "pending": "Les réglages enregistrés diffèrent de ceux en cours d'exécution. Ils s'appliquent après un redémarrage.",
     "restart": "Redémarrer maintenant",
-    "restart_confirm": "Arrêter le serveur maintenant ? Le gestionnaire de services doit le relancer (systemd le fait si l'unité a Restart=on-failure).",
+    "restart_confirm": "Redémarrer le serveur maintenant ? Il sera indisponible quelques secondes.",
     "cfg_test_to": "Envoyer l'e-mail de test à",
     "cfg_test": "Tester",
     "cfg_group": {
@@ -484,7 +483,7 @@
       "captcha_key": "Clé secrète ou licence CProof"
     },
     "avatar": "Avatar du serveur",
-    "avatar_hint": "Affiché à côté du nom de ce serveur dans les listes de serveurs des autres serveurs. Une image carrée convient le mieux.",
+    "avatar_hint": "JPEG, PNG, GIF ou WebP, jusqu'à 3 Mo, ajusté à 256 par 256 pixels.",
     "avatar_upload": "Téléverser un avatar",
     "avatar_remove": "Supprimer l'avatar",
     "captcha": {

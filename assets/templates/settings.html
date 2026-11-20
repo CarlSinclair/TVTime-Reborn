@@ -255,13 +255,13 @@
     {{if .User.BannerPath}}<img id="banner-preview" class="banner-img" src="{{banner .User.BannerPath}}" alt="">{{else}}<img id="banner-preview" class="banner-img" src="" alt="" hidden><div class="banner-img placeholder" id="banner-placeholder"></div>{{end}}
   </div>
   <div class="upload-row">
-    <label class="btn ghost small">{{.T "profile.upload_banner"}}<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-upload="banners" hidden></label>
+    <label class="upload-dropzone"><svg class="icon upload-icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-upload"></use></svg><span>{{.T "profile.upload_banner"}}</span><input type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-upload="banners"></label>
     {{if .User.BannerPath}}<button class="btn ghost small" type="button" data-remove-media="banners">{{.T "profile.remove"}}</button>{{end}}
   </div>
   <div class="avatar-row">
     {{if .User.AvatarPath}}<img id="avatar-preview" class="avatar lg" src="{{avatar .User.AvatarPath}}" alt="">{{else}}<span id="avatar-fallback" class="avatar lg fallback">{{initial .User.Name}}</span><img id="avatar-preview" class="avatar lg" src="" alt="" hidden>{{end}}
     <div class="upload-row">
-      <label class="btn ghost small">{{.T "profile.upload_avatar"}}<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-upload="avatars" hidden></label>
+      <label class="upload-dropzone"><svg class="icon upload-icon" aria-hidden="true"><use href="/static/icons.svg?v={{assetV}}#fa-upload"></use></svg><span>{{.T "profile.upload_avatar"}}</span><input type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-upload="avatars"></label>
       {{if .User.AvatarPath}}<button class="btn ghost small" type="button" data-remove-media="avatars">{{.T "profile.remove"}}</button>{{end}}
     </div>
   </div>

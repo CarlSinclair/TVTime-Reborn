@@ -351,7 +351,7 @@
     "server_approve": "批准",
     "server_pending": "待批准",
     "logo": "标志",
-    "logo_hint": "显示在顶部栏中，取代站点名称。支持 JPEG、PNG、GIF 或 WebP，最大 2 MB，会缩放至 640×160 像素以内。透明 PNG 效果最佳。",
+    "logo_hint": "JPEG、PNG、GIF 或 WebP，最大 2 MB，会缩放至 640×160 像素以内。",
     "logo_upload": "上传标志",
     "logo_remove": "使用默认标志",
     "pages": "页面",
@@ -432,11 +432,10 @@
     "comments_hide": "隐藏其评论",
     "comments_delete": "删除其评论",
     "config": "配置",
-    "config_hint": "这些是当前生效的设置。它们已从环境文件中一次性导入，不再从该文件读取，因此可以删除其中对应的行。更改在重启后生效。",
     "config_saved": "已保存。重启后生效。",
     "pending": "已保存的设置与当前运行的不同，重启后生效。",
     "restart": "立即重启",
-    "restart_confirm": "现在停止服务器吗？需要服务管理器重新启动它（单元设置了 Restart=on-failure 时 systemd 会自动重启）。",
+    "restart_confirm": "现在重启服务器吗？几秒钟内将无法访问。",
     "cfg_test_to": "测试邮件发送至",
     "cfg_test": "测试",
     "cfg_group": {
@@ -484,7 +483,7 @@
       "captcha_key": "私密密钥或 CProof 许可证密钥"
     },
     "avatar": "服务器头像",
-    "avatar_hint": "显示在其他服务器的服务器列表中，位于此服务器名称旁。正方形图片效果最佳。",
+    "avatar_hint": "JPEG、PNG、GIF 或 WebP，最大 3 MB，会缩放至 256×256 像素。",
     "avatar_upload": "上传头像",
     "avatar_remove": "移除头像",
     "captcha": {

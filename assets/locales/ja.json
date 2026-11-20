@@ -351,7 +351,7 @@
     "server_approve": "承認",
     "server_pending": "承認待ち",
     "logo": "ロゴ",
-    "logo_hint": "サイト名の代わりに上部バーに表示されます。2 MBまでのJPEG、PNG、GIF、WebP。640×160ピクセルに収まるよう縮小されます。透過PNGが最適です。",
+    "logo_hint": "JPEG、PNG、GIF、WebP、2 MBまで。640×160ピクセルに収まるよう縮小されます。",
     "logo_upload": "ロゴをアップロード",
     "logo_remove": "既定のロゴに戻す",
     "pages": "ページ",
@@ -432,11 +432,10 @@
     "comments_hide": "コメントを非表示",
     "comments_delete": "コメントを削除",
     "config": "設定",
-    "config_hint": "これらは現在有効な設定です。環境ファイルから一度だけインポートされ、以後このファイルは参照されないため、該当行は削除できます。変更は再起動後に反映されます。",
     "config_saved": "保存しました。反映には再起動が必要です。",
     "pending": "保存済みの設定は実行中の設定と異なります。再起動後に反映されます。",
     "restart": "今すぐ再起動",
-    "restart_confirm": "今すぐサーバーを停止しますか？サービスマネージャーによる再起動が必要です（ユニットに Restart=on-failure があれば systemd が行います）。",
+    "restart_confirm": "今すぐサーバーを再起動しますか？数秒間利用できなくなります。",
     "cfg_test_to": "テストメールの送信先",
     "cfg_test": "テスト",
     "cfg_group": {
@@ -484,7 +483,7 @@
       "captcha_key": "シークレットキーまたはCProofライセンスキー"
     },
     "avatar": "サーバーのアバター",
-    "avatar_hint": "他のサーバーのサーバー一覧で、このサーバー名の横に表示されます。正方形の画像が最適です。",
+    "avatar_hint": "JPEG、PNG、GIF、WebP、3 MBまで。256×256ピクセルに縮小されます。",
     "avatar_upload": "アバターをアップロード",
     "avatar_remove": "アバターを削除",
     "captcha": {

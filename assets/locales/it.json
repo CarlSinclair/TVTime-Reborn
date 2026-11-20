@@ -351,7 +351,7 @@
     "server_approve": "Approva",
     "server_pending": "In attesa di approvazione",
     "logo": "Logo",
-    "logo_hint": "Mostrato nella barra superiore al posto del nome del sito. JPEG, PNG, GIF o WebP fino a 2 MB, adattato a 640 per 160 pixel. I PNG trasparenti funzionano meglio.",
+    "logo_hint": "JPEG, PNG, GIF o WebP, fino a 2 MB, adattato a 640 per 160 pixel.",
     "logo_upload": "Carica logo",
     "logo_remove": "Usa il logo predefinito",
     "pages": "Pagine",
@@ -432,11 +432,10 @@
     "comments_hide": "Nascondi i commenti",
     "comments_delete": "Elimina i commenti",
     "config": "Configurazione",
-    "config_hint": "Queste sono le impostazioni in uso. Sono state importate una volta dal file di ambiente, che non viene più letto per esse, quindi quelle righe si possono rimuovere. Le modifiche si applicano al riavvio.",
     "config_saved": "Salvato. Riavvia per applicare.",
     "pending": "Le impostazioni salvate differiscono da quelle in esecuzione. Si applicano al riavvio.",
     "restart": "Riavvia ora",
-    "restart_confirm": "Fermare il server ora? Il gestore dei servizi deve riavviarlo (systemd lo fa se l'unità ha Restart=on-failure).",
+    "restart_confirm": "Riavviare il server ora? Non sarà disponibile per qualche secondo.",
     "cfg_test_to": "Invia l'email di prova a",
     "cfg_test": "Prova",
     "cfg_group": {
@@ -484,7 +483,7 @@
       "captcha_key": "Chiave segreta o licenza CProof"
     },
     "avatar": "Avatar del server",
-    "avatar_hint": "Mostrato accanto al nome di questo server negli elenchi dei server degli altri server. Funziona meglio un'immagine quadrata.",
+    "avatar_hint": "JPEG, PNG, GIF o WebP, fino a 3 MB, adattato a 256 per 256 pixel.",
     "avatar_upload": "Carica avatar",
     "avatar_remove": "Rimuovi avatar",
     "captcha": {
