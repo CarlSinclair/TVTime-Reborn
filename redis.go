@@ -42,7 +42,5 @@ func startRedis(cfg *config.Config) func() {
 func useAlertState(cfg *config.Config) {
 	if cfg.RedisAddr != "" {
 		logger.SetAlertStateStore(redis.AlertStateStore("alert-dedupe"))
-		return
 	}
-	logger.SetAlertStateStore(logger.FileAlertStore(cfg.DataDir))
 }

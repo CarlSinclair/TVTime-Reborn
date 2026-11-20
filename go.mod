@@ -5,7 +5,7 @@ go 1.27.0
 toolchain go1.27.4
 
 require (
-	github.com/CarlSinclair/csuit-libs v1.9.6
+	github.com/CarlSinclair/csuit-libs v1.9.11
 	github.com/dop251/goja v0.0.0-20261012212121-0c308c5ed11b
 	github.com/go-webauthn/webauthn v0.18.2
 	github.com/golang-jwt/jwt/v5 v5.3.1
@@ -21,7 +21,7 @@ require (
 
 require (
 	github.com/alicebob/miniredis/v2 v2.37.0 // indirect
-	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
+	github.com/boombuler/barcode v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dlclark/regexp2/v2 v2.8.1 // indirect
