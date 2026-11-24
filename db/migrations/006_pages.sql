@@ -1,3 +1,4 @@
+-- +goose Up
 CREATE TABLE pages (
   page_id      INTEGER NOT NULL,
   lang         TEXT NOT NULL,

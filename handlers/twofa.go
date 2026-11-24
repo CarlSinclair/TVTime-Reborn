@@ -317,7 +317,7 @@ func (a *App) apiTwoFAPrefs(w http.ResponseWriter, r *http.Request) {
 		Code             string
 		Telegram         bool
 		Email            bool
-		Mode             string
+		All              bool
 		PasskeyRequires  bool `json:"passkey_requires"`
 		MagicRequires    bool `json:"magic_requires"`
 		TelegramRequires bool `json:"telegram_requires"`
@@ -340,7 +340,7 @@ func (a *App) apiTwoFAPrefs(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	p := twofa.Prefs{Telegram: in.Telegram, Email: in.Email, All: in.Mode == "all", PasskeyRequires: in.PasskeyRequires, MagicRequires: in.MagicRequires, TelegramRequires: in.TelegramRequires}
+	p := twofa.Prefs{Telegram: in.Telegram, Email: in.Email, All: in.All, PasskeyRequires: in.PasskeyRequires, MagicRequires: in.MagicRequires, TelegramRequires: in.TelegramRequires}
 	if p.Email && (strings.TrimSpace(u.Email) == "" || !a.mailOK()) {
 		a.fail(w, r, apiErr{http.StatusBadRequest, "settings.tfa_email_needs_mail"})
 		return

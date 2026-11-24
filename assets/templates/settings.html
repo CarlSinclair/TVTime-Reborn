@@ -43,14 +43,6 @@
   </div>
   <div class="row" id="twofa">
     <div class="row-main"><strong>{{.T "settings.twofa"}}</strong><span class="muted">{{if .User.TOTPEnabled}}{{.T "settings.on"}}{{else}}{{.T "settings.off"}}{{end}}</span></div>
-    {{if .User.TOTPEnabled}}
-    <button class="btn ghost small" type="button" data-modal-open="m-twofa-off">{{.T "settings.disable"}}</button>
-    {{else}}
-    <button class="btn small" type="button" id="twofa-start">{{.T "settings.twofa_enable"}}</button>
-    {{end}}
-  </div>
-  <div class="row">
-    <div class="row-main"><strong>{{.T "settings.tfa_methods"}}</strong></div>
     <button class="btn ghost small" type="button" data-modal-open="m-twofa-prefs">{{.T "settings.change"}}</button>
   </div>
   {{if .User.TOTPEnabled}}
@@ -162,20 +154,21 @@
 
 <dialog class="modal" id="m-twofa-prefs" aria-labelledby="m-twofa-prefs-t">
   <form class="stack" data-tfa-confirm="/api/account/2fa/confirm" data-api="/api/account/2fa/prefs" data-success="{{.T "settings.tfa_prefs_saved"}}" data-reload="1">
-    <h2 id="m-twofa-prefs-t">{{.T "settings.tfa_methods"}}</h2>
-    <label class="check"><input type="checkbox" name="telegram" {{if .Data.TwoFAPrefs.Telegram}}checked{{end}} {{if not .Data.TelegramLinked}}disabled{{end}}> {{.T "settings.tfa_telegram"}}</label>
+    <h2 id="m-twofa-prefs-t">{{.T "settings.twofa"}}</h2>
+    <div class="row">
+      <div class="row-main"><strong>{{.T "settings.twofa"}}</strong><span class="muted">{{if .User.TOTPEnabled}}{{.T "settings.on"}}{{else}}{{.T "settings.off"}}{{end}}</span></div>
+      {{if .User.TOTPEnabled}}<button class="btn ghost small" type="button" data-modal-open="m-twofa-off">{{.T "settings.disable"}}</button>{{else}}<button class="btn small" type="button" id="twofa-start">{{.T "settings.twofa_enable"}}</button>{{end}}
+    </div>
+    <h3>{{.T "settings.tfa_methods"}}</h3>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="tfa-telegram" name="telegram" {{if .Data.TwoFAPrefs.Telegram}}checked{{end}} {{if not .Data.TelegramLinked}}disabled{{end}}><label for="tfa-telegram" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="tfa-telegram">{{.T "settings.tfa_telegram"}}</label></div>
     <p class="muted">{{if .Data.TelegramLinked}}{{.T "settings.tfa_telegram_hint"}}{{else}}{{.T "settings.tfa_telegram_needs_link"}}{{end}}</p>
-    <label>{{.T "settings.tfa_mode_title"}}
-      <select name="mode">
-        <option value="any" {{if not .Data.TwoFAPrefs.All}}selected{{end}}>{{.T "settings.tfa_mode_any"}}</option>
-        <option value="all" {{if .Data.TwoFAPrefs.All}}selected{{end}}>{{.T "settings.tfa_mode_all"}}</option>
-      </select>
-    </label>
-    <label class="check"><input type="checkbox" name="email" {{if .Data.TwoFAPrefs.Email}}checked{{end}} {{if not .Data.MailOn}}disabled{{end}}> {{.T "settings.tfa_email"}}</label>
+    <strong>{{.T "settings.tfa_mode_title"}}</strong>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="tfa-mode" name="all" {{if .Data.TwoFAPrefs.All}}checked{{end}}><label for="tfa-mode" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="tfa-mode">{{.T "settings.tfa_mode_all"}}</label></div>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="tfa-email" name="email" {{if .Data.TwoFAPrefs.Email}}checked{{end}} {{if not .Data.MailOn}}disabled{{end}}><label for="tfa-email" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="tfa-email">{{.T "settings.tfa_email"}}</label></div>
     <p class="muted">{{if .Data.MailOn}}{{.T "settings.tfa_email_hint"}}{{else}}{{.T "settings.tfa_email_needs_mail"}}{{end}}</p>
-    <label class="check"><input type="checkbox" name="passkey_requires" {{if .Data.TwoFAPrefs.PasskeyRequires}}checked{{end}}> {{.T "settings.tfa_passkey_requires"}}</label>
-    <label class="check"><input type="checkbox" name="magic_requires" {{if .Data.TwoFAPrefs.MagicRequires}}checked{{end}}> {{.T "settings.tfa_magic_requires"}}</label>
-    <label class="check"><input type="checkbox" name="telegram_requires" {{if .Data.TwoFAPrefs.TelegramRequires}}checked{{end}}> {{.T "settings.tfa_telegram_requires"}}</label>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="tfa-passkey-requires" name="passkey_requires" {{if .Data.TwoFAPrefs.PasskeyRequires}}checked{{end}}><label for="tfa-passkey-requires" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="tfa-passkey-requires">{{.T "settings.tfa_passkey_requires"}}</label></div>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="tfa-magic-requires" name="magic_requires" {{if .Data.TwoFAPrefs.MagicRequires}}checked{{end}}><label for="tfa-magic-requires" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="tfa-magic-requires">{{.T "settings.tfa_magic_requires"}}</label></div>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="tfa-telegram-requires" name="telegram_requires" {{if .Data.TwoFAPrefs.TelegramRequires}}checked{{end}}><label for="tfa-telegram-requires" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="tfa-telegram-requires">{{.T "settings.tfa_telegram_requires"}}</label></div>
     {{if .User.HasPassword}}<label>{{.T "auth.password"}}<input type="password" name="password" autocomplete="current-password" required></label>{{end}}
     {{if .User.TOTPEnabled}}<label>{{.T "mfa.code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>{{end}}
     <p class="form-error" role="alert" hidden></p>
@@ -268,7 +261,7 @@
   <p class="muted">{{.T "profile.upload_hint"}}</p>
 </section>
 <section class="panel">
-  <form class="stack" data-api="/api/account/username" data-reload="1" data-success="{{.T "settings.username_changed"}}">
+  <form class="stack" data-api="/api/account/username" data-reload="1" data-full-reload data-success="{{.T "settings.username_changed"}}">
     <label>{{.T "auth.username"}}<input type="text" name="username" value="{{.User.Username}}" minlength="3" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" required></label>
     <p class="muted">{{.T "auth.username_hint"}}. {{.T "settings.username_rules"}}</p>
     <p class="form-error" role="alert" hidden></p>

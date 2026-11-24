@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"strings"
 	"sync"
 	"time"
@@ -541,6 +542,35 @@ func (s *Syncer) RunYouTube(ctx context.Context) {
 	}
 }
 
+const youtubeTransientAlertAfter = 3
+
+func youtubeTransient(err error) bool {
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	var ne net.Error
+	if errors.As(err, &ne) && ne.Timeout() {
+		return true
+	}
+	return false
+}
+
+func (s *Syncer) logYouTubePollFailure(id int64, name string, err error) {
+	if !youtubeTransient(err) {
+		logger.Error("SYNC youtube poll show=%d %q: %v", id, name, err)
+		return
+	}
+	if s.ytFails == nil {
+		s.ytFails = map[int64]int{}
+	}
+	s.ytFails[id]++
+	if n := s.ytFails[id]; n >= youtubeTransientAlertAfter {
+		logger.Error("SYNC youtube poll show=%d %q failed %d polls in a row: %v", id, name, n, err)
+		return
+	}
+	logger.Warn("SYNC youtube poll show=%d %q timed out, will retry next poll: %v", id, name, err)
+}
+
 func (s *Syncer) pollYouTube(ctx context.Context) {
 	adoptions, err := s.Store.FollowedAdoptions()
 	if err != nil {
@@ -562,8 +592,10 @@ func (s *Syncer) pollYouTube(ctx context.Context) {
 		if ctx.Err() != nil {
 			return
 		}
-		if _, _, err := s.SyncYouTubeShow(ctx, y.TMDBID); err != nil {
-			logger.Error("SYNC youtube poll show=%d %q: %v", y.ID, y.Name, err)
+		if _, _, err := s.SyncYouTubeShow(ctx, y.TMDBID); err == nil {
+			delete(s.ytFails, y.ID)
+		} else {
+			s.logYouTubePollFailure(y.ID, y.Name, err)
 			if e := s.Store.RecordSyncError(y.TMDBID, trunc(err.Error(), 300)); e != nil {
 				logger.Error("SYNC %v", e)
 			}

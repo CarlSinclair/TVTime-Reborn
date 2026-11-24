@@ -82,6 +82,12 @@
     }
   };
 
+  const refresh = () =>
+    navigate(window.location.pathname + window.location.search, { push: false, y: window.scrollY, fresh: true }).catch((err) => {
+      console.error("page refresh failed, reloading", err);
+      window.location.reload();
+    });
+
   const nextTarget = () => {
     const n = new URLSearchParams(window.location.search).get("next");
     return n && n.startsWith("/") && !n.startsWith("//") && !n.startsWith("/\\") ? n : null;
@@ -91,7 +97,7 @@
     if (data && data.redirect) {
       window.location.href = (data.redirect === "/" && nextTarget()) || data.redirect;
     } else {
-      window.location.reload();
+      refresh();
     }
   };
 
@@ -163,7 +169,8 @@
       go(data);
     } else if (form.dataset.reload) {
       toast(form.dataset.success || t("saved"), "ok");
-      setTimeout(() => window.location.reload(), 700);
+      if ("fullReload" in form.dataset) window.location.reload();
+      else refresh();
     } else if (form.dataset.success) {
       toast(form.dataset.success, "ok");
       form.reset();
@@ -537,7 +544,7 @@
       return;
     }
     toast(t("saved"), "ok");
-    setTimeout(() => window.location.reload(), 600);
+    refresh();
   };
 
   let tgPoll = null;
@@ -558,7 +565,7 @@
         const st = await api("/api/account/telegram/status", null, "GET");
         if (st.chat_linked) {
           clearInterval(tgPoll);
-          window.location.reload();
+          refresh();
         }
       } catch (err) {
         console.warn("telegram status poll failed", err);
@@ -694,18 +701,18 @@
     }
     if ("follow" in d) {
       const data = await run(el, () => api("/api/show/" + tmdbOf(el) + "/follow", { status: "watching" }));
-      if (data) window.location.reload();
+      if (data) refresh();
       return;
     }
     if ("unfollow" in d) {
       const data = await run(el, () => api("/api/show/" + tmdbOf(el) + "/unfollow"));
-      if (data) window.location.reload();
+      if (data) refresh();
       return;
     }
     if ("favorite" in d) {
       const next = d.favorite !== "1";
       const data = await run(el, () => api("/api/show/" + tmdbOf(el) + "/favorite", { favorite: next }));
-      if (data) window.location.reload();
+      if (data) refresh();
       return;
     }
     if ("watch" in d) {
@@ -721,7 +728,7 @@
         if (!data) return;
         if (all && !card) {
           toast(fmt("marked_many", data.marked), "ok");
-          window.location.reload();
+          refresh();
           return;
         }
       }
@@ -773,7 +780,7 @@
     }
     if ("serverBlock" in d) {
       const data = await run(el, () => api("/api/admin/servers/block", { host: d.serverBlock, blocked: d.blocked === "1" }));
-      if (data) window.location.reload();
+      if (data) refresh();
       return;
     }
     if ("serverRemove" in d) {
@@ -797,7 +804,7 @@
       };
       if (dlg.dataset.mode === "block") body.blocked = true;
       const data = await run(el, () => api(dlg.dataset.mode === "forget" ? "/api/admin/servers/forget" : "/api/admin/servers/block", body));
-      if (data) window.location.reload();
+      if (data) refresh();
       return;
     }
     if ("configTest" in d) {
@@ -820,7 +827,7 @@
     }
     if ("serverApprove" in d) {
       const data = await run(el, () => api("/api/admin/servers/share", { host: d.serverApprove, share: true }));
-      if (data) window.location.reload();
+      if (data) refresh();
       return;
     }
     if ("restart" in d) {
@@ -828,29 +835,29 @@
       const data = await run(el, () => api("/api/admin/restart"));
       if (data) {
         toast(t("restarting"), "ok");
-        setTimeout(() => window.location.reload(), 4000);
+        setTimeout(refresh, 4000);
       }
       return;
     }
     if ("pagesAction" in d) {
       if (d.confirm && !(await confirmDialog(d.confirm))) return;
       const data = await run(el, () => api("/api/admin/pages", { action: d.pagesAction, page_id: d.pageId ? parseInt(d.pageId, 10) : 0 }));
-      if (data) window.location.reload();
+      if (data) refresh();
       return;
     }
     if ("avatarRemove" in d) {
       const data = await run(el, () => api("/api/admin/avatar/remove"));
       if (data && data.announced === false) {
         toast(t("avatar_announce_failed"), "error");
-        setTimeout(() => window.location.reload(), 3000);
+        setTimeout(refresh, 3000);
       } else if (data) {
-        window.location.reload();
+        refresh();
       }
       return;
     }
     if ("logoRemove" in d) {
       const data = await run(el, () => api("/api/admin/logo/remove"));
-      if (data) window.location.reload();
+      if (data) refresh();
       return;
     }
     if ("userEdit" in d) {
@@ -897,19 +904,19 @@
       const toggles = commentToggleValues(el.closest(".danger-row"));
       const call = "userBan" in d ? () => api("/api/admin/users/" + id + "/ban", Object.assign({ banned: on }, toggles)) : () => api("/api/admin/users/" + id + "/deactivate", Object.assign({ deactivated: on }, toggles));
       const data = await run(el, call);
-      if (data) window.location.reload();
+      if (data) refresh();
       return;
     }
     if ("userDeleteModal" in d) {
       if (!(await confirmDialog(d.confirm))) return;
       const id = el.closest("form").dataset.userId;
       const data = await run(el, () => api("/api/admin/users/" + id + "/delete", commentToggleValues(el.closest(".danger-row"))));
-      if (data) window.location.reload();
+      if (data) refresh();
       return;
     }
     if ("adminDismissUser" in d) {
       const data = await run(el, () => api("/api/admin/users/" + d.adminDismissUser + "/dismiss-reports"));
-      if (data) window.location.reload();
+      if (data) refresh();
       return;
     }
     if ("star" in d) {
@@ -957,36 +964,36 @@
     }
     if ("unblock" in d) {
       const data = await run(el, () => api("/api/blocks/unblock", { username: d.unblock }));
-      if (data) window.location.reload();
+      if (data) refresh();
       return;
     }
     if ("adminResolve" in d) {
       const data = await run(el, () => api("/api/admin/comments/" + d.adminResolve + "/resolve"));
-      if (data) window.location.reload();
+      if (data) refresh();
       return;
     }
     if ("adminDelete" in d) {
       if (!(await confirmDialog(t("delete_confirm"), t("delete")))) return;
       const data = await run(el, () => api("/api/admin/comments/" + d.adminDelete + "/delete"));
-      if (data) window.location.reload();
+      if (data) refresh();
       return;
     }
     if ("adminBan" in d) {
       if (!(await confirmDialog(t("ban_confirm")))) return;
       const data = await run(el, () => api("/api/admin/users/" + d.adminBan + "/ban", { banned: true }));
-      if (data) window.location.reload();
+      if (data) refresh();
       return;
     }
     if (el.id === "telegram-connect") return telegramConnect(el);
     if ("telegramUnlinkChat" in d) {
       const data = await run(el, () => api("/api/account/telegram/unlink-chat"));
-      if (data) window.location.reload();
+      if (data) refresh();
       return;
     }
     if ("telegramUnlink" in d) {
       if (!(await confirmDialog(t("telegram_unlink_confirm")))) return;
       const data = await run(el, () => api("/api/account/telegram/unlink"));
-      if (data) window.location.reload();
+      if (data) refresh();
       return;
     }
     if ("testChannel" in d) {
@@ -1055,18 +1062,18 @@
       return;
     }
     if (el.id === "recovery-done") {
-      window.location.reload();
+      refresh();
       return;
     }
     if ("passkeyDelete" in d) {
       if (!(await confirmDialog(t("passkey_remove_confirm")))) return;
       const data = await run(el, () => api("/api/account/passkey/" + d.passkeyDelete + "/delete"));
-      if (data) window.location.reload();
+      if (data) refresh();
       return;
     }
     if ("removeMedia" in d) {
       const data = await run(el, () => api("/api/profile/" + (d.removeMedia === "avatars" ? "avatar" : "banner") + "/remove"));
-      if (data) window.location.reload();
+      if (data) refresh();
     }
   });
 
@@ -1119,7 +1126,7 @@
       if (data) toast(t("saved"), "ok");
     } else if (el.id === "lang-select" || el.id === "settings-lang") {
       const data = await run(el, () => api("/api/account/locale", { locale: el.value }));
-      if (data) window.location.reload();
+      if (data) refresh();
     } else if (el.matches('[name="hide_comments"], [name="delete_comments"]')) {
       if (el.checked) {
         const other = el.closest(".comment-toggles").querySelector(el.name === "hide_comments" ? '[name="delete_comments"]' : '[name="hide_comments"]');
@@ -1127,7 +1134,7 @@
       }
     } else if (el.id === "federation-switch") {
       const data = await run(el, () => api("/api/admin/config", { group: "federation", federation: el.checked }));
-      if (data) window.location.reload();
+      if (data) refresh();
       else el.checked = !el.checked;
     } else if (el.id === "signups-switch") {
       const data = await run(el, () => api("/api/admin/signups", { closed: !el.checked }));
@@ -1155,10 +1162,10 @@
       toast(t("saved"), "ok");
       if (data.announced === false) {
         toast(t("avatar_announce_failed"), "error");
-        setTimeout(() => window.location.reload(), 3000);
+        setTimeout(refresh, 3000);
         return;
       }
-      window.location.reload();
+      refresh();
     } else if (el.matches("[data-import]")) {
       const file = el.files && el.files[0];
       if (!file) return;
@@ -2290,7 +2297,7 @@
           const cred = await navigator.credentials.create({ publicKey: PublicKeyCredential.parseCreationOptionsFromJSON(begin.options.publicKey) });
           await api("/api/account/passkey/finish?name=" + encodeURIComponent(name.trim()), cred.toJSON());
           toast(t("passkey_added"), "ok");
-          setTimeout(() => window.location.reload(), 700);
+          refresh();
         } catch (err) {
           passkeyAdd.disabled = false;
           toast(passkeyError(err), "error");
@@ -2397,7 +2404,7 @@
     let page;
     try {
       const hit = prefetched.get(url);
-      page = hit && Date.now() - hit.at < 8000 ? await hit.page : await fetchPage(url, ctl.signal);
+      page = !(opts && opts.fresh) && hit && Date.now() - hit.at < 8000 ? await hit.page : await fetchPage(url, ctl.signal);
       if (ctl.signal.aborted) return;
     } catch (err) {
       if (err.name === "AbortError") return;

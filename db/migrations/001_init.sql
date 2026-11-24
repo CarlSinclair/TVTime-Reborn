@@ -1,3 +1,4 @@
+-- +goose Up
 CREATE TABLE users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   email TEXT UNIQUE COLLATE NOCASE,
@@ -27,7 +28,9 @@ CREATE TABLE users (
   notify_email INTEGER NOT NULL DEFAULT 1,
   notify_telegram INTEGER NOT NULL DEFAULT 1,
   notify_offset_min INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  share_activity INTEGER NOT NULL DEFAULT 1,
+  remote_host TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE passkeys (
@@ -199,6 +202,7 @@ CREATE TABLE episodes (
 );
 CREATE INDEX idx_episodes_air ON episodes(air_date);
 CREATE INDEX idx_episodes_tmdb ON episodes(tmdb_id);
+CREATE INDEX idx_episodes_progress ON episodes(show_id, season_number, episode_number, air_date);
 CREATE UNIQUE INDEX idx_episodes_yt_video ON episodes(show_id, yt_video_id) WHERE yt_video_id IS NOT NULL;
 
 CREATE TABLE follows (
@@ -218,7 +222,7 @@ CREATE TABLE watched (
   watched_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id, episode_id)
 );
-CREATE INDEX idx_watched_user_show ON watched(user_id, show_id);
+CREATE INDEX idx_watched_progress ON watched(user_id, show_id, watched_at);
 
 CREATE TABLE episode_ratings (
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -248,7 +252,10 @@ CREATE TABLE episode_i18n (
 
 CREATE TABLE comments (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  episode_id INTEGER NOT NULL REFERENCES episodes(id) ON DELETE CASCADE,
+  episode_id INTEGER REFERENCES episodes(id) ON DELETE CASCADE,
+  profile_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  season_id INTEGER REFERENCES seasons(id) ON DELETE CASCADE,
+  show_id INTEGER REFERENCES shows(id) ON DELETE CASCADE,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   parent_id INTEGER REFERENCES comments(id) ON DELETE CASCADE,
   body TEXT NOT NULL,
@@ -257,11 +264,20 @@ CREATE TABLE comments (
   not_spoiler_reports INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   edited_at TEXT,
-  deleted_at TEXT
+  deleted_at TEXT,
+  hidden_at TEXT,
+  parent_host TEXT NOT NULL DEFAULT '',
+  parent_ref TEXT NOT NULL DEFAULT '',
+  image TEXT NOT NULL DEFAULT '',
+  CHECK ((episode_id IS NOT NULL) + (profile_id IS NOT NULL) + (season_id IS NOT NULL) + (show_id IS NOT NULL) = 1)
 );
 CREATE INDEX idx_comments_episode ON comments(episode_id, created_at);
+CREATE INDEX idx_comments_profile ON comments(profile_id, created_at);
+CREATE INDEX idx_comments_season ON comments(season_id, created_at);
+CREATE INDEX idx_comments_show ON comments(show_id, created_at);
 CREATE INDEX idx_comments_user ON comments(user_id);
 CREATE INDEX idx_comments_parent ON comments(parent_id);
+CREATE INDEX idx_comments_time ON comments(created_at);
 
 CREATE TABLE comment_reports (
   comment_id INTEGER NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
@@ -297,5 +313,11 @@ CREATE TABLE import_jobs (
   unmatched TEXT NOT NULL DEFAULT '',
   error TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  finished_at TEXT
+  finished_at TEXT,
+  payload TEXT NOT NULL DEFAULT '',
+  shows_done INTEGER NOT NULL DEFAULT 0,
+  episodes_added INTEGER NOT NULL DEFAULT 0,
+  episodes_skipped INTEGER NOT NULL DEFAULT 0,
+  follows_added INTEGER NOT NULL DEFAULT 0
 );
+CREATE INDEX idx_import_jobs_user ON import_jobs(user_id, id);

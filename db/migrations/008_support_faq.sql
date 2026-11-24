@@ -1,3 +1,4 @@
+-- +goose Up
 -- Questions and answers the support bot offers before (and next to) the
 -- "Talk to a human" button. One row per question and language.
 CREATE TABLE support_faq (

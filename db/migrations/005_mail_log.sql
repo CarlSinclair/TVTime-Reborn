@@ -1,3 +1,4 @@
+-- +goose Up
 CREATE TABLE mail_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   recipient TEXT NOT NULL,

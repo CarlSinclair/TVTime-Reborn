@@ -1,4 +1,4 @@
-ALTER TABLE users ADD COLUMN remote_host TEXT NOT NULL DEFAULT '';
+-- +goose Up
 
 CREATE TABLE federation_peers (
   host TEXT PRIMARY KEY,
@@ -70,6 +70,8 @@ CREATE TABLE remote_comments (
   created_at TEXT NOT NULL,
   edited_at TEXT NOT NULL DEFAULT '',
   expires_at TEXT NOT NULL,
+  parent_host TEXT NOT NULL DEFAULT '',
+  image_url TEXT NOT NULL DEFAULT '',
   UNIQUE(host, ref)
 );
 CREATE INDEX idx_remote_comments_episode ON remote_comments(show_tmdb, season, episode);

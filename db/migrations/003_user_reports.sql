@@ -1,3 +1,4 @@
+-- +goose Up
 CREATE TABLE user_reports (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   reporter_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

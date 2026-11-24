@@ -1,3 +1,4 @@
+-- +goose Up
 -- The home page's "up next" list, kept up to date as people watch and as
 -- episodes arrive instead of being worked out on every visit. One row per person
 -- and followed show that has something left to watch: the next episode, how many

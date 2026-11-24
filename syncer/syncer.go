@@ -35,6 +35,7 @@ type Syncer struct {
 	mu          sync.Mutex
 	locks       map[string]*sync.Mutex
 	failed      map[string]time.Time
+	ytFails     map[int64]int
 	prefetch    sync.Mutex
 	shortMu     sync.Mutex
 	backfillMu  sync.Mutex

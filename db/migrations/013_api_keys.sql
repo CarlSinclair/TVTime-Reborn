@@ -1,3 +1,4 @@
+-- +goose Up
 CREATE TABLE api_keys (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   key_hash TEXT NOT NULL UNIQUE,

@@ -1,3 +1,4 @@
+-- +goose Up
 -- Support conversations run through the Telegram bot: a visitor talks to the bot,
 -- the operator answers by replying to the messages the bot relays to them.
 CREATE TABLE support_threads (
