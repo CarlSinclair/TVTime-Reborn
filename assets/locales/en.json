@@ -138,7 +138,6 @@
   },
   "settings": {
     "password": "Change password",
-    "current_password": "Current password",
     "new_password": "New password",
     "save": "Save",
     "password_changed": "Password changed.",
@@ -187,10 +186,8 @@
     "twofa": "Two-step verification",
     "twofa_confirm": "Confirm and enable",
     "twofa_disable": "Turn off two-step verification",
-    "twofa_enable": "Enable 2FA",
     "twofa_hint": "Protect your account with a code from an authenticator app.",
     "twofa_off": "Two-step verification turned off.",
-    "twofa_on": "Two-step verification is on.",
     "twofa_secret": "Can't scan? Enter this key:",
     "passkeys": "Passkeys",
     "passkeys_hint": "Sign in with your fingerprint, face or device PIN instead of a password.",
@@ -220,22 +217,9 @@
     "cancel": "Cancel",
     "recovery_title": "Recovery codes",
     "recovery_n": "%d left",
-    "tfa_methods": "Sign-in verification methods",
-    "tfa_telegram": "Telegram approval",
-    "tfa_telegram_hint": "We send a message with Approve and Deny buttons to your linked Telegram chat.",
-    "tfa_telegram_needs_link": "Link your Telegram account first to use Telegram approval.",
-    "tfa_mode_title": "When more than one method is on",
-    "tfa_mode_any": "Any one method is enough, and you can pick another way when signing in",
-    "tfa_mode_all": "Require every enabled method",
-    "tfa_passkey_requires": "Ask for 2FA when I sign in with a passkey",
     "tfa_prefs_save": "Save verification settings",
     "tfa_prefs_saved": "Verification settings saved.",
-    "tfa_email": "Email code",
-    "tfa_email_hint": "We email a 6-digit code to your account address.",
-    "tfa_email_needs_mail": "Email codes need a confirmed email address and outgoing mail on this server.",
-    "tfa_magic_requires": "Ask for 2FA when I sign in with an email link",
-    "tfa_telegram_requires": "Ask for 2FA when I sign in with Telegram",
-    "forgot_current_password_btn": "I forgot my current password: email me a code"
+    "tfa_email_needs_mail": "Email codes need a confirmed email address and outgoing mail on this server."
   },
   "footer": {
     "tmdb": "Show data and images are provided by",
@@ -814,7 +798,6 @@
     "western": "Western"
   },
   "mfa": {
-    "code": "Verification code",
     "recovery_hint": "Lost your device? Enter one of your recovery codes instead.",
     "text": "Enter the 6-digit code from your authenticator app.",
     "title": "Two-step verification",
@@ -826,13 +809,11 @@
     "tg_failed": "Could not send the Telegram message. Use another method.",
     "email_title": "Confirm with email",
     "email_btn": "Email me a code",
-    "email_sent": "We sent a 6-digit code to your email address.",
     "email_wait": "A code was sent a moment ago. Wait a few seconds before asking for another.",
     "email_failed": "Could not send the email. Use another method.",
-    "email_label": "Email code",
     "reset_label": "Verification code (only if you use two-step verification)",
-    "reset_send": "Send a code to my Telegram",
-    "reset_sent": "If Telegram is connected, a code was sent to it."
+    "reset_send": "Ask Telegram to approve the reset",
+    "reset_sent": "If Telegram is connected, an approval request was sent there. Approve it, then continue."
   },
   "notif": {
     "abuse_report": {
@@ -1033,7 +1014,7 @@
     "tfa_approved": "Approved. You can go back to the sign-in page.",
     "tfa_denied": "Denied. If this was not you, change your password.",
     "tfa_stale": "This request expired or was already answered.",
-    "reset_code": "Your {app} password reset code is {code}. If you did not ask for a reset, ignore this message."
+    "reset_prompt": "Someone is resetting your account password. Approve only if it was you."
   },
   "privacy": {
     "title": "Privacy policy",

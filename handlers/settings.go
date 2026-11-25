@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/CarlSinclair/csuit-libs/twofa"
 	"net/http"
 	"strings"
 
@@ -102,6 +103,7 @@ func (a *App) pageSettings(w http.ResponseWriter, r *http.Request) {
 		data["TwoFAPrefs"] = prefs
 		data["TelegramLinked"] = twoFAChat(u) != 0 && a.Bot.Configured()
 		data["MailOn"] = a.mailOK() && strings.TrimSpace(u.Email) != ""
+		data["TwoFAStatus"] = twofa.Summarize(u.TOTPEnabled, twoFAChat(u) != 0 && a.Bot.Configured(), len(passkeys) > 0)
 	case "notifications":
 		rows, err := a.prefRows(u)
 		if err != nil {

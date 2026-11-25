@@ -15,7 +15,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/CarlSinclair/csuit-libs/accountkit"
 	"github.com/CarlSinclair/csuit-libs/apikit"
+	"github.com/CarlSinclair/csuit-libs/auditlog"
 	"github.com/CarlSinclair/csuit-libs/legalpages"
 	"tvt/appconfig"
 	"tvt/assets"
@@ -71,6 +73,8 @@ type App struct {
 	pageLimit    *auth.Limiter
 	writeLimit   *auth.Limiter
 	trending     trendingCache
+	auditLog     *auditlog.Log
+	acct         *accountkit.Kit
 }
 
 func New(cfg *config.Config, st *store.Store, a *auth.Service, sy *syncer.Syncer, tm *tmdb.Client, ml *mailer.Mailer, nt *notify.Service, bot *telegram.Bot, md media.Store) (*App, error) {
@@ -99,6 +103,14 @@ func New(cfg *config.Config, st *store.Store, a *auth.Service, sy *syncer.Syncer
 		contactLimit: auth.NewLimiter(3, time.Hour),
 		supportLimit: auth.NewLimiter(60, time.Hour),
 	}
+	if err := app.initAudit(); err != nil {
+		return nil, err
+	}
+	kit, err := app.newAccountKit()
+	if err != nil {
+		return nil, err
+	}
+	app.acct = kit
 	app.logo.set(st.KVGet(logoKV))
 	app.reloadPages()
 	app.Importer = &importer.Runner{Store: st, Sync: sy, TMDB: tm, Notify: nt}
@@ -487,7 +499,7 @@ func (a *App) middleware(next http.Handler) http.Handler {
 				}
 			}
 		}
-		if r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions && r.URL.Path != "/api/telegram/webhook" && !isFederation(r.URL.Path) && !isMachineAPI(r.URL.Path) {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions && r.URL.Path != "/api/telegram/webhook" && r.URL.Path != "/login/2fa/email/link" && !isFederation(r.URL.Path) && !isMachineAPI(r.URL.Path) {
 			if !a.Auth.CSRFValid(r) {
 				logger.Warn("CSRF rejected %s %s from=%s", r.Method, r.URL.Path, auth.ClientCountry(r))
 				a.fail(sw, r, errForbidden)

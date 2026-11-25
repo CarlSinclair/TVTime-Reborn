@@ -163,7 +163,7 @@ func (a *App) apiAdminServerShare(w http.ResponseWriter, r *http.Request) {
 	if in.Share && a.Fed != nil {
 		go a.Fed.BackfillRatings(host)
 	}
-	logger.Info("ADMIN uid=%d set sharing with %s to %v", admin.ID, host, in.Share)
+	a.audit(r, "ADMIN server_sharing uid=%d host=%s share=%v", admin.ID, host, in.Share)
 	a.okJSON(w, nil)
 }
 

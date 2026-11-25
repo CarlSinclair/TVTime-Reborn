@@ -48,7 +48,7 @@ func (a *App) apiAdminDelete(w http.ResponseWriter, r *http.Request) {
 			a.Fed.WithdrawComment(au, "c:"+itoa(id))
 		}
 	}
-	logger.Info("ADMIN uid=%d deleted comment=%d", u.ID, id)
+	a.audit(r, "ADMIN comment_deleted uid=%d comment=%d", u.ID, id)
 	a.okJSON(w, nil)
 }
 
@@ -66,7 +66,7 @@ func (a *App) apiAdminResolve(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	logger.Info("ADMIN uid=%d resolved reports comment=%d", u.ID, id)
+	a.audit(r, "ADMIN reports_resolved uid=%d comment=%d", u.ID, id)
 	a.okJSON(w, nil)
 }
 
@@ -126,7 +126,7 @@ func (a *App) apiAdminBan(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	logger.Info("ADMIN uid=%d set banned=%v comments=%s ratings_removed=%v target=%d", admin.ID, in.Banned, mode, in.Banned && in.RemoveRatings, target.ID)
+	a.audit(r, "ADMIN user_ban uid=%d banned=%v comments=%s ratings_removed=%v target=%d", admin.ID, in.Banned, mode, in.Banned && in.RemoveRatings, target.ID)
 	a.okJSON(w, nil)
 }
 
@@ -175,7 +175,7 @@ func (a *App) apiAdminDeactivate(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	logger.Info("ADMIN uid=%d set deactivated=%v comments=%s ratings_removed=%v target=%d", admin.ID, in.Deactivated, mode, in.Deactivated && in.RemoveRatings, target.ID)
+	a.audit(r, "ADMIN user_deactivate uid=%d deactivated=%v comments=%s ratings_removed=%v target=%d", admin.ID, in.Deactivated, mode, in.Deactivated && in.RemoveRatings, target.ID)
 	a.okJSON(w, nil)
 }
 
@@ -197,7 +197,7 @@ func (a *App) apiAdminResetLink(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	logger.Info("ADMIN uid=%d sent a password reset link to uid=%d", admin.ID, target.ID)
+	a.audit(r, "ADMIN user_reset_link uid=%d target=%d", admin.ID, target.ID)
 	a.okJSON(w, nil)
 }
 
@@ -220,7 +220,7 @@ func (a *App) apiAdminDismissUser(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	logger.Info("ADMIN uid=%d dismissed user reports target=%d", admin.ID, uid)
+	a.audit(r, "ADMIN user_reports_dismissed uid=%d target=%d", admin.ID, uid)
 	a.okJSON(w, nil)
 }
 
@@ -270,7 +270,7 @@ func (a *App) apiAdminServer(forget bool) http.HandlerFunc {
 					a.fail(w, r, err)
 					return
 				}
-				logger.Info("ADMIN uid=%d removed %d ratings from server %s", admin.ID, n, host)
+				a.audit(r, "ADMIN server_ratings_removed uid=%d count=%d host=%s", admin.ID, n, host)
 			}
 			if in.DropComments {
 				n, err := a.Store.DropRemoteCommentsFrom(host)
@@ -278,9 +278,9 @@ func (a *App) apiAdminServer(forget bool) http.HandlerFunc {
 					a.fail(w, r, err)
 					return
 				}
-				logger.Info("ADMIN uid=%d removed %d comments from server %s", admin.ID, n, host)
+				a.audit(r, "ADMIN server_comments_removed uid=%d count=%d host=%s", admin.ID, n, host)
 			}
-			logger.Info("ADMIN uid=%d server %s forget=%v blocked=%v", admin.ID, host, forget, in.Blocked)
+			a.audit(r, "ADMIN server_update uid=%d host=%s forget=%v blocked=%v", admin.ID, host, forget, in.Blocked)
 			a.okJSON(w, nil)
 		}
 	}
@@ -549,7 +549,7 @@ func (a *App) apiAdminServerAdd(w http.ResponseWriter, r *http.Request) {
 	if err := a.Store.AckPeer(host); err != nil {
 		logger.Error("ADMIN uid=%d add server %s: could not mark it seen: %v", admin.ID, host, err)
 	}
-	logger.Info("ADMIN uid=%d added server %s", admin.ID, host)
+	a.audit(r, "ADMIN server_added uid=%d host=%s", admin.ID, host)
 	a.okJSON(w, nil)
 }
 
@@ -656,7 +656,7 @@ func (a *App) apiAdminUserCreate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	logger.Info("ADMIN uid=%d created user uid=%d username=%s", admin.ID, u.ID, u.Username)
+	a.audit(r, "ADMIN user_created uid=%d target=%d username=%s", admin.ID, u.ID, u.Username)
 	a.okJSON(w, nil)
 }
 
@@ -724,9 +724,9 @@ func (a *App) apiAdminUserUpdate(w http.ResponseWriter, r *http.Request) {
 			a.fail(w, r, err)
 			return
 		}
-		logger.Info("ADMIN uid=%d replaced the password of uid=%d and ended its sessions", admin.ID, target.ID)
+		a.audit(r, "ADMIN user_password_replaced uid=%d target=%d", admin.ID, target.ID)
 	}
-	logger.Info("ADMIN uid=%d updated user uid=%d email_changed=%v verified=%v", admin.ID, target.ID, !strings.EqualFold(target.Email, email), verified)
+	a.audit(r, "ADMIN user_updated uid=%d target=%d email_changed=%v verified=%v", admin.ID, target.ID, !strings.EqualFold(target.Email, email), verified)
 	a.okJSON(w, nil)
 }
 
@@ -757,7 +757,7 @@ func (a *App) apiAdminUserDelete(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	logger.Info("ADMIN uid=%d deleted user uid=%d username=%s comments=%s ratings_withdrawn=%v", admin.ID, target.ID, target.Username, mode, in.RemoveRatings)
+	a.audit(r, "ADMIN user_deleted uid=%d target=%d username=%s comments=%s ratings_withdrawn=%v", admin.ID, target.ID, target.Username, mode, in.RemoveRatings)
 	a.okJSON(w, nil)
 }
 
@@ -780,6 +780,6 @@ func (a *App) apiAdminSignups(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	logger.Info("ADMIN uid=%d set signups closed=%v", admin.ID, in.Closed)
+	a.audit(r, "ADMIN signups uid=%d closed=%v", admin.ID, in.Closed)
 	a.okJSON(w, nil)
 }

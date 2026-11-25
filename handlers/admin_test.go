@@ -1,6 +1,7 @@
 package handlers_test
 
 import (
+	"github.com/CarlSinclair/csuit-libs/twofa"
 	"strings"
 	"testing"
 )
@@ -329,6 +330,7 @@ func TestDeactivateSelfHidesCommentsAndSigningInRestoresThem(t *testing.T) {
 	if code, out := alice.post("/api/account/deactivate", map[string]any{"password": "wrong"}); code != 401 {
 		t.Fatalf("deactivation needs the password: %d %v", code, out)
 	}
+	e.prove2FA(t, "alice")
 	if code, out := alice.post("/api/account/deactivate", map[string]any{"password": "Passw0rd!x1", "hide_comments": true}); code != 200 {
 		t.Fatalf("deactivate: %d %v", code, out)
 	}
@@ -359,6 +361,7 @@ func TestDeactivateSelfCanDeleteCommentsInstead(t *testing.T) {
 	eps, _ := e.store.Episodes(sh.ID, 1, 0)
 	list := "/api/episode/" + itoa64(eps[0].ID) + "/comments"
 	alice.post(list, map[string]any{"body": "to be erased"})
+	e.prove2FA(t, "alice")
 	if code, out := alice.post("/api/account/deactivate", map[string]any{"password": "Passw0rd!x1", "delete_comments": true}); code != 200 {
 		t.Fatalf("deactivate: %d %v", code, out)
 	}
@@ -440,6 +443,7 @@ func TestDeletingAnAccountNeverDeletesReplies(t *testing.T) {
 	bob.post(list, map[string]any{"body": "bobby to alice", "parent_id": idOf("alice original")})
 	bob.post(list, map[string]any{"body": "bobby to carl", "parent_id": idOf("carl original")})
 
+	e.prove2FA(t, "alice")
 	if code, out := alice.post("/api/account/delete", map[string]any{"password": "Passw0rd!x1", "delete_comments": true}); code != 200 {
 		t.Fatalf("delete with comments deleted: %d %v", code, out)
 	}
@@ -447,6 +451,7 @@ func TestDeletingAnAccountNeverDeletesReplies(t *testing.T) {
 	if !strings.Contains(raw, "bobby to alice") || strings.Contains(raw, "alice original") || !strings.Contains(raw, `"deleted":true`) {
 		t.Fatalf("the reply stays under a Deleted placeholder: %s", raw)
 	}
+	e.prove2FA(t, "carl")
 	if code, out := carl.post("/api/account/delete", map[string]any{"password": "Passw0rd!x1"}); code != 200 {
 		t.Fatalf("delete keeping comments: %d %v", code, out)
 	}
@@ -458,6 +463,7 @@ func TestDeletingAnAccountNeverDeletesReplies(t *testing.T) {
 		t.Fatalf("the account itself is gone")
 	}
 	dan := e.signup(t, "dan", true)
+	e.prove2FA(t, "dan")
 	if code, _ := dan.post("/api/account/delete", map[string]any{"password": "Passw0rd!x1", "hide_comments": true, "delete_comments": true}); code != 400 {
 		t.Fatalf("the two switches exclude each other: %d", code)
 	}
@@ -571,5 +577,35 @@ func TestUserEditModalAlwaysHasStatusControls(t *testing.T) {
 	}
 	if !strings.Contains(page, `<div class="toolbar">`) || strings.Index(page, `for="signups-switch">Allow sign-ups`) > strings.Index(page, `id="signups-switch"`) {
 		t.Fatalf("the plus button sits beside the search, and the switch comes after its label")
+	}
+}
+
+func (e *env) prove2FA(t *testing.T, username string) {
+	t.Helper()
+	u := e.mustUser(t, username)
+	if err := twofa.MarkReauth("tvt", u.ID, twofa.MethodEmail); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAdminActionsAreAuditedAndListed(t *testing.T) {
+	e := newEnv(t)
+	boss := e.makeAdmin(t, "boss")
+	member := e.signup(t, "member", true)
+	if code, _ := boss.post("/api/admin/signups", map[string]any{"closed": true}); code != 200 {
+		t.Fatalf("close signups: %d", code)
+	}
+	var n int
+	if err := e.store.DB.QueryRow(`SELECT COUNT(*) FROM audit_logs WHERE action='signups' AND user_id=?`, e.mustUser(t, "boss").ID).Scan(&n); err != nil || n != 1 {
+		t.Fatalf("signups audit rows=%d err=%v", n, err)
+	}
+	if code, body := boss.get("/admin/audit"); code != 200 || !strings.Contains(body, "signups") {
+		t.Fatalf("audit page: %d", code)
+	}
+	if code, body := boss.get("/admin/audit?format=csv"); code != 200 || !strings.Contains(body, "signups") {
+		t.Fatalf("audit csv: %d", code)
+	}
+	if code, _ := member.get("/admin/audit"); code != 403 {
+		t.Fatalf("audit page must be admin only: %d", code)
 	}
 }

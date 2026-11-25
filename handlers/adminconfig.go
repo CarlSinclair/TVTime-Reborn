@@ -159,7 +159,7 @@ func (a *App) apiAdminConfigSave(w http.ResponseWriter, r *http.Request) {
 		}
 		keys = append(keys, k)
 	}
-	logger.Info("ADMIN uid=%d saved settings group=%s keys=%s (restart needed to apply)", admin.ID, group, strings.Join(keys, ","))
+	a.audit(r, "ADMIN settings_save uid=%d group=%s keys=%s", admin.ID, group, strings.Join(keys, ","))
 	if _, touched := changes["app_name"]; touched && a.Fed != nil && a.savedAppName() != oldName {
 		if err := a.Fed.SendInstanceName(); err != nil {
 			logger.Error("ADMIN uid=%d saved the site name but telling the connected servers failed: %v", admin.ID, err)
@@ -209,7 +209,7 @@ func (a *App) apiAdminConfigTest(w http.ResponseWriter, r *http.Request) {
 			a.configErr(w, r, http.StatusBadGateway, "err.test_failed", err)
 			return
 		}
-		logger.Info("ADMIN uid=%d sent a settings test email", admin.ID)
+		a.audit(r, "ADMIN settings_test_mail uid=%d", admin.ID)
 		a.okJSON(w, map[string]any{"detail": to})
 	case "storage":
 		if !c.S3.Configured() {
@@ -225,7 +225,7 @@ func (a *App) apiAdminConfigTest(w http.ResponseWriter, r *http.Request) {
 			a.configErr(w, r, http.StatusBadGateway, "err.test_failed", err)
 			return
 		}
-		logger.Info("ADMIN uid=%d tested object storage settings ok", admin.ID)
+		a.audit(r, "ADMIN settings_test_storage uid=%d", admin.ID)
 		a.okJSON(w, map[string]any{"detail": c.S3.Bucket})
 	case "telegram":
 		bot := telegram.New(c.TelegramBot, c.TelegramName, "")
@@ -242,7 +242,7 @@ func (a *App) apiAdminConfigTest(w http.ResponseWriter, r *http.Request) {
 			a.configErr(w, r, http.StatusBadRequest, "err.test_failed", fmt.Errorf("this token belongs to @%s, not @%s", name, bot.Username))
 			return
 		}
-		logger.Info("ADMIN uid=%d tested the Telegram bot settings ok", admin.ID)
+		a.audit(r, "ADMIN settings_test_telegram uid=%d", admin.ID)
 		a.okJSON(w, map[string]any{"detail": "@" + name})
 	default:
 		a.fail(w, r, errBadRequest)
@@ -277,7 +277,7 @@ func (a *App) apiAdminRestart(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, errBadRequest)
 		return
 	}
-	logger.Info("ADMIN uid=%d requested a restart", admin.ID)
+	a.audit(r, "ADMIN restart uid=%d", admin.ID)
 	a.okJSON(w, nil)
 	go func() {
 		time.Sleep(500 * time.Millisecond)

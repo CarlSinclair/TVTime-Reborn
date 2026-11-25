@@ -533,3 +533,7 @@ fieldset.lang-fieldset:has(> legend .tswitch-input:not(:checked)) > :not(legend)
 .tfa-dialog { padding: 20px 24px; max-width: 360px; text-align: center; border-radius: 12px; }
 .tfa-dialog h3 { margin-top: 0; }
 .tfa-dialog::backdrop { background: rgba(0, 0, 0, 0.5); }
+.tfa-level{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.78rem;color:#fff}
+.tfa-level.level-red{background:#b42318}
+.tfa-level.level-yellow{background:#b54708}
+.tfa-level.level-green{background:#067647}

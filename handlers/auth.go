@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/mail"
 	"net/url"
@@ -107,7 +106,7 @@ func (a *App) apiRegister(w http.ResponseWriter, r *http.Request) {
 	if err := a.sendLink(u, auth.PurposeVerify); err != nil {
 		mailSent = false
 	}
-	logger.Info("AUTH registered uid=%d username=%s mail_sent=%v", u.ID, u.Username, mailSent)
+	a.audit(r, "AUTH registered uid=%d username=%s mail_sent=%v", u.ID, u.Username, mailSent)
 	a.okJSON(w, map[string]any{"redirect": "/", "mail_sent": mailSent})
 }
 
@@ -325,7 +324,7 @@ func (a *App) apiResetConsume(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	logger.Info("AUTH password reset uid=%d", uid)
+	a.audit(r, "AUTH password_reset uid=%d", uid)
 	a.okJSON(w, map[string]any{"redirect": "/login"})
 }
 
@@ -359,10 +358,8 @@ func (a *App) apiChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in struct {
-		Current   string
-		New       string
-		Code      string
-		EmailCode string `json:"email_code"`
+		New  string
+		Code string
 	}
 	if err := decode(r, &in); err != nil {
 		a.fail(w, r, err)
@@ -372,33 +369,7 @@ func (a *App) apiChangePassword(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	var proven []twofa.Method
-	if u.HasPassword() {
-		switch {
-		case in.Current != "":
-			if !a.Auth.CheckPassword(u, in.Current) {
-				a.fail(w, r, apiErr{http.StatusUnauthorized, "err.bad_credentials"})
-				return
-			}
-		case strings.TrimSpace(in.EmailCode) != "":
-			ok, cerr := a.checkTwoFAEmail(u, in.EmailCode)
-			if cerr != nil {
-				logger.Error("AUTH password change email code check uid=%d: %v", u.ID, cerr)
-				a.fail(w, r, cerr)
-				return
-			}
-			if !ok {
-				logger.Warn("AUTH password change bad email code uid=%d from=%s", u.ID, auth.ClientCountry(r))
-				a.fail(w, r, apiErr{http.StatusUnauthorized, "err.mfa_bad_code"})
-				return
-			}
-			proven = append(proven, twofa.MethodEmail)
-		default:
-			a.fail(w, r, apiErr{http.StatusUnauthorized, "err.bad_credentials"})
-			return
-		}
-	}
-	if err := a.requireSecondFactor(u, in.Code, proven...); err != nil {
+	if err := a.requireSecondFactor(u, in.Code); err != nil {
 		a.fail(w, r, err)
 		return
 	}
@@ -489,87 +460,6 @@ func (a *App) apiSetTimezone(w http.ResponseWriter, r *http.Request) {
 	a.okJSON(w, nil)
 }
 
-func (a *App) apiDeleteAccount(w http.ResponseWriter, r *http.Request) {
-	u, err := a.needUser(r)
-	if err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	var in struct {
-		Password, Confirm string
-		commentToggles
-	}
-	if err := decode(r, &in); err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	mode, err := in.mode()
-	if err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	if u.HasPassword() {
-		if !a.Auth.CheckPassword(u, in.Password) {
-			a.fail(w, r, apiErr{http.StatusUnauthorized, "err.bad_credentials"})
-			return
-		}
-	} else if !strings.EqualFold(strings.TrimSpace(in.Confirm), u.Username) {
-		a.fail(w, r, apiErr{http.StatusBadRequest, "err.confirm_username"})
-		return
-	}
-	if err := a.deleteAccount(r.Context(), u, mode, false); err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	a.Auth.ClearCookies(w)
-	a.okJSON(w, map[string]any{"redirect": "/"})
-}
-
-// apiDeactivateAccount lets people step away: their profile and comments are
-// hidden (or the comments deleted, as they choose) and they are signed out.
-// Signing in again reactivates the account.
-func (a *App) apiDeactivateAccount(w http.ResponseWriter, r *http.Request) {
-	u, err := a.needUser(r)
-	if err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	var in struct {
-		Password, Confirm string
-		commentToggles
-	}
-	if err := decode(r, &in); err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	mode, err := in.mode()
-	if err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	if u.HasPassword() {
-		if !a.Auth.CheckPassword(u, in.Password) {
-			a.fail(w, r, apiErr{http.StatusUnauthorized, "err.bad_credentials"})
-			return
-		}
-	} else if !strings.EqualFold(strings.TrimSpace(in.Confirm), u.Username) {
-		a.fail(w, r, apiErr{http.StatusBadRequest, "err.confirm_username"})
-		return
-	}
-	a.withdrawAll(u)
-	if err := a.applyCommentMode(u.ID, mode); err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	if err := a.Store.DeactivateSelf(u.ID); err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	a.Auth.ClearCookies(w)
-	logger.Info("ACCOUNT deactivated by its owner uid=%d comments=%s", u.ID, mode)
-	a.okJSON(w, map[string]any{"redirect": "/"})
-}
-
 // deleteAccount removes an account and everything it owns. Its comments are
 // first hidden, erased or kept as the mode says and then moved to the anonymous
 // deleted account, so nobody's replies are ever lost with it, and its ratings go
@@ -617,23 +507,7 @@ func (a *App) deleteAccount(ctx context.Context, u *store.User, mode string, dro
 	if err := a.removeUserMedia(ctx, u); err != nil {
 		logger.Error("ACCOUNT delete media uid=%d: %v", u.ID, err)
 	}
-	logger.Info("ACCOUNT deleted uid=%d", u.ID)
 	return nil
-}
-
-func (a *App) apiExport(w http.ResponseWriter, r *http.Request) {
-	u, err := a.needUser(r)
-	if err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	out, err := a.Store.ExportUser(u.ID)
-	if err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s-export.json"`, u.Username))
-	writeJSON(w, http.StatusOK, out)
 }
 
 // promoteIfAdmin grants admin only to the configured admin address, and only
@@ -655,7 +529,7 @@ func (a *App) promoteIfAdmin(uid int64) {
 		logger.Error("AUTH admin promotion uid=%d: %v", uid, err)
 		return
 	}
-	logger.Info("AUTH admin granted uid=%d", uid)
+	a.audit(nil, "AUTH admin_granted uid=%d", uid)
 }
 
 var errUsernameCooldown = apiErr{http.StatusTooManyRequests, "err.username_cooldown"}
@@ -680,7 +554,7 @@ func (a *App) changeUsername(u *store.User, name string, enforceGap bool) error 
 		return err
 	}
 	if old != name {
-		logger.Info("ACCOUNT username changed uid=%d from=%s to=%s", u.ID, old, name)
+		a.audit(nil, "ACCOUNT username_changed uid=%d from=%s to=%s", u.ID, old, name)
 		if a.Fed != nil {
 			renamed := *u
 			renamed.Username = name

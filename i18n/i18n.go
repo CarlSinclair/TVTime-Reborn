@@ -8,6 +8,11 @@ import (
 	"strings"
 
 	"tvt/logger"
+
+	"github.com/CarlSinclair/csuit-libs/accountkit"
+	"github.com/CarlSinclair/csuit-libs/auditlog"
+	"github.com/CarlSinclair/csuit-libs/i18nkit"
+	"github.com/CarlSinclair/csuit-libs/twofa"
 )
 
 // Fallback is the language used when a person's own language is unknown or
@@ -54,6 +59,12 @@ func Load(fsys fs.FS, dir, fallback string) (*Bundle, error) {
 		}
 		flat := map[string]string{}
 		flatten("", raw, flat)
+		lang := strings.TrimSuffix(e.Name(), ".json")
+		for k, v := range sharedStrings(lang) {
+			if _, own := flat[k]; !own {
+				flat[k] = v
+			}
+		}
 		b.langs[strings.TrimSuffix(e.Name(), ".json")] = flat
 	}
 	if _, ok := b.langs[fallback]; !ok {
@@ -145,3 +156,5 @@ func (b *Bundle) TN(lang, key string, vars map[string]string) string {
 	}
 	return strings.NewReplacer(pairs...).Replace(s)
 }
+
+var sharedStrings = i18nkit.MergeShared(twofa.SharedStrings, auditlog.SharedStrings, accountkit.SharedStrings)

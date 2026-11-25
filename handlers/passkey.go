@@ -53,7 +53,7 @@ func (a *App) apiPasskeyLoginFinish(w http.ResponseWriter, r *http.Request) {
 		a.passkeyFail(w, r, err)
 		return
 	}
-	logger.Info("AUTH passkey first factor ok uid=%d", u.ID)
+	a.audit(r, "AUTH passkey_first_factor uid=%d", u.ID)
 	a.finishLogin(w, r, u, twofa.ViaPasskey)
 }
 
@@ -67,7 +67,7 @@ func (a *App) apiPasskeyStepFinish(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	if !s.has(twofa.MethodPasskey) {
+	if !s.Has(twofa.MethodPasskey) {
 		a.fail(w, r, errBadRequest)
 		return
 	}
@@ -76,8 +76,8 @@ func (a *App) apiPasskeyStepFinish(w http.ResponseWriter, r *http.Request) {
 		a.passkeyFail(w, r, err)
 		return
 	}
-	if u.ID != s.user.ID {
-		logger.Warn("AUTH passkey step wrong account uid=%d got=%d from=%s", s.user.ID, u.ID, auth.ClientCountry(r))
+	if u.ID != s.UserID {
+		logger.Warn("AUTH passkey step wrong account uid=%d got=%d from=%s", s.UserID, u.ID, auth.ClientCountry(r))
 		a.fail(w, r, apiErr{http.StatusUnauthorized, "err.mfa_bad_code"})
 		return
 	}
@@ -90,11 +90,11 @@ func (a *App) apiPasskeyStepFinish(w http.ResponseWriter, r *http.Request) {
 		a.okJSON(w, map[string]any{"redirect": "/login/2fa"})
 		return
 	}
-	if err := a.Auth.StartSessionFor(w, r, s.user.ID); err != nil {
+	if err := a.Auth.StartSessionFor(w, r, s.UserID); err != nil {
 		a.fail(w, r, err)
 		return
 	}
-	logger.Info("AUTH 2fa_ok uid=%d method=passkey from=%s", s.user.ID, auth.ClientCountry(r))
+	a.audit(r, "AUTH 2fa_ok uid=%d method=passkey from=%s", s.UserID, auth.ClientCountry(r))
 	a.okJSON(w, map[string]any{"redirect": "/"})
 }
 
@@ -135,7 +135,7 @@ func (a *App) apiPasskeyAddFinish(w http.ResponseWriter, r *http.Request) {
 		a.passkeyFail(w, r, err)
 		return
 	}
-	logger.Info("AUTH passkey added uid=%d", u.ID)
+	a.audit(r, "AUTH passkey_added uid=%d", u.ID)
 	a.Notif.Send(u.ID, "passkey_added", "/settings?tab=account", nil)
 	a.okJSON(w, nil)
 }

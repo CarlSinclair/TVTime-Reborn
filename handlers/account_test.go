@@ -1,8 +1,12 @@
 package handlers_test
 
 import (
+	"context"
 	"net/url"
 	"testing"
+
+	"github.com/CarlSinclair/csuit-libs/emailchange"
+	"github.com/CarlSinclair/csuit-libs/twofa"
 
 	"tvt/auth"
 )
@@ -13,24 +17,32 @@ func TestChangeEmailFlow(t *testing.T) {
 	e.signup(t, "taken", true)
 	u, _ := e.store.UserByUsername("movey")
 	const newMail = "new-address@example.com"
-
-	if code, _ := c.post("/api/account/email/change", map[string]string{"email": newMail, "password": "wrong"}); code != 401 {
-		t.Fatalf("wrong password must be refused: %d", code)
+	prove := func() {
+		if err := twofa.MarkReauth("tvt", u.ID, twofa.MethodEmail); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if code, out := c.post("/api/account/email/change", map[string]string{"email": "taken@example.com", "password": "Passw0rd!x1"}); code != 409 {
+
+	if code, _ := c.post("/api/account/email/change", map[string]string{"email": newMail}); code != 401 {
+		t.Fatalf("a change without a second factor must be refused: %d", code)
+	}
+	prove()
+	if code, out := c.post("/api/account/email/change", map[string]string{"email": "taken@example.com"}); code != 409 {
 		t.Fatalf("an address in use must be refused: %d %v", code, out)
 	}
-	if code, _ := c.post("/api/account/email/change", map[string]string{"email": "movey@example.com", "password": "Passw0rd!x1"}); code != 400 {
+	prove()
+	if code, _ := c.post("/api/account/email/change", map[string]string{"email": "movey@example.com"}); code != 400 {
 		t.Fatalf("the same address must be refused: %d", code)
 	}
-	if code, out := c.post("/api/account/email/change", map[string]string{"email": newMail, "password": "Passw0rd!x1"}); code != 200 {
+	prove()
+	if code, out := c.post("/api/account/email/change", map[string]string{"email": newMail}); code != 200 {
 		t.Fatalf("change request: %d %v", code, out)
 	}
 	fresh, _ := e.store.UserByID(u.ID)
-	if fresh.Email != "movey@example.com" || fresh.PendingEmail != newMail {
+	if fresh.Email != "movey@example.com" {
 		t.Fatalf("nothing may change before the link is opened: %+v", fresh)
 	}
-	tok, err := e.auth.IssueEmailToken(u.ID, auth.PurposeEmail)
+	tok, _, err := emailchange.Request(context.Background(), &emailchange.SQLStore{DB: e.store.DB, TextTime: true, EmptyNotNull: true}, u.ID, fresh.Email, newMail, emailchange.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +50,7 @@ func TestChangeEmailFlow(t *testing.T) {
 		t.Fatalf("consume: %d %v", code, out)
 	}
 	fresh, _ = e.store.UserByID(u.ID)
-	if fresh.Email != newMail || !fresh.EmailVerified || fresh.PendingEmail != "" {
+	if fresh.Email != newMail || !fresh.EmailVerified {
 		t.Fatalf("after confirming: %+v", fresh)
 	}
 	if code, _ := c.post("/api/auth/emailchange/consume", map[string]string{"token": tok}); code != 400 {

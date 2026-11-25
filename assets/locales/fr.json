@@ -138,7 +138,6 @@
   },
   "settings": {
     "password": "Changer le mot de passe",
-    "current_password": "Mot de passe actuel",
     "new_password": "Nouveau mot de passe",
     "save": "Enregistrer",
     "password_changed": "Mot de passe modifié.",
@@ -187,10 +186,8 @@
     "twofa": "Vérification en deux étapes",
     "twofa_confirm": "Confirmer et activer",
     "twofa_disable": "Désactiver la vérification en deux étapes",
-    "twofa_enable": "Activer la 2FA",
     "twofa_hint": "Protégez votre compte avec un code d'une application d'authentification.",
     "twofa_off": "Vérification en deux étapes désactivée.",
-    "twofa_on": "La vérification en deux étapes est active.",
     "twofa_secret": "Impossible de scanner ? Saisissez cette clé :",
     "passkeys": "Passkeys",
     "passkeys_hint": "Connectez-vous avec votre empreinte, votre visage ou le code de l'appareil plutôt qu'avec un mot de passe.",
@@ -220,22 +217,9 @@
     "recovery_title": "Codes de récupération",
     "recovery_n": "%d restants",
     "tab_integrations": "Intégrations",
-    "tfa_methods": "Méthodes de vérification à la connexion",
-    "tfa_telegram": "Approbation via Telegram",
-    "tfa_telegram_hint": "Nous envoyons un message avec les boutons Approuver et Refuser à votre discussion Telegram liée.",
-    "tfa_telegram_needs_link": "Liez d'abord votre compte Telegram pour utiliser l'approbation via Telegram.",
-    "tfa_mode_title": "Lorsque plusieurs méthodes sont activées",
-    "tfa_mode_any": "Une seule méthode suffit, et vous pouvez en choisir une autre à la connexion",
-    "tfa_mode_all": "Exiger toutes les méthodes activées",
-    "tfa_passkey_requires": "Demander la 2FA lorsque je me connecte avec une clé d'accès",
     "tfa_prefs_save": "Enregistrer les paramètres de vérification",
     "tfa_prefs_saved": "Paramètres de vérification enregistrés.",
-    "tfa_email": "Code par e-mail",
-    "tfa_email_hint": "Nous envoyons un code à 6 chiffres à l'adresse e-mail de votre compte.",
-    "tfa_email_needs_mail": "Les codes par e-mail nécessitent une adresse e-mail confirmée et l'envoi d'e-mails sortants sur ce serveur.",
-    "tfa_magic_requires": "Demander la 2FA lorsque je me connecte avec un lien par e-mail",
-    "tfa_telegram_requires": "Demander la 2FA lorsque je me connecte avec Telegram",
-    "forgot_current_password_btn": "J'ai oublié mon mot de passe actuel : m'envoyer un code par e-mail"
+    "tfa_email_needs_mail": "Les codes par e-mail nécessitent une adresse e-mail confirmée et l'envoi d'e-mails sortants sur ce serveur."
   },
   "footer": {
     "tmdb": "Les données et images des séries sont fournies par",
@@ -790,7 +774,6 @@
     "western": "Western"
   },
   "mfa": {
-    "code": "Code de vérification",
     "recovery_hint": "Appareil perdu ? Saisissez plutôt l'un de vos codes de récupération.",
     "text": "Saisissez le code à 6 chiffres de votre application d'authentification.",
     "title": "Vérification en deux étapes",
@@ -802,13 +785,11 @@
     "tg_failed": "Impossible d'envoyer le message Telegram. Utilisez une autre méthode.",
     "email_title": "Confirmer par e-mail",
     "email_btn": "M'envoyer un code par e-mail",
-    "email_sent": "Nous avons envoyé un code à 6 chiffres à votre adresse e-mail.",
     "email_wait": "Un code a été envoyé il y a un instant. Patientez quelques secondes avant d'en demander un autre.",
     "email_failed": "Impossible d'envoyer l'e-mail. Utilisez une autre méthode.",
-    "email_label": "Code par e-mail",
     "reset_label": "Code de vérification (uniquement si vous utilisez la vérification en deux étapes)",
-    "reset_send": "Envoyer un code sur mon Telegram",
-    "reset_sent": "Si Telegram est connecté, un code y a été envoyé."
+    "reset_send": "Demander l'approbation sur Telegram",
+    "reset_sent": "Si Telegram est connecté, une demande d'approbation y a été envoyée. Approuvez-la, puis continuez."
   },
   "notif": {
     "abuse_report": {
@@ -1009,7 +990,7 @@
     "tfa_approved": "Approuvé. Vous pouvez revenir à la page de connexion.",
     "tfa_denied": "Refusé. Si ce n'était pas vous, changez votre mot de passe.",
     "tfa_stale": "Cette demande a expiré ou a déjà reçu une réponse.",
-    "reset_code": "Votre code de réinitialisation du mot de passe {app} est {code}. Si vous n'avez pas demandé de réinitialisation, ignorez ce message."
+    "reset_prompt": "Quelqu'un réinitialise le mot de passe de votre compte. Approuvez uniquement si c'était vous."
   },
   "privacy": {
     "title": "Politique de confidentialité",

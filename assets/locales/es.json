@@ -138,7 +138,6 @@
   },
   "settings": {
     "password": "Cambiar contraseña",
-    "current_password": "Contraseña actual",
     "new_password": "Nueva contraseña",
     "save": "Guardar",
     "password_changed": "Contraseña cambiada.",
@@ -187,10 +186,8 @@
     "twofa": "Verificación en dos pasos",
     "twofa_confirm": "Confirmar y activar",
     "twofa_disable": "Desactivar la verificación en dos pasos",
-    "twofa_enable": "Activar 2FA",
     "twofa_hint": "Protege tu cuenta con un código de una app de autenticación.",
     "twofa_off": "Verificación en dos pasos desactivada.",
-    "twofa_on": "La verificación en dos pasos está activa.",
     "twofa_secret": "¿No puedes escanear? Introduce esta clave:",
     "passkeys": "Passkeys",
     "passkeys_hint": "Inicia sesión con tu huella, rostro o PIN del dispositivo en lugar de una contraseña.",
@@ -220,22 +217,9 @@
     "recovery_title": "Códigos de recuperación",
     "recovery_n": "%d restantes",
     "tab_integrations": "Integraciones",
-    "tfa_methods": "Métodos de verificación al iniciar sesión",
-    "tfa_telegram": "Aprobación por Telegram",
-    "tfa_telegram_hint": "Enviamos un mensaje con los botones Aprobar y Rechazar a tu chat de Telegram vinculado.",
-    "tfa_telegram_needs_link": "Vincula primero tu cuenta de Telegram para usar la aprobación por Telegram.",
-    "tfa_mode_title": "Cuando hay más de un método activado",
-    "tfa_mode_any": "Basta con un método, y puedes elegir otro al iniciar sesión",
-    "tfa_mode_all": "Requerir todos los métodos activados",
-    "tfa_passkey_requires": "Pedir 2FA cuando inicie sesión con una clave de acceso",
     "tfa_prefs_save": "Guardar configuración de verificación",
     "tfa_prefs_saved": "Configuración de verificación guardada.",
-    "tfa_email": "Código por correo",
-    "tfa_email_hint": "Enviamos un código de 6 dígitos a la dirección de correo de tu cuenta.",
-    "tfa_email_needs_mail": "Los códigos por correo requieren una dirección de correo confirmada y envío de correo saliente en este servidor.",
-    "tfa_magic_requires": "Pedir 2FA cuando inicie sesión con un enlace de correo",
-    "tfa_telegram_requires": "Pedir 2FA cuando inicie sesión con Telegram",
-    "forgot_current_password_btn": "Olvidé mi contraseña actual: enviarme un código por correo"
+    "tfa_email_needs_mail": "Los códigos por correo requieren una dirección de correo confirmada y envío de correo saliente en este servidor."
   },
   "footer": {
     "tmdb": "Los datos e imágenes de las series los proporciona",
@@ -790,7 +774,6 @@
     "western": "Western"
   },
   "mfa": {
-    "code": "Código de verificación",
     "recovery_hint": "¿Perdiste tu dispositivo? Introduce uno de tus códigos de recuperación.",
     "text": "Introduce el código de 6 dígitos de tu app de autenticación.",
     "title": "Verificación en dos pasos",
@@ -802,13 +785,11 @@
     "tg_failed": "No se pudo enviar el mensaje de Telegram. Usa otro método.",
     "email_title": "Confirmar con correo electrónico",
     "email_btn": "Enviarme un código por correo",
-    "email_sent": "Enviamos un código de 6 dígitos a tu dirección de correo electrónico.",
     "email_wait": "Se envió un código hace un momento. Espera unos segundos antes de pedir otro.",
     "email_failed": "No se pudo enviar el correo. Usa otro método.",
-    "email_label": "Código por correo",
     "reset_label": "Código de verificación (solo si usas verificación en dos pasos)",
-    "reset_send": "Enviar un código a mi Telegram",
-    "reset_sent": "Si Telegram está conectado, se le envió un código."
+    "reset_send": "Pedir aprobación en Telegram",
+    "reset_sent": "Si Telegram está conectado, se envió una solicitud de aprobación. Apruébala y continúa."
   },
   "notif": {
     "abuse_report": {
@@ -1009,7 +990,7 @@
     "tfa_approved": "Aprobado. Puedes volver a la página de inicio de sesión.",
     "tfa_denied": "Rechazado. Si no fuiste tú, cambia tu contraseña.",
     "tfa_stale": "Esta solicitud expiró o ya fue respondida.",
-    "reset_code": "Tu código para restablecer la contraseña de {app} es {code}. Si no pediste el restablecimiento, ignora este mensaje."
+    "reset_prompt": "Alguien está restableciendo la contraseña de tu cuenta. Aprueba solo si fuiste tú."
   },
   "privacy": {
     "title": "Política de privacidad",

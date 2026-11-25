@@ -138,7 +138,6 @@
   },
   "settings": {
     "password": "修改密码",
-    "current_password": "当前密码",
     "new_password": "新密码",
     "save": "保存",
     "password_changed": "密码已修改。",
@@ -187,10 +186,8 @@
     "twofa": "两步验证",
     "twofa_confirm": "确认并开启",
     "twofa_disable": "关闭两步验证",
-    "twofa_enable": "启用两步验证",
     "twofa_hint": "使用验证器应用中的验证码保护你的账号。",
     "twofa_off": "两步验证已关闭。",
-    "twofa_on": "两步验证已开启。",
     "twofa_secret": "无法扫描？请输入此密钥：",
     "passkeys": "通行密钥",
     "passkeys_hint": "用指纹、面容或设备 PIN 代替密码登录。",
@@ -220,22 +217,9 @@
     "recovery_title": "恢复码",
     "recovery_n": "剩余 %d 个",
     "tab_integrations": "集成",
-    "tfa_methods": "登录验证方式",
-    "tfa_telegram": "Telegram 审批",
-    "tfa_telegram_hint": "我们会向您绑定的 Telegram 聊天发送一条包含“批准”和“拒绝”按钮的消息。",
-    "tfa_telegram_needs_link": "请先绑定 Telegram 账号，才能使用 Telegram 审批。",
-    "tfa_mode_title": "启用多种方式时",
-    "tfa_mode_any": "任选一种即可，登录时也可以改用其他方式",
-    "tfa_mode_all": "要求启用的所有方式",
-    "tfa_passkey_requires": "使用通行密钥登录时要求 2FA",
     "tfa_prefs_save": "保存验证设置",
     "tfa_prefs_saved": "验证设置已保存。",
-    "tfa_email": "邮箱验证码",
-    "tfa_email_hint": "我们会向您账户的邮箱地址发送一个 6 位数验证码。",
-    "tfa_email_needs_mail": "邮箱验证码需要已确认的邮箱地址，并且本服务器已启用外发邮件。",
-    "tfa_magic_requires": "使用邮件链接登录时要求 2FA",
-    "tfa_telegram_requires": "使用Telegram登录时要求 2FA",
-    "forgot_current_password_btn": "我忘记了当前密码：向邮箱发送验证码"
+    "tfa_email_needs_mail": "邮箱验证码需要已确认的邮箱地址，并且本服务器已启用外发邮件。"
   },
   "footer": {
     "tmdb": "剧集数据和图片由以下平台提供：",
@@ -790,7 +774,6 @@
     "western": "西部"
   },
   "mfa": {
-    "code": "验证码",
     "recovery_hint": "设备丢失了？请改为输入一个恢复码。",
     "text": "请输入验证器应用中的 6 位验证码。",
     "title": "两步验证",
@@ -802,13 +785,11 @@
     "tg_failed": "无法发送 Telegram 消息，请使用其他方式。",
     "email_title": "邮箱确认",
     "email_btn": "向我发送邮箱验证码",
-    "email_sent": "我们已向您的邮箱地址发送了一个 6 位数验证码。",
     "email_wait": "验证码刚刚已发送。请稍等几秒后再申请新的验证码。",
     "email_failed": "无法发送邮件。请使用其他方式。",
-    "email_label": "邮箱验证码",
     "reset_label": "验证码(仅在使用两步验证时填写)",
-    "reset_send": "向我的 Telegram 发送验证码",
-    "reset_sent": "如果已连接 Telegram,验证码已发送到该处。"
+    "reset_send": "在 Telegram 中请求批准",
+    "reset_sent": "如果已连接 Telegram,已向其发送批准请求。请批准后继续。"
   },
   "notif": {
     "abuse_report": {
@@ -1009,7 +990,7 @@
     "tfa_approved": "已批准。您可以返回登录页面。",
     "tfa_denied": "已拒绝。如果不是您本人操作，请修改密码。",
     "tfa_stale": "该请求已过期或已被处理。",
-    "reset_code": "你的 {app} 密码重置验证码是 {code}。如果不是你申请的重置,请忽略此消息。"
+    "reset_prompt": "有人正在重置您账号的密码。仅在确认是您本人时才批准。"
   },
   "privacy": {
     "title": "隐私政策",

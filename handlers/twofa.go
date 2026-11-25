@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"html"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -15,7 +17,9 @@ import (
 	"tvt/store"
 	"tvt/telegram"
 
+	"github.com/CarlSinclair/csuit-libs/redis"
 	"github.com/CarlSinclair/csuit-libs/twofa"
+	goredis "github.com/redis/go-redis/v9"
 )
 
 const twoFATenant = "tvt"
@@ -37,10 +41,17 @@ func (a *App) twoFAMethods(u *store.User) (twofa.Prefs, []twofa.Method, error) {
 	if err != nil {
 		return twofa.Prefs{}, nil, err
 	}
-	if p.Email && (strings.TrimSpace(u.Email) == "" || !a.mailOK()) {
-		p.Email = false
+	enabled := p.Enabled(u.TOTPEnabled, twoFAChat(u) != 0 && a.Bot.Configured())
+	if strings.TrimSpace(u.Email) == "" || !a.mailOK() {
+		kept := enabled[:0:0]
+		for _, m := range enabled {
+			if m != twofa.MethodEmail {
+				kept = append(kept, m)
+			}
+		}
+		enabled = kept
 	}
-	return p, p.Enabled(u.TOTPEnabled, p.Telegram && twoFAChat(u) != 0 && a.Bot.Configured()), nil
+	return p, enabled, nil
 }
 
 func (a *App) twoFASignInMethods(u *store.User) (twofa.Prefs, []twofa.Method, error) {
@@ -67,51 +78,41 @@ func (a *App) twoFARequired(u *store.User, via twofa.Via) (bool, error) {
 	return p.NeedsStep(via, enabled), nil
 }
 
-func (a *App) sendTwoFAEmail(u *store.User) error {
+func (a *App) sendTwoFAEmailLink(r *http.Request, u *store.User) (string, string, error) {
 	if strings.TrimSpace(u.Email) == "" || !a.mailOK() {
-		return errMailDown
+		return "", "", errMailDown
 	}
-	code, err := twofa.NewEmailCode(twoFATenant, u.ID)
+	token, secret, err := twofa.StartEmailApproval(twoFATenant, u.ID)
 	if err != nil {
-		if errors.Is(err, twofa.ErrEmailCooldown) {
-			return apiErr{http.StatusTooManyRequests, "mfa.email_wait"}
-		}
-		return err
+		return "", "", err
 	}
 	lang := u.Locale
 	if !a.I18n.Has(lang) {
 		lang = i18n.Fallback
 	}
-	if err := a.Mail.Send(u.Email, a.I18n.T(lang, "mail.tfa.subject", a.Cfg.AppName), a.I18n.T(lang, "mail.tfa.body", a.Cfg.AppName, code)); err != nil {
-		twofa.DiscardEmailCode(twoFATenant, u.ID)
-		logger.Error("AUTH 2fa_email send uid=%d: %v", u.ID, err)
-		return errMailDown
+	link := a.Cfg.BaseURL + "/login/2fa/email/link?t=" + url.QueryEscape(token)
+	body := a.I18n.T(lang, "tfa_mail_body") + "\n\n" + link + "\n\n" + a.I18n.T(lang, "tfa_mail_disclaimer")
+	htmlBody := "<p>" + html.EscapeString(a.I18n.T(lang, "tfa_mail_body")) + "</p><p><a href=\"" + html.EscapeString(link) + "\">" + html.EscapeString(a.I18n.T(lang, "tfa_mail_button")) + "</a></p><p>" + html.EscapeString(a.I18n.T(lang, "tfa_mail_disclaimer")) + "</p>"
+	if err := a.Mail.SendHTML(u.Email, a.I18n.T(lang, "tfa_mail_subject"), body, htmlBody); err != nil {
+		twofa.DiscardEmailApproval(twoFATenant, u.ID, token)
+		logger.Error("AUTH 2fa_email link send uid=%d: %v", u.ID, err)
+		return "", "", errMailDown
 	}
-	return nil
+	return token, secret, nil
 }
 
-func (a *App) checkTwoFAEmail(u *store.User, code string) (bool, error) {
-	return twofa.CheckEmailCode(twoFATenant, u.ID, strings.TrimSpace(code))
+func (a *App) startTwoFATelegram(r *http.Request, u *store.User) (string, string, error) {
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+	lang := u.Locale
+	return twofa.StartApproval(ctx, a.Bot, twoFATenant, u.ID, twoFAChat(u), twofa.Texts{
+		Prompt:  a.tgT(lang, "tg.tfa_prompt", nil),
+		Approve: a.tgT(lang, "tg.tfa_approve", nil),
+		Deny:    a.tgT(lang, "tg.tfa_deny", nil),
+	})
 }
 
-type twoFAStep struct {
-	user    *store.User
-	prefs   twofa.Prefs
-	enabled []twofa.Method
-	done    map[twofa.Method]bool
-	token   string
-}
-
-func (s *twoFAStep) has(m twofa.Method) bool {
-	for _, e := range s.enabled {
-		if e == m {
-			return true
-		}
-	}
-	return false
-}
-
-func (a *App) loadTwoFAStep(r *http.Request) (*twoFAStep, error) {
+func (a *App) loadTwoFAStep(r *http.Request) (*twofa.Step[*store.User], error) {
 	uid, err := a.Auth.PendingMFAUser(r)
 	if err != nil {
 		return nil, apiErr{http.StatusUnauthorized, "err.mfa_expired"}
@@ -129,26 +130,24 @@ func (a *App) loadTwoFAStep(r *http.Request) (*twoFAStep, error) {
 		logger.Error("AUTH 2fa_step prefs uid=%d: %v", uid, err)
 		return nil, err
 	}
-	done, err := twofa.Done(token)
+	step, err := twofa.NewStep(u, uid, token, prefs, enabled, u.HasPassword())
 	if err != nil {
 		logger.Error("AUTH 2fa_step progress read uid=%d: %v", uid, err)
 		return nil, err
 	}
-	return &twoFAStep{user: u, prefs: prefs, enabled: enabled, done: done, token: token}, nil
+	return step, nil
 }
 
-func (a *App) finishTwoFAMethod(w http.ResponseWriter, s *twoFAStep, m twofa.Method) (bool, error) {
-	if err := twofa.MarkDone(s.token, m); err != nil {
-		logger.Error("AUTH 2fa_step could not record method=%s uid=%d: %v", m, s.user.ID, err)
+func (a *App) finishTwoFAMethod(w http.ResponseWriter, s *twofa.Step[*store.User], m twofa.Method) (bool, error) {
+	complete, err := s.Finish(m)
+	if err != nil {
+		logger.Error("AUTH 2fa_step could not record method=%s uid=%d: %v", m, s.UserID, err)
 		return false, err
 	}
-	s.done[m] = true
-	if !s.prefs.Satisfied(s.enabled, s.done) {
-		return false, nil
+	if complete {
+		a.Auth.ClearMFA(w)
 	}
-	twofa.ClearDone(s.token)
-	a.Auth.ClearMFA(w)
-	return true, nil
+	return complete, nil
 }
 
 func (a *App) pageMFA(w http.ResponseWriter, r *http.Request) {
@@ -164,37 +163,80 @@ func (a *App) pageMFA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.page(w, r, "mfa", "mfa.title", map[string]any{
-		"TOTP":     s.has(twofa.MethodTOTP) && !s.done[twofa.MethodTOTP],
-		"Telegram": s.has(twofa.MethodTelegram) && !s.done[twofa.MethodTelegram],
-		"Email":    s.has(twofa.MethodEmail) && !s.done[twofa.MethodEmail],
-		"Passkey":  s.has(twofa.MethodPasskey) && !s.done[twofa.MethodPasskey],
+		"TOTP":     s.Open(twofa.MethodTOTP),
+		"Telegram": s.Open(twofa.MethodTelegram),
+		"Email":    s.Open(twofa.MethodEmail),
+		"Passkey":  s.Open(twofa.MethodPasskey),
+		"Password": s.Open(twofa.MethodPassword),
 	})
 }
 
-func (a *App) apiTwoFAEmailSend(w http.ResponseWriter, r *http.Request) {
-	s, err := a.loadTwoFAStep(r)
-	if err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	if !s.has(twofa.MethodEmail) || s.done[twofa.MethodEmail] {
-		a.fail(w, r, errBadRequest)
-		return
-	}
-	if err := a.allow(a.mfaLimit, "mfa-mail:"+itoa(s.user.ID)); err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	if err := a.sendTwoFAEmail(s.user); err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	logger.Info("AUTH 2fa_email sent uid=%d from=%s", s.user.ID, auth.ClientCountry(r))
-	a.okJSON(w, nil)
+func (a *App) pageMFALink(w http.ResponseWriter, r *http.Request) {
+	twofa.LinkHost{Page: func(w http.ResponseWriter, r *http.Request, state, token string) {
+		a.page(w, r, "mfalink", "tfa_link_title", map[string]any{"State": state, "Token": token})
+	}}.ServeHTTP(w, r)
 }
 
-func (a *App) apiTwoFAEmailVerify(w http.ResponseWriter, r *http.Request) {
-	var in struct{ Code string }
+func (a *App) twoFAStepHost() twofa.StepHost[*store.User] {
+	return twofa.StepHost[*store.User]{
+		Load: func(r *http.Request) (*twofa.Step[*store.User], string) {
+			s, err := a.loadTwoFAStep(r)
+			if err != nil {
+				var ae apiErr
+				if errors.As(err, &ae) {
+					return nil, ae.key
+				}
+				return nil, "system_error"
+			}
+			return s, ""
+		},
+		StartTelegram: func(r *http.Request, s *twofa.Step[*store.User]) (string, string, error) {
+			if err := a.allow(a.mfaLimit, "mfa-tg:"+itoa(s.UserID)); err != nil {
+				return "", "", err
+			}
+			return a.startTwoFATelegram(r, s.User)
+		},
+		SendEmailLink: func(r *http.Request, s *twofa.Step[*store.User]) (string, string, error) {
+			if err := a.allow(a.mfaLimit, "mfa-mail:"+itoa(s.UserID)); err != nil {
+				return "", "", err
+			}
+			return a.sendTwoFAEmailLink(r, s.User)
+		},
+		Complete: func(w http.ResponseWriter, r *http.Request, s *twofa.Step[*store.User]) (string, string) {
+			a.Auth.ClearMFA(w)
+			if err := a.Auth.StartSessionFor(w, r, s.UserID); err != nil {
+				logger.Error("AUTH 2fa_step start session uid=%d: %v", s.UserID, err)
+				return "", "system_error"
+			}
+			return "/", ""
+		},
+		JSON: func(w http.ResponseWriter, r *http.Request, v any) {
+			out, _ := v.(map[string]any)
+			a.okJSON(w, out)
+		},
+		Fail: func(w http.ResponseWriter, r *http.Request, status int, key string) {
+			if mapped, ok := twoFAConfirmErrKeys[key]; ok {
+				key = mapped
+			}
+			a.fail(w, r, apiErr{status, key})
+		},
+	}
+}
+
+func (a *App) apiTwoFATelegramStart(w http.ResponseWriter, r *http.Request) {
+	a.twoFAStepHost().TelegramStart(w, r)
+}
+
+func (a *App) apiTwoFAEmailStart(w http.ResponseWriter, r *http.Request) {
+	a.twoFAStepHost().EmailStart(w, r)
+}
+
+func (a *App) apiTwoFAPoll(w http.ResponseWriter, r *http.Request) {
+	a.twoFAStepHost().Poll(w, r)
+}
+
+func (a *App) apiTwoFAPassword(w http.ResponseWriter, r *http.Request) {
+	var in struct{ Password string }
 	if err := decode(r, &in); err != nil {
 		a.fail(w, r, err)
 		return
@@ -204,26 +246,20 @@ func (a *App) apiTwoFAEmailVerify(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	if !s.has(twofa.MethodEmail) {
+	if !s.Open(twofa.MethodPassword) {
 		a.fail(w, r, errBadRequest)
 		return
 	}
-	if err := a.allow(a.mfaLimit, "mfa:"+itoa(s.user.ID)); err != nil {
+	if err := a.allow(a.mfaLimit, "mfa-pw:"+itoa(s.UserID)); err != nil {
 		a.fail(w, r, err)
 		return
 	}
-	ok, err := a.checkTwoFAEmail(s.user, in.Code)
-	if err != nil {
-		logger.Error("AUTH 2fa_email check uid=%d: %v", s.user.ID, err)
-		a.fail(w, r, err)
+	if !a.Auth.CheckPassword(s.User, in.Password) {
+		logger.Warn("AUTH 2fa_password bad_password uid=%d from=%s", s.UserID, auth.ClientCountry(r))
+		a.fail(w, r, apiErr{http.StatusUnauthorized, "err.bad_credentials"})
 		return
 	}
-	if !ok {
-		logger.Warn("AUTH 2fa_email bad_code uid=%d from=%s", s.user.ID, auth.ClientCountry(r))
-		a.fail(w, r, apiErr{http.StatusUnauthorized, "err.mfa_bad_code"})
-		return
-	}
-	complete, err := a.finishTwoFAMethod(w, s, twofa.MethodEmail)
+	complete, err := a.finishTwoFAMethod(w, s, twofa.MethodPassword)
 	if err != nil {
 		a.fail(w, r, err)
 		return
@@ -232,78 +268,12 @@ func (a *App) apiTwoFAEmailVerify(w http.ResponseWriter, r *http.Request) {
 		a.okJSON(w, map[string]any{"redirect": "/login/2fa"})
 		return
 	}
-	if err := a.Auth.StartSessionFor(w, r, s.user.ID); err != nil {
+	if err := a.Auth.StartSessionFor(w, r, s.UserID); err != nil {
 		a.fail(w, r, err)
 		return
 	}
-	logger.Info("AUTH 2fa_ok uid=%d method=email from=%s", s.user.ID, auth.ClientCountry(r))
+	a.audit(r, "AUTH 2fa_ok uid=%d method=password from=%s", s.UserID, auth.ClientCountry(r))
 	a.okJSON(w, map[string]any{"redirect": "/"})
-}
-
-func (a *App) apiTwoFATelegramStart(w http.ResponseWriter, r *http.Request) {
-	s, err := a.loadTwoFAStep(r)
-	if err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	if !s.has(twofa.MethodTelegram) {
-		a.fail(w, r, errBadRequest)
-		return
-	}
-	if err := a.allow(a.mfaLimit, "mfa-tg:"+itoa(s.user.ID)); err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	lang := s.user.Locale
-	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
-	defer cancel()
-	token, secret, err := twofa.StartApproval(ctx, a.Bot, twoFATenant, s.user.ID, twoFAChat(s.user), twofa.Texts{
-		Prompt:  a.tgT(lang, "tg.tfa_prompt", nil),
-		Approve: a.tgT(lang, "tg.tfa_approve", nil),
-		Deny:    a.tgT(lang, "tg.tfa_deny", nil),
-	})
-	if err != nil {
-		logger.Error("AUTH 2fa_telegram start failed uid=%d: %v", s.user.ID, err)
-		a.fail(w, r, apiErr{http.StatusBadGateway, "mfa.tg_failed"})
-		return
-	}
-	logger.Info("AUTH 2fa_telegram sent uid=%d from=%s", s.user.ID, auth.ClientCountry(r))
-	w.Header().Set("Cache-Control", "no-store")
-	a.okJSON(w, map[string]any{"token": token, "secret": secret})
-}
-
-func (a *App) apiTwoFATelegramPoll(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "no-store")
-	s, err := a.loadTwoFAStep(r)
-	if err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	status, uid := twofa.PollApproval(r.URL.Query().Get("t"), r.Header.Get("X-Login-Secret"))
-	if status != "approved" {
-		a.okJSON(w, map[string]any{"status": status})
-		return
-	}
-	if uid != s.user.ID {
-		logger.Warn("AUTH 2fa_telegram approval for another account uid=%d approved_uid=%d", s.user.ID, uid)
-		a.okJSON(w, map[string]any{"status": "expired"})
-		return
-	}
-	complete, err := a.finishTwoFAMethod(w, s, twofa.MethodTelegram)
-	if err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	if !complete {
-		a.okJSON(w, map[string]any{"status": "more"})
-		return
-	}
-	if err := a.Auth.StartSessionFor(w, r, s.user.ID); err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	logger.Info("AUTH 2fa_ok uid=%d method=telegram from=%s", s.user.ID, auth.ClientCountry(r))
-	a.okJSON(w, map[string]any{"status": "approved", "next": "/"})
 }
 
 func (a *App) apiTwoFAPrefs(w http.ResponseWriter, r *http.Request) {
@@ -313,14 +283,10 @@ func (a *App) apiTwoFAPrefs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in struct {
-		Password         string
-		Code             string
-		Telegram         bool
-		Email            bool
-		All              bool
-		PasskeyRequires  bool `json:"passkey_requires"`
-		MagicRequires    bool `json:"magic_requires"`
-		TelegramRequires bool `json:"telegram_requires"`
+		Password string
+		Code     string
+		Require  bool
+		All      bool
 	}
 	if err := decode(r, &in); err != nil {
 		a.fail(w, r, err)
@@ -340,21 +306,13 @@ func (a *App) apiTwoFAPrefs(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	p := twofa.Prefs{Telegram: in.Telegram, Email: in.Email, All: in.All, PasskeyRequires: in.PasskeyRequires, MagicRequires: in.MagicRequires, TelegramRequires: in.TelegramRequires}
-	if p.Email && (strings.TrimSpace(u.Email) == "" || !a.mailOK()) {
-		a.fail(w, r, apiErr{http.StatusBadRequest, "settings.tfa_email_needs_mail"})
-		return
-	}
-	if p.Telegram && (twoFAChat(u) == 0 || !a.Bot.Configured()) {
-		a.fail(w, r, apiErr{http.StatusBadRequest, "settings.tfa_telegram_needs_link"})
-		return
-	}
+	p := twofa.Prefs{Require: &in.Require, All: in.All}
 	if err := a.Store.SetTwoFAPrefs(u.ID, p); err != nil {
 		logger.Error("AUTH 2fa prefs save uid=%d: %v", u.ID, err)
 		a.fail(w, r, apiErr{http.StatusInternalServerError, "err.tfa_prefs_failed"})
 		return
 	}
-	logger.Info("AUTH 2fa prefs saved uid=%d prefs=%s", u.ID, p.Encode())
+	a.audit(r, "AUTH 2fa_prefs uid=%d prefs=%s", u.ID, p.Encode())
 	a.okJSON(w, nil)
 }
 
@@ -433,10 +391,10 @@ func (a *App) resetSecondFactor(uid int64, code string) error {
 	}
 	code = strings.TrimSpace(code)
 	for _, m := range enabled {
-		if m == twofa.MethodTelegram && code != "" {
-			ok, cerr := twofa.CheckEmailCode(twoFAResetTenant, uid, code)
+		if m == twofa.MethodTelegram {
+			ok, cerr := a.takeResetApproval(uid)
 			if cerr != nil {
-				logger.Error("AUTH password reset telegram code check uid=%d: %v", uid, cerr)
+				logger.Error("AUTH password reset telegram approval check uid=%d: %v", uid, cerr)
 				return cerr
 			}
 			if ok {
@@ -489,26 +447,52 @@ func (a *App) apiResetCode(w http.ResponseWriter, r *http.Request) {
 		a.okJSON(w, nil)
 		return
 	}
-	code, err := twofa.NewEmailCode(twoFAResetTenant, u.ID)
-	if err != nil {
-		if errors.Is(err, twofa.ErrEmailCooldown) {
-			a.okJSON(w, nil)
-			return
-		}
-		logger.Error("AUTH password reset code create uid=%d: %v", u.ID, err)
-		a.fail(w, r, err)
-		return
-	}
 	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 	defer cancel()
-	text := a.tgT(u.Locale, "tg.reset_code", map[string]string{"code": code})
-	if err := a.Bot.SendMessage(ctx, strconv.FormatInt(twoFAChat(u), 10), text); err != nil {
-		twofa.DiscardEmailCode(twoFAResetTenant, u.ID)
-		logger.Error("AUTH password reset telegram code send uid=%d: %v", u.ID, err)
+	lang := u.Locale
+	token, secret, err := twofa.StartApproval(ctx, a.Bot, twoFAResetTenant, u.ID, twoFAChat(u), twofa.Texts{
+		Prompt:  a.tgT(lang, "tg.reset_prompt", nil),
+		Approve: a.tgT(lang, "tg.tfa_approve", nil),
+		Deny:    a.tgT(lang, "tg.tfa_deny", nil),
+	})
+	if err != nil {
+		logger.Error("AUTH password reset telegram approval send uid=%d: %v", u.ID, err)
 		a.fail(w, r, apiErr{http.StatusBadGateway, "mfa.tg_failed"})
 		return
 	}
+	if err := redis.Client().Set(redis.Ctx, resetApprovalKey(u.ID), token+":"+secret, 10*time.Minute).Err(); err != nil {
+		logger.Error("AUTH password reset approval not stored uid=%d: %v", u.ID, err)
+		a.fail(w, r, apiErr{http.StatusInternalServerError, "err.internal"})
+		return
+	}
 	a.okJSON(w, nil)
+}
+
+func resetApprovalKey(uid int64) string { return "twofa-reset:" + itoa(uid) }
+
+func (a *App) takeResetApproval(uid int64) (bool, error) {
+	if redis.Client() == nil {
+		return false, twofa.ErrNoRedis
+	}
+	val, err := redis.Client().Get(redis.Ctx, resetApprovalKey(uid)).Result()
+	if err != nil {
+		if errors.Is(err, goredis.Nil) {
+			return false, nil
+		}
+		return false, err
+	}
+	token, secret, found := strings.Cut(val, ":")
+	if !found {
+		return false, nil
+	}
+	status, approvedUID, _ := twofa.PollApprovalMethod(token, secret)
+	if status != "approved" || approvedUID != uid {
+		return false, nil
+	}
+	if err := redis.Client().Del(redis.Ctx, resetApprovalKey(uid)).Err(); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 var twoFAConfirmErrKeys = map[string]string{
@@ -518,6 +502,8 @@ var twoFAConfirmErrKeys = map[string]string{
 	"tfa_login_telegram_failed": "mfa.tg_failed",
 	"tfa_login_email_wait":      "mfa.email_wait",
 	"tfa_login_email_failed":    "mfa.email_failed",
+	"invalid_request":           "err.bad_request",
+	"system_error":              "err.internal",
 }
 
 func (a *App) twoFAConfirmHost() twofa.ConfirmHost[*store.User] {
@@ -550,12 +536,9 @@ func (a *App) twoFAConfirmHost() twofa.ConfirmHost[*store.User] {
 				"cancel":       t("settings.cancel"),
 				"email_title":  t("mfa.email_title"),
 				"email_send":   t("mfa.email_btn"),
-				"email_sent":   t("mfa.email_sent"),
+				"email_sent":   t("tfa_login_email_sent"),
 				"email_wait":   t("mfa.email_wait"),
 				"email_failed": t("mfa.email_failed"),
-				"email_bad":    t("err.mfa_bad_code"),
-				"email_label":  t("mfa.email_label"),
-				"email_verify": t("token.continue"),
 			}
 		},
 		StartTelegram: func(r *http.Request, u *store.User) (string, string, error) {
@@ -568,16 +551,10 @@ func (a *App) twoFAConfirmHost() twofa.ConfirmHost[*store.User] {
 				Deny:    a.tgT(lang, "tg.tfa_deny", nil),
 			})
 		},
-		SendEmail: func(r *http.Request, u *store.User) error {
-			err := a.sendTwoFAEmail(u)
-			var ae apiErr
-			if errors.As(err, &ae) && ae.status == http.StatusTooManyRequests {
-				return twofa.ErrEmailCooldown
-			}
-			return err
+		SendEmail: func(r *http.Request, u *store.User) (string, string, error) {
+			return a.sendTwoFAEmailLink(r, u)
 		},
-		CheckEmail: a.checkTwoFAEmail,
-		Tenant:     func() string { return twoFATenant },
+		Tenant: func() string { return twoFATenant },
 		Allow: func(w http.ResponseWriter, r *http.Request, u *store.User, bucket string) bool {
 			prefix := map[string]string{"tg": "mfa-tg:", "mail": "mfa-mail:", "verify": "mfa:"}[bucket]
 			if err := a.allow(a.mfaLimit, prefix+itoa(u.ID)); err != nil {
@@ -613,8 +590,4 @@ func (a *App) apiTwoFAConfirmPoll(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) apiTwoFAConfirmEmailSend(w http.ResponseWriter, r *http.Request) {
 	a.twoFAConfirmHost().EmailSend(w, r)
-}
-
-func (a *App) apiTwoFAConfirmEmailVerify(w http.ResponseWriter, r *http.Request) {
-	a.twoFAConfirmHost().EmailVerify(w, r)
 }

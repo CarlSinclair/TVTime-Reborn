@@ -138,7 +138,6 @@
   },
   "settings": {
     "password": "パスワードを変更",
-    "current_password": "現在のパスワード",
     "new_password": "新しいパスワード",
     "save": "保存",
     "password_changed": "パスワードを変更しました。",
@@ -187,10 +186,8 @@
     "twofa": "2段階認証",
     "twofa_confirm": "確認して有効にする",
     "twofa_disable": "2段階認証をオフにする",
-    "twofa_enable": "2FAを有効にする",
     "twofa_hint": "認証アプリのコードでアカウントを保護します。",
     "twofa_off": "2段階認証をオフにしました。",
-    "twofa_on": "2段階認証はオンです。",
     "twofa_secret": "スキャンできませんか？このキーを入力してください：",
     "passkeys": "パスキー",
     "passkeys_hint": "パスワードの代わりに指紋、顔、またはデバイスのPINでログインできます。",
@@ -220,22 +217,9 @@
     "recovery_title": "リカバリーコード",
     "recovery_n": "残り%d個",
     "tab_integrations": "連携",
-    "tfa_methods": "ログイン時の確認方法",
-    "tfa_telegram": "Telegramでの承認",
-    "tfa_telegram_hint": "リンクされたTelegramチャットに「承認」と「拒否」のボタン付きのメッセージを送信します。",
-    "tfa_telegram_needs_link": "Telegramでの承認を使うには、まずTelegramアカウントをリンクしてください。",
-    "tfa_mode_title": "複数の方法が有効な場合",
-    "tfa_mode_any": "いずれか1つの方法で十分です。ログイン時に別の方法を選ぶこともできます",
-    "tfa_mode_all": "有効なすべての方法を必須にする",
-    "tfa_passkey_requires": "パスキーでログインするときに2FAを求める",
     "tfa_prefs_save": "確認設定を保存",
     "tfa_prefs_saved": "確認設定を保存しました。",
-    "tfa_email": "メールコード",
-    "tfa_email_hint": "6桁のコードをアカウントのメールアドレスに送信します。",
-    "tfa_email_needs_mail": "メールコードを利用するには、確認済みのメールアドレスと、このサーバーからの送信メールが必要です。",
-    "tfa_magic_requires": "メールのリンクでログインするときに2FAを求める",
-    "tfa_telegram_requires": "Telegramでログインするときに2FAを求める",
-    "forgot_current_password_btn": "現在のパスワードを忘れました: メールでコードを送信"
+    "tfa_email_needs_mail": "メールコードを利用するには、確認済みのメールアドレスと、このサーバーからの送信メールが必要です。"
   },
   "footer": {
     "tmdb": "作品データと画像の提供元：",
@@ -790,7 +774,6 @@
     "western": "西部劇"
   },
   "mfa": {
-    "code": "確認コード",
     "recovery_hint": "デバイスを紛失しましたか？代わりにリカバリーコードを入力してください。",
     "text": "認証アプリに表示される6桁のコードを入力してください。",
     "title": "2段階認証",
@@ -802,13 +785,11 @@
     "tg_failed": "Telegramメッセージを送信できませんでした。別の方法を使用してください。",
     "email_title": "メールで確認",
     "email_btn": "メールでコードを送信",
-    "email_sent": "6桁のコードをメールアドレスに送信しました。",
     "email_wait": "コードを先ほど送信しました。別のコードを求める前に数秒お待ちください。",
     "email_failed": "メールを送信できませんでした。別の方法をお試しください。",
-    "email_label": "メールコード",
     "reset_label": "確認コード(2段階認証を使っている場合のみ)",
-    "reset_send": "Telegramにコードを送る",
-    "reset_sent": "Telegramが連携されていれば、コードを送信しました。"
+    "reset_send": "Telegramで承認を依頼",
+    "reset_sent": "Telegramが連携されている場合、承認リクエストを送信しました。承認してから続行してください。"
   },
   "notif": {
     "abuse_report": {
@@ -1009,7 +990,7 @@
     "tfa_approved": "承認しました。ログインページに戻ることができます。",
     "tfa_denied": "拒否しました。心当たりがない場合は、パスワードを変更してください。",
     "tfa_stale": "このリクエストは期限切れか、すでに応答済みです。",
-    "reset_code": "{app}のパスワード再設定コードは {code} です。再設定を依頼していない場合は、このメッセージを無視してください。"
+    "reset_prompt": "誰かがあなたのアカウントのパスワードを再設定しようとしています。本人の場合のみ承認してください。"
   },
   "privacy": {
     "title": "プライバシーポリシー",

@@ -138,7 +138,6 @@
   },
   "settings": {
     "password": "Cambia password",
-    "current_password": "Password attuale",
     "new_password": "Nuova password",
     "save": "Salva",
     "password_changed": "Password cambiata.",
@@ -187,10 +186,8 @@
     "twofa": "Verifica in due passaggi",
     "twofa_confirm": "Conferma e attiva",
     "twofa_disable": "Disattiva la verifica in due passaggi",
-    "twofa_enable": "Attiva 2FA",
     "twofa_hint": "Proteggi il tuo account con un codice da un'app di autenticazione.",
     "twofa_off": "Verifica in due passaggi disattivata.",
-    "twofa_on": "La verifica in due passaggi è attiva.",
     "twofa_secret": "Non riesci a scansionare? Inserisci questa chiave:",
     "passkeys": "Passkey",
     "passkeys_hint": "Accedi con impronta, volto o PIN del dispositivo al posto della password.",
@@ -220,22 +217,9 @@
     "recovery_title": "Codici di recupero",
     "recovery_n": "%d rimasti",
     "tab_integrations": "Integrazioni",
-    "tfa_methods": "Metodi di verifica per l'accesso",
-    "tfa_telegram": "Approvazione tramite Telegram",
-    "tfa_telegram_hint": "Inviamo un messaggio con i pulsanti Approva e Rifiuta alla tua chat Telegram collegata.",
-    "tfa_telegram_needs_link": "Collega prima il tuo account Telegram per usare l'approvazione tramite Telegram.",
-    "tfa_mode_title": "Quando è attivo più di un metodo",
-    "tfa_mode_any": "È sufficiente un metodo e puoi sceglierne un altro al momento dell'accesso",
-    "tfa_mode_all": "Richiedi tutti i metodi attivi",
-    "tfa_passkey_requires": "Chiedi la 2FA quando accedo con una passkey",
     "tfa_prefs_save": "Salva impostazioni di verifica",
     "tfa_prefs_saved": "Impostazioni di verifica salvate.",
-    "tfa_email": "Codice via email",
-    "tfa_email_hint": "Inviamo via email un codice di 6 cifre all'indirizzo del tuo account.",
-    "tfa_email_needs_mail": "I codici via email richiedono un indirizzo email confermato e la posta in uscita attiva su questo server.",
-    "tfa_magic_requires": "Chiedi la 2FA quando accedo con un link via e-mail",
-    "tfa_telegram_requires": "Chiedi la 2FA quando accedo con Telegram",
-    "forgot_current_password_btn": "Ho dimenticato la password attuale: inviami un codice via email"
+    "tfa_email_needs_mail": "I codici via email richiedono un indirizzo email confermato e la posta in uscita attiva su questo server."
   },
   "footer": {
     "tmdb": "Dati e immagini delle serie forniti da",
@@ -790,7 +774,6 @@
     "western": "Western"
   },
   "mfa": {
-    "code": "Codice di verifica",
     "recovery_hint": "Hai perso il dispositivo? Inserisci invece uno dei tuoi codici di recupero.",
     "text": "Inserisci il codice di 6 cifre della tua app di autenticazione.",
     "title": "Verifica in due passaggi",
@@ -802,13 +785,11 @@
     "tg_failed": "Impossibile inviare il messaggio Telegram. Usa un altro metodo.",
     "email_title": "Conferma con email",
     "email_btn": "Inviami un codice via email",
-    "email_sent": "Abbiamo inviato un codice di 6 cifre al tuo indirizzo email.",
     "email_wait": "Un codice è stato inviato poco fa. Attendi qualche secondo prima di richiederne un altro.",
     "email_failed": "Impossibile inviare l'email. Usa un altro metodo.",
-    "email_label": "Codice via email",
     "reset_label": "Codice di verifica (solo se usi la verifica in due passaggi)",
-    "reset_send": "Invia un codice al mio Telegram",
-    "reset_sent": "Se Telegram è collegato, vi è stato inviato un codice."
+    "reset_send": "Chiedi approvazione su Telegram",
+    "reset_sent": "Se Telegram è collegato, vi è stata inviata una richiesta di approvazione. Approvala, poi continua."
   },
   "notif": {
     "abuse_report": {
@@ -1009,7 +990,7 @@
     "tfa_approved": "Approvato. Puoi tornare alla pagina di accesso.",
     "tfa_denied": "Rifiutato. Se non sei stato tu, cambia la password.",
     "tfa_stale": "Questa richiesta è scaduta o ha già ricevuto risposta.",
-    "reset_code": "Il tuo codice per reimpostare la password di {app} è {code}. Se non hai richiesto la reimpostazione, ignora questo messaggio."
+    "reset_prompt": "Qualcuno sta reimpostando la password del tuo account. Approva solo se sei stato tu."
   },
   "privacy": {
     "title": "Informativa sulla privacy",

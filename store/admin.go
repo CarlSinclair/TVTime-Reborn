@@ -126,7 +126,7 @@ func (s *Store) AdminUpdateUser(id int64, displayName, email string, verified bo
 	if verified {
 		v = 1
 	}
-	if _, err := s.DB.Exec(`UPDATE users SET display_name = ?, email = ?, email_verified = ?, pending_email = '' WHERE id = ?`,
+	if _, err := s.DB.Exec(`UPDATE users SET display_name = ?, email = ?, email_verified = ?, pending_email = '', pending_email_token = '', pending_email_expires = '' WHERE id = ?`,
 		displayName, nullIfEmpty(email), v, id); err != nil {
 		if isUnique(err, "users.email") {
 			return ErrEmailTaken

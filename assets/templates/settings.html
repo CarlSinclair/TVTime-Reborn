@@ -42,7 +42,7 @@
     <button class="btn ghost small" type="button" data-modal-open="m-password">{{if .User.HasPassword}}{{.T "settings.change"}}{{else}}{{.T "settings.set"}}{{end}}</button>
   </div>
   <div class="row" id="twofa">
-    <div class="row-main"><strong>{{.T "settings.twofa"}}</strong><span class="muted">{{if .User.TOTPEnabled}}{{.T "settings.on"}}{{else}}{{.T "settings.off"}}{{end}}</span></div>
+    <div class="row-main"><strong>{{.T "settings.twofa"}}</strong><span class="tfa-level level-{{.Data.TwoFAStatus.Level}}">{{.Data.TwoFAStatus.Count}}/4</span></div>
     <button class="btn ghost small" type="button" data-modal-open="m-twofa-prefs">{{.T "settings.change"}}</button>
   </div>
   {{if .User.TOTPEnabled}}
@@ -108,8 +108,7 @@
   <form class="stack" data-tfa-confirm="/api/account/2fa/confirm" data-api="/api/account/email/change" data-success="{{.T "settings.email_change_sent"}}" data-reload="1">
     <h2 id="m-email-t">{{.T "settings.email_change_btn"}}</h2>
     <label>{{.T "settings.email_new"}}<input type="email" name="email" autocomplete="email" required></label>
-    {{if .User.HasPassword}}<label>{{.T "auth.password"}}<input type="password" name="password" autocomplete="current-password" required></label>{{end}}
-    {{if .User.TOTPEnabled}}<label>{{.T "mfa.code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>{{end}}
+    {{if .User.TOTPEnabled}}<label>{{.T "tfa_code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>{{end}}
     <p class="form-error" role="alert" hidden></p>
     <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn" type="submit">{{.T "settings.email_change_btn"}}</button></div>
   </form>
@@ -128,10 +127,7 @@
 <dialog class="modal" id="m-password" aria-labelledby="m-password-t">
   <form class="stack" data-tfa-confirm="/api/account/2fa/confirm" data-api="/api/account/password" data-success="{{.T "settings.password_changed"}}">
     <h2 id="m-password-t">{{.T "settings.password"}}</h2>
-    {{if .User.HasPassword}}<label>{{.T "settings.current_password"}}<input type="password" name="current" autocomplete="current-password"></label>
-    {{if .Data.MailOn}}<label>{{.T "mfa.email_label"}}<input type="text" name="email_code" inputmode="numeric" autocomplete="one-time-code" maxlength="6"></label>
-    <button class="btn ghost" type="button" data-forgot-send="/api/account/2fa/confirm/email/send" data-text-sent="{{.T "mfa.email_sent"}}" data-text-wait="{{.T "mfa.email_wait"}}" data-text-failed="{{.T "mfa.email_failed"}}">{{.T "settings.forgot_current_password_btn"}}</button>{{end}}{{end}}
-    {{if .User.TOTPEnabled}}<label>{{.T "mfa.code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code"></label>{{end}}
+    {{if .User.TOTPEnabled}}<label>{{.T "tfa_code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code"></label>{{end}}
     <label>{{.T "settings.new_password"}}<input type="password" name="new" autocomplete="new-password" minlength="8" maxlength="72" data-pw-rules required></label>
     <p class="form-error" role="alert" hidden></p>
     <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn" type="submit">{{.T "settings.save"}}</button></div>
@@ -145,7 +141,7 @@
     <img id="twofa-qr" class="qr" alt="">
     <p class="muted">{{.T "settings.twofa_secret"}} <code id="twofa-secret"></code></p>
     <form class="stack" id="twofa-confirm">
-      <label>{{.T "mfa.code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>
+      <label>{{.T "tfa_code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>
       <p class="form-error" role="alert" hidden></p>
       <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn" type="submit">{{.T "settings.twofa_confirm"}}</button></div>
     </form>
@@ -155,22 +151,15 @@
 <dialog class="modal" id="m-twofa-prefs" aria-labelledby="m-twofa-prefs-t">
   <form class="stack" data-tfa-confirm="/api/account/2fa/confirm" data-api="/api/account/2fa/prefs" data-success="{{.T "settings.tfa_prefs_saved"}}" data-reload="1">
     <h2 id="m-twofa-prefs-t">{{.T "settings.twofa"}}</h2>
-    <div class="row">
-      <div class="row-main"><strong>{{.T "settings.twofa"}}</strong><span class="muted">{{if .User.TOTPEnabled}}{{.T "settings.on"}}{{else}}{{.T "settings.off"}}{{end}}</span></div>
-      {{if .User.TOTPEnabled}}<button class="btn ghost small" type="button" data-modal-open="m-twofa-off">{{.T "settings.disable"}}</button>{{else}}<button class="btn small" type="button" id="twofa-start">{{.T "settings.twofa_enable"}}</button>{{end}}
-    </div>
-    <h3>{{.T "settings.tfa_methods"}}</h3>
-    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="tfa-telegram" name="telegram" {{if .Data.TwoFAPrefs.Telegram}}checked{{end}} {{if not .Data.TelegramLinked}}disabled{{end}}><label for="tfa-telegram" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="tfa-telegram">{{.T "settings.tfa_telegram"}}</label></div>
-    <p class="muted">{{if .Data.TelegramLinked}}{{.T "settings.tfa_telegram_hint"}}{{else}}{{.T "settings.tfa_telegram_needs_link"}}{{end}}</p>
-    <strong>{{.T "settings.tfa_mode_title"}}</strong>
-    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="tfa-mode" name="all" {{if .Data.TwoFAPrefs.All}}checked{{end}}><label for="tfa-mode" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="tfa-mode">{{.T "settings.tfa_mode_all"}}</label></div>
-    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="tfa-email" name="email" {{if .Data.TwoFAPrefs.Email}}checked{{end}} {{if not .Data.MailOn}}disabled{{end}}><label for="tfa-email" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="tfa-email">{{.T "settings.tfa_email"}}</label></div>
-    <p class="muted">{{if .Data.MailOn}}{{.T "settings.tfa_email_hint"}}{{else}}{{.T "settings.tfa_email_needs_mail"}}{{end}}</p>
-    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="tfa-passkey-requires" name="passkey_requires" {{if .Data.TwoFAPrefs.PasskeyRequires}}checked{{end}}><label for="tfa-passkey-requires" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="tfa-passkey-requires">{{.T "settings.tfa_passkey_requires"}}</label></div>
-    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="tfa-magic-requires" name="magic_requires" {{if .Data.TwoFAPrefs.MagicRequires}}checked{{end}}><label for="tfa-magic-requires" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="tfa-magic-requires">{{.T "settings.tfa_magic_requires"}}</label></div>
-    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="tfa-telegram-requires" name="telegram_requires" {{if .Data.TwoFAPrefs.TelegramRequires}}checked{{end}}><label for="tfa-telegram-requires" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="tfa-telegram-requires">{{.T "settings.tfa_telegram_requires"}}</label></div>
+    <div class="row"><div class="row-main"><strong>{{.T "tfa_method_passkey"}}</strong></div>{{if .Data.TwoFAStatus.Passkey}}<span class="muted">{{.T "settings.on"}}</span>{{else}}<a class="btn small" href="#passkey-box">{{.T "tfa_add_passkey_btn"}}</a>{{end}}</div>
+    <div class="row"><div class="row-main"><strong>{{.T "tfa_method_email"}}</strong></div>{{if .Data.MailOn}}<span class="muted">{{.T "settings.on"}}</span>{{else}}<span class="muted">{{.T "settings.tfa_email_needs_mail"}}</span>{{end}}</div>
+    <div class="row"><div class="row-main"><strong>{{.T "tfa_method_totp"}}</strong></div>{{if .User.TOTPEnabled}}<button class="btn ghost small" type="button" data-modal-open="m-twofa-off">{{.T "totp_remove_btn"}}</button>{{else}}<button class="btn small" type="button" id="twofa-start">{{.T "totp_setup_btn"}}</button>{{end}}</div>
+    <div class="row"><div class="row-main"><strong>{{.T "tfa_method_telegram"}}</strong></div>{{if .Data.TwoFAStatus.Telegram}}<span class="muted">{{.T "settings.on"}}</span>{{else}}<a class="btn small" href="/settings?tab=notifications#telegram-box">{{.T "tfa_connect_btn"}}</a>{{end}}</div>
+    {{if not .User.HasPassword}}<p class="notice">{{.T "tfa_no_password_warning"}}</p>{{end}}
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="tfa-require" name="require" {{if .Data.TwoFAStatus.Require}}checked{{end}}><label for="tfa-require" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="tfa-require">{{.T "tfa_require"}}</label></div>
+    <div class="notify-row"><span class="tswitch"><input type="checkbox" class="tswitch-input" id="tfa-mode" name="all" {{if .Data.TwoFAStatus.All}}checked{{end}}><label for="tfa-mode" class="tswitch-label"><span class="ball"></span></label></span><label class="notify-text" for="tfa-mode">{{.T "tfa_mode_all"}}</label></div>
     {{if .User.HasPassword}}<label>{{.T "auth.password"}}<input type="password" name="password" autocomplete="current-password" required></label>{{end}}
-    {{if .User.TOTPEnabled}}<label>{{.T "mfa.code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>{{end}}
+    {{if .User.TOTPEnabled}}<label>{{.T "tfa_code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>{{end}}
     <p class="form-error" role="alert" hidden></p>
     <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn" type="submit">{{.T "settings.tfa_prefs_save"}}</button></div>
   </form>
@@ -180,7 +169,7 @@
   <form class="stack" data-api="/api/account/2fa/disable" data-success="{{.T "settings.twofa_off"}}" data-reload="1">
     <h2 id="m-twofa-off-t">{{.T "settings.twofa_disable"}}</h2>
     {{if .User.HasPassword}}<label>{{.T "auth.password"}}<input type="password" name="password" autocomplete="current-password" required></label>{{end}}
-    <label>{{.T "mfa.code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>
+    <label>{{.T "tfa_code"}}<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></label>
     <p class="form-error" role="alert" hidden></p>
     <div class="modal-actions"><button class="btn ghost" type="button" data-modal-close>{{.T "settings.cancel"}}</button><button class="btn danger" type="submit">{{.T "settings.disable"}}</button></div>
   </form>
@@ -205,7 +194,7 @@
 </dialog>
 
 <dialog class="modal" id="m-delete" aria-labelledby="m-delete-t">
-  <form class="stack"{{if not .User.HasPassword}} data-tfa-confirm="/api/account/2fa/confirm"{{end}} data-api="/api/account/delete" data-confirm="{{.T "settings.delete_confirm"}}">
+  <form class="stack" data-tfa-confirm="/api/account/2fa/confirm" data-api="/api/account/delete" data-confirm="{{.T "settings.delete_confirm"}}">
     <h2 id="m-delete-t">{{.T "settings.delete"}}</h2>
     <p class="muted">{{.T "settings.delete_warning"}}</p>
     {{if .User.HasPassword}}
@@ -224,7 +213,7 @@
 </dialog>
 
 <dialog class="modal" id="m-deactivate" aria-labelledby="m-deactivate-t">
-  <form class="stack"{{if not .User.HasPassword}} data-tfa-confirm="/api/account/2fa/confirm"{{end}} data-api="/api/account/deactivate" data-confirm="{{.T "settings.deactivate_confirm"}}">
+  <form class="stack" data-tfa-confirm="/api/account/2fa/confirm" data-api="/api/account/deactivate" data-confirm="{{.T "settings.deactivate_confirm"}}">
     <h2 id="m-deactivate-t">{{.T "settings.deactivate"}}</h2>
     <p class="muted">{{.T "settings.deactivate_warning"}}</p>
     {{if .User.HasPassword}}

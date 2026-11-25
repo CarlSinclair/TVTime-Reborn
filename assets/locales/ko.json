@@ -138,7 +138,6 @@
   },
   "settings": {
     "password": "비밀번호 변경",
-    "current_password": "현재 비밀번호",
     "new_password": "새 비밀번호",
     "save": "저장",
     "password_changed": "비밀번호를 변경했습니다.",
@@ -187,10 +186,8 @@
     "twofa": "2단계 인증",
     "twofa_confirm": "확인 후 켜기",
     "twofa_disable": "2단계 인증 끄기",
-    "twofa_enable": "2FA 켜기",
     "twofa_hint": "인증 앱의 코드로 계정을 보호하세요.",
     "twofa_off": "2단계 인증을 껐습니다.",
-    "twofa_on": "2단계 인증이 켜져 있습니다.",
     "twofa_secret": "스캔할 수 없나요? 이 키를 입력하세요:",
     "passkeys": "패스키",
     "passkeys_hint": "비밀번호 대신 지문, 얼굴 또는 기기 PIN으로 로그인하세요.",
@@ -220,22 +217,9 @@
     "recovery_title": "복구 코드",
     "recovery_n": "%d개 남음",
     "tab_integrations": "연동",
-    "tfa_methods": "로그인 시 인증 방법",
-    "tfa_telegram": "Telegram 승인",
-    "tfa_telegram_hint": "연결된 Telegram 채팅으로 승인 및 거부 버튼이 있는 메시지를 보내드립니다.",
-    "tfa_telegram_needs_link": "Telegram 승인을 사용하려면 먼저 Telegram 계정을 연결하세요.",
-    "tfa_mode_title": "둘 이상의 방법이 켜져 있을 때",
-    "tfa_mode_any": "방법 하나만 있으면 충분하며, 로그인할 때 다른 방법을 선택할 수 있습니다",
-    "tfa_mode_all": "켜진 모든 방법 요구",
-    "tfa_passkey_requires": "패스키로 로그인할 때 2FA 요구하기",
     "tfa_prefs_save": "인증 설정 저장",
     "tfa_prefs_saved": "인증 설정이 저장되었습니다.",
-    "tfa_email": "이메일 코드",
-    "tfa_email_hint": "계정 이메일 주소로 6자리 코드를 보내 드립니다.",
-    "tfa_email_needs_mail": "이메일 코드를 사용하려면 인증된 이메일 주소와 이 서버의 발신 메일 기능이 필요합니다.",
-    "tfa_magic_requires": "이메일 링크로 로그인할 때 2FA 요구하기",
-    "tfa_telegram_requires": "Telegram으로 로그인할 때 2FA 요구하기",
-    "forgot_current_password_btn": "현재 비밀번호를 잊으셨나요? 이메일로 코드 받기"
+    "tfa_email_needs_mail": "이메일 코드를 사용하려면 인증된 이메일 주소와 이 서버의 발신 메일 기능이 필요합니다."
   },
   "footer": {
     "tmdb": "작품 데이터와 이미지 제공:",
@@ -790,7 +774,6 @@
     "western": "서부극"
   },
   "mfa": {
-    "code": "인증 코드",
     "recovery_hint": "기기를 분실하셨나요? 대신 복구 코드를 입력하세요.",
     "text": "인증 앱의 6자리 코드를 입력하세요.",
     "title": "2단계 인증",
@@ -802,13 +785,11 @@
     "tg_failed": "Telegram 메시지를 보낼 수 없습니다. 다른 방법을 사용하세요.",
     "email_title": "이메일로 확인",
     "email_btn": "이메일로 인증 코드 받기",
-    "email_sent": "이메일 주소로 6자리 인증 코드를 보냈습니다.",
     "email_wait": "방금 인증 코드를 보냈습니다. 몇 초 후에 다시 요청해 주세요.",
     "email_failed": "이메일을 보낼 수 없습니다. 다른 방법을 사용해 주세요.",
-    "email_label": "이메일 코드",
     "reset_label": "확인 코드(2단계 인증을 사용하는 경우에만)",
-    "reset_send": "내 Telegram으로 코드 보내기",
-    "reset_sent": "Telegram이 연결되어 있으면 코드를 보냈습니다."
+    "reset_send": "Telegram에서 승인 요청",
+    "reset_sent": "Telegram이 연결되어 있으면 승인 요청을 보냈습니다. 승인한 뒤 계속하세요."
   },
   "notif": {
     "abuse_report": {
@@ -1009,7 +990,7 @@
     "tfa_approved": "승인되었습니다. 로그인 페이지로 돌아가도 됩니다.",
     "tfa_denied": "거부되었습니다. 본인이 아니라면 비밀번호를 변경하세요.",
     "tfa_stale": "이 요청은 만료되었거나 이미 응답되었습니다.",
-    "reset_code": "{app} 비밀번호 재설정 코드는 {code} 입니다. 재설정을 요청하지 않았다면 이 메시지를 무시하세요."
+    "reset_prompt": "누군가 회원님 계정의 비밀번호를 재설정하려고 합니다. 본인이 맞을 때만 승인하세요."
   },
   "privacy": {
     "title": "개인정보 처리방침",

@@ -132,7 +132,7 @@ func (a *App) apiAdminLogoUpload(w http.ResponseWriter, r *http.Request) {
 			logger.Warn("MEDIA remove old logo %s: %v", old, err)
 		}
 	}
-	logger.Info("ADMIN uid=%d set the logo %s", admin.ID, name)
+	a.audit(r, "ADMIN logo_set uid=%d name=%s", admin.ID, name)
 	a.okJSON(w, map[string]any{"url": a.logoURL()})
 }
 
@@ -155,6 +155,6 @@ func (a *App) apiAdminLogoRemove(w http.ResponseWriter, r *http.Request) {
 			logger.Warn("MEDIA remove logo %s: %v", old, err)
 		}
 	}
-	logger.Info("ADMIN uid=%d reset the logo to the default", admin.ID)
+	a.audit(r, "ADMIN logo_reset uid=%d", admin.ID)
 	a.okJSON(w, nil)
 }

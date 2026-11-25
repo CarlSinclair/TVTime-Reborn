@@ -10,6 +10,8 @@ CREATE TABLE users (
   password_hash TEXT NOT NULL DEFAULT '',
   email_verified INTEGER NOT NULL DEFAULT 0,
   pending_email TEXT NOT NULL DEFAULT '',
+  pending_email_token TEXT NOT NULL DEFAULT '',
+  pending_email_expires TEXT NOT NULL DEFAULT '',
   locale TEXT NOT NULL DEFAULT 'en',
   timezone TEXT NOT NULL DEFAULT 'UTC',
   profile_public INTEGER NOT NULL DEFAULT 1,

@@ -399,7 +399,7 @@ func (a *App) apiAccountKeyCreate(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	logger.Info("API key created uid=%d key=%d scopes=%v", u.ID, id, scopes)
+	a.audit(r, "API key_created uid=%d key=%d scopes=%v", u.ID, id, scopes)
 	a.okJSON(w, map[string]any{"id": id, "key": raw})
 }
 
@@ -424,6 +424,6 @@ func (a *App) apiAccountKeyRevoke(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, errNotFound)
 		return
 	}
-	logger.Info("API key revoked uid=%d key=%d", u.ID, id)
+	a.audit(r, "API key_revoked uid=%d key=%d", u.ID, id)
 	a.okJSON(w, nil)
 }

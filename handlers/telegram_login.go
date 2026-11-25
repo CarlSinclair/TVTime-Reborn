@@ -90,7 +90,7 @@ func (a *App) telegramResolve(chatID int64, who telegramlogin.Identity) ([]int64
 		return []int64{u.ID}, nil
 	case errors.Is(err, store.ErrNotFound):
 		if a.signupsClosed() {
-			logger.Info("AUTH telegram sign-in refused: sign-ups are closed tg=%d", chatID)
+			a.audit(nil, "AUTH telegram_refused uid=0 tg=%d", chatID)
 			return nil, nil
 		}
 		lang := who.Lang
@@ -102,7 +102,7 @@ func (a *App) telegramResolve(chatID int64, who telegramlogin.Identity) ([]int64
 			logger.Error("AUTH telegram register tg=%d: %v", chatID, err)
 			return nil, err
 		}
-		logger.Info("AUTH telegram registered uid=%d tg=%d", u.ID, chatID)
+		a.audit(nil, "AUTH telegram_registered uid=%d tg=%d", u.ID, chatID)
 		return []int64{u.ID}, nil
 	}
 	logger.Error("AUTH telegram lookup tg=%d: %v", chatID, err)
@@ -121,7 +121,7 @@ func (a *App) telegramLoginHTTP() telegramlogin.HTTPConfig {
 			return telegramlogin.Subject{ID: u.ID, Disabled: u.IsDeactivated && !u.SelfDeactivated, Payload: u}, nil
 		},
 		LogSignIn: func(r *http.Request, s telegramlogin.Subject) {
-			logger.Info("AUTH telegram sign-in uid=%d", s.ID)
+			a.audit(r, "AUTH telegram_login uid=%d", s.ID)
 		},
 		Temp2FAToken: func(userID int64) (string, error) {
 			return "", errors.New("two-factor sign-in is not used for Telegram sign-in here")

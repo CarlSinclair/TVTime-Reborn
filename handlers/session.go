@@ -24,8 +24,8 @@ func (a *App) finishLogin(w http.ResponseWriter, r *http.Request, u *store.User,
 	}
 	if need {
 		tok, err := a.Auth.BeginMFA(w, u.ID)
-		if err == nil && via == twofa.ViaMagic {
-			err = twofa.MarkDone(tok, twofa.MethodEmail)
+		if err == nil {
+			err = markFirstFactor(tok, via)
 		}
 		if err != nil {
 			logger.Error("AUTH begin mfa uid=%d via=%s: %v", u.ID, via, err)
@@ -41,6 +41,18 @@ func (a *App) finishLogin(w http.ResponseWriter, r *http.Request, u *store.User,
 		return
 	}
 	a.okJSON(w, map[string]any{"redirect": "/"})
+}
+
+func markFirstFactor(tok string, via twofa.Via) error {
+	switch via {
+	case twofa.ViaPasskey:
+		return twofa.MarkFirst(tok, twofa.MethodPasskey)
+	case twofa.ViaMagic:
+		return twofa.MarkFirst(tok, twofa.MethodEmail)
+	case twofa.ViaTelegram:
+		return twofa.MarkFirst(tok, twofa.MethodTelegram)
+	}
+	return nil
 }
 
 func (a *App) twoFARequiredAfterTelegram(u *store.User) (bool, error) {
@@ -63,7 +75,7 @@ func (a *App) finishLoginRedirect(w http.ResponseWriter, r *http.Request, u *sto
 	if need {
 		tok, err := a.Auth.BeginMFA(w, u.ID)
 		if err == nil {
-			err = twofa.MarkDone(tok, twofa.MethodTelegram)
+			err = markFirstFactor(tok, twofa.ViaTelegram)
 		}
 		if err != nil {
 			logger.Error("AUTH begin mfa uid=%d: %v", u.ID, err)
@@ -93,8 +105,8 @@ func (a *App) apiMFAVerify(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	uid := s.user.ID
-	if !s.has(twofa.MethodTOTP) {
+	uid := s.UserID
+	if !s.Has(twofa.MethodTOTP) {
 		a.fail(w, r, errBadRequest)
 		return
 	}
@@ -102,7 +114,7 @@ func (a *App) apiMFAVerify(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	if err := a.Auth.VerifySecondFactor(s.user, in.Code); err != nil {
+	if err := a.Auth.VerifySecondFactor(s.User, in.Code); err != nil {
 		if errors.Is(err, auth.ErrBadMFACode) {
 			logger.Warn("AUTH 2fa failed uid=%d from=%s", uid, auth.ClientCountry(r))
 			a.fail(w, r, apiErr{http.StatusUnauthorized, "err.mfa_bad_code"})
@@ -169,7 +181,7 @@ func (a *App) apiTOTPEnable(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	logger.Info("AUTH 2fa enabled uid=%d", u.ID)
+	a.audit(r, "AUTH 2fa_enabled uid=%d", u.ID)
 	a.Notif.Send(u.ID, "twofa_enabled", "/settings?tab=account", nil)
 	a.okJSON(w, map[string]any{"recovery_codes": codes})
 }
@@ -219,7 +231,7 @@ func (a *App) apiTOTPDisable(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	logger.Info("AUTH 2fa disabled uid=%d", u.ID)
+	a.audit(r, "AUTH 2fa_disabled uid=%d", u.ID)
 	a.Notif.Send(u.ID, "twofa_disabled", "/settings?tab=account", nil)
 	a.okJSON(w, nil)
 }
@@ -258,19 +270,4 @@ func (a *App) apiRecoveryRegenerate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.okJSON(w, map[string]any{"recovery_codes": codes})
-}
-
-func (a *App) apiLogoutEverywhere(w http.ResponseWriter, r *http.Request) {
-	u, err := a.needUser(r)
-	if err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	if err := a.Auth.RevokeAll(u.ID); err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	a.Auth.ClearCookies(w)
-	a.Notif.Send(u.ID, "session_revoked", "/settings?tab=account", nil)
-	a.okJSON(w, map[string]any{"redirect": "/login"})
 }

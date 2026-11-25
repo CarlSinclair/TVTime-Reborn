@@ -243,42 +243,6 @@ func (s *Store) AddEmail(userID int64, email string) error {
 	return nil
 }
 
-// SetPendingEmail records an address waiting for confirmation. It fails with
-// ErrEmailTaken when someone already owns it or is waiting to.
-func (s *Store) SetPendingEmail(userID int64, email string) error {
-	var n int
-	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM users WHERE id <> ? AND (email = ? OR pending_email = ?)`, userID, email, email).Scan(&n); err != nil {
-		return fmt.Errorf("check pending email uid=%d: %w", userID, err)
-	}
-	if n > 0 {
-		return ErrEmailTaken
-	}
-	return s.exec("set pending email", userID, `UPDATE users SET pending_email = ? WHERE id = ?`, email, userID)
-}
-
-// ConfirmEmailChange swaps in the pending address, already proven by the link,
-// and returns the previous one so it can be told.
-func (s *Store) ConfirmEmailChange(userID int64) (oldEmail, newEmail string, err error) {
-	tx, err := s.DB.Begin()
-	if err != nil {
-		return "", "", fmt.Errorf("begin email change uid=%d: %w", userID, err)
-	}
-	defer tx.Rollback()
-	if err := tx.QueryRow(`SELECT COALESCE(email,''), pending_email FROM users WHERE id = ?`, userID).Scan(&oldEmail, &newEmail); err != nil {
-		return "", "", fmt.Errorf("read email change uid=%d: %w", userID, err)
-	}
-	if newEmail == "" {
-		return "", "", ErrNotFound
-	}
-	if _, err := tx.Exec(`UPDATE users SET email = ?, email_verified = 1, pending_email = '' WHERE id = ?`, newEmail, userID); err != nil {
-		if isUnique(err, "users.email") {
-			return "", "", ErrEmailTaken
-		}
-		return "", "", fmt.Errorf("apply email change uid=%d: %w", userID, err)
-	}
-	return oldEmail, newEmail, tx.Commit()
-}
-
 func (s *Store) UpdateProfile(userID int64, displayName, bio string, public, shareActivity bool) error {
 	p, sh := 0, 0
 	if public {

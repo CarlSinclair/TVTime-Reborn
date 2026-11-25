@@ -195,7 +195,7 @@ func (a *App) apiAdminAvatarUpload(w http.ResponseWriter, r *http.Request) {
 			logger.Warn("MEDIA remove old server avatar %s: %v", old, err)
 		}
 	}
-	logger.Info("ADMIN uid=%d set the server avatar %s", admin.ID, name)
+	a.audit(r, "ADMIN avatar_set uid=%d name=%s", admin.ID, name)
 	a.okJSON(w, map[string]any{"announced": a.announceProfile()})
 }
 
@@ -217,6 +217,6 @@ func (a *App) apiAdminAvatarRemove(w http.ResponseWriter, r *http.Request) {
 			logger.Warn("MEDIA remove server avatar %s: %v", old, err)
 		}
 	}
-	logger.Info("ADMIN uid=%d removed the server avatar", admin.ID)
+	a.audit(r, "ADMIN avatar_removed uid=%d", admin.ID)
 	a.okJSON(w, map[string]any{"announced": a.announceProfile()})
 }

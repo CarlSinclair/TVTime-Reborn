@@ -3,13 +3,13 @@ package handlers
 import (
 	"errors"
 	"net/http"
-	"net/url"
 	"strings"
 	"tvt/i18n"
 
+	"github.com/CarlSinclair/csuit-libs/emailchange"
+
 	"tvt/auth"
 	"tvt/logger"
-	"tvt/store"
 )
 
 func maskEmail(e string) string {
@@ -20,24 +20,33 @@ func maskEmail(e string) string {
 	return e[:1] + "***" + e[at:]
 }
 
+func (a *App) emailChanges() *emailchange.SQLStore {
+	return &emailchange.SQLStore{DB: a.Store.DB, TextTime: true, EmptyNotNull: true}
+}
+
+func (a *App) emailChangeErr(err error) error {
+	switch {
+	case errors.Is(err, emailchange.ErrInvalidEmail):
+		return apiErr{http.StatusBadRequest, "err.invalid_email"}
+	case errors.Is(err, emailchange.ErrSameEmail):
+		return apiErr{http.StatusBadRequest, "err.email_same"}
+	case errors.Is(err, emailchange.ErrTaken):
+		return apiErr{http.StatusConflict, "err.email_taken"}
+	case errors.Is(err, emailchange.ErrNotFound), errors.Is(err, emailchange.ErrExpired), errors.Is(err, emailchange.ErrSession):
+		return apiErr{http.StatusBadRequest, "err.link_invalid"}
+	}
+	return err
+}
+
 func (a *App) apiChangeEmail(w http.ResponseWriter, r *http.Request) {
 	u, err := a.needUser(r)
 	if err != nil {
 		a.fail(w, r, err)
 		return
 	}
-	var in struct{ Email, Password, Code string }
+	var in struct{ Email, Code string }
 	if err := decode(r, &in); err != nil {
 		a.fail(w, r, err)
-		return
-	}
-	email, ok := normEmail(in.Email)
-	if !ok {
-		a.fail(w, r, apiErr{http.StatusBadRequest, "err.invalid_email"})
-		return
-	}
-	if strings.EqualFold(email, u.Email) {
-		a.fail(w, r, apiErr{http.StatusBadRequest, "err.email_same"})
 		return
 	}
 	if err := a.allow(a.mailLimit, "chgmail:"+itoa(u.ID)); err != nil {
@@ -49,12 +58,6 @@ func (a *App) apiChangeEmail(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, errMailDown)
 		return
 	}
-	if u.HasPassword() {
-		if err := a.requireReauth(u, in.Password, ""); err != nil {
-			a.fail(w, r, err)
-			return
-		}
-	}
 	if err := a.allow(a.mfaLimit, "mfa-email:"+itoa(u.ID)); err != nil {
 		a.fail(w, r, err)
 		return
@@ -63,68 +66,83 @@ func (a *App) apiChangeEmail(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
-	if err := a.Store.SetPendingEmail(u.ID, email); err != nil {
-		if errors.Is(err, store.ErrEmailTaken) {
-			a.fail(w, r, apiErr{http.StatusConflict, "err.email_taken"})
-		} else {
-			a.fail(w, r, err)
-		}
-		return
-	}
-	tok, err := a.Auth.IssueEmailToken(u.ID, auth.PurposeEmail)
-	if err != nil {
-		a.fail(w, r, err)
-		return
-	}
 	lang := u.Locale
 	if !a.I18n.Has(lang) {
 		lang = i18n.Fallback
 	}
-	link := a.Cfg.BaseURL + "/t/" + auth.PurposeEmail + "?token=" + url.QueryEscape(tok)
-	if err := a.Mail.Send(email, a.I18n.T(lang, "mail.emailchange.subject", a.Cfg.AppName), a.I18n.T(lang, "mail.emailchange.body", a.Cfg.AppName, link)); err != nil {
-		logger.Error("ACCOUNT email change mail uid=%d: %v", u.ID, err)
-		a.fail(w, r, errMailDown)
+	send := func(to, link string) error {
+		return a.Mail.Send(to, a.I18n.T(lang, "mail.emailchange.subject", a.Cfg.AppName), a.I18n.T(lang, "mail.emailchange.body", a.Cfg.AppName, link))
+	}
+	p, err := emailchange.Start(r.Context(), a.emailChanges(), u.ID, u.Email, in.Email, emailchange.Options{}, a.Cfg.BaseURL, "/t/"+auth.PurposeEmail, send)
+	if err != nil {
+		logger.Error("ACCOUNT email change request uid=%d: %v", u.ID, err)
+		if mapped := a.emailChangeErr(err); mapped != err {
+			a.fail(w, r, mapped)
+		} else {
+			a.fail(w, r, errMailDown)
+		}
 		return
 	}
-	logger.Info("ACCOUNT email change requested uid=%d", u.ID)
+	a.audit(r, "ACCOUNT email_change_requested uid=%d", u.ID)
 	if u.Email != "" {
-		a.Notif.Send(u.ID, "email_change_requested", "/settings?tab=account", map[string]any{"email": maskEmail(email)})
+		a.Notif.Send(u.ID, "email_change_requested", "/settings?tab=account", map[string]any{"email": maskEmail(p.NewEmail)})
 	}
 	a.okJSON(w, nil)
 }
 
 func (a *App) apiEmailChangeConsume(w http.ResponseWriter, r *http.Request) {
-	uid, _, ok := a.consume(w, r, auth.PurposeEmail)
-	if !ok {
-		return
-	}
-	oldEmail, newEmail, err := a.Store.ConfirmEmailChange(uid)
-	switch {
-	case errors.Is(err, store.ErrNotFound):
-		a.fail(w, r, apiErr{http.StatusBadRequest, "err.link_invalid"})
-		return
-	case errors.Is(err, store.ErrEmailTaken):
-		a.fail(w, r, apiErr{http.StatusConflict, "err.email_taken"})
-		return
-	case err != nil:
+	var in struct{ Token string }
+	if err := decode(r, &in); err != nil {
 		a.fail(w, r, err)
 		return
 	}
-	logger.Info("ACCOUNT email changed uid=%d", uid)
+	if err := a.allow(a.authLimit, "tok:"+auth.ClientIP(r)); err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	var sessionUID int64
+	if cur := auth.UserFrom(r.Context()); cur != nil {
+		sessionUID = cur.ID
+	}
+	before := ""
+	if p, err := emailchange.Peek(r.Context(), a.emailChanges(), strings.TrimSpace(in.Token), sessionUID); err == nil {
+		if u, uerr := a.Store.UserByID(p.UserID); uerr == nil {
+			before = u.Email
+		} else {
+			logger.Error("ACCOUNT email change uid=%d: read current address: %v", p.UserID, uerr)
+		}
+	}
+	p, err := emailchange.Confirm(r.Context(), a.emailChanges(), strings.TrimSpace(in.Token), sessionUID, emailchange.Options{})
+	if err != nil {
+		if mapped := a.emailChangeErr(err); mapped != err {
+			logger.Warn("ACCOUNT email change confirm refused uid=%d: %v", p.UserID, err)
+			a.fail(w, r, mapped)
+		} else {
+			logger.Error("ACCOUNT email change confirm failed uid=%d: %v", p.UserID, err)
+			a.fail(w, r, err)
+		}
+		return
+	}
+	uid := p.UserID
+	if err := a.Store.SetEmailVerified(uid); err != nil {
+		logger.Error("ACCOUNT email changed uid=%d: mark verified: %v", uid, err)
+	}
+	a.audit(r, "ACCOUNT email_changed uid=%d", uid)
 	a.promoteIfAdmin(uid)
-	if u, err := a.Store.UserByID(uid); err != nil {
+	u, err := a.Store.UserByID(uid)
+	if err != nil {
 		logger.Error("ACCOUNT email changed uid=%d: reload: %v", uid, err)
 	} else {
 		lang := u.Locale
 		if !a.I18n.Has(lang) {
 			lang = i18n.Fallback
 		}
-		if oldEmail != "" {
-			if err := a.Mail.Send(oldEmail, a.I18n.T(lang, "mail.emailchanged.subject", a.Cfg.AppName), a.I18n.T(lang, "mail.emailchanged.body", a.Cfg.AppName, maskEmail(newEmail))); err != nil {
+		if before != "" {
+			if err := a.Mail.Send(before, a.I18n.T(lang, "mail.emailchanged.subject", a.Cfg.AppName), a.I18n.T(lang, "mail.emailchanged.body", a.Cfg.AppName, maskEmail(p.NewEmail))); err != nil {
 				logger.Error("ACCOUNT email changed notice to previous address uid=%d: %v", uid, err)
 			}
 		}
-		a.Notif.Send(uid, "email_changed", "/settings?tab=account", map[string]any{"email": maskEmail(newEmail)})
+		a.Notif.Send(uid, "email_changed", "/settings?tab=account", map[string]any{"email": maskEmail(p.NewEmail)})
 	}
 	a.okJSON(w, map[string]any{"redirect": "/settings?tab=account"})
 }

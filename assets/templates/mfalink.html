@@ -1,0 +1,16 @@
+{{define "content"}}
+<section class="auth-card">
+  <h1>{{.T "tfa_link_title"}}</h1>
+  {{if eq .Data.State "confirm"}}
+  <p>{{.T "tfa_link_body"}}</p>
+  <form class="stack" method="post" action="/login/2fa/email/link">
+    <input type="hidden" name="t" value="{{.Data.Token}}">
+    <button class="btn" type="submit">{{.T "tfa_link_btn"}}</button>
+  </form>
+  {{else if eq .Data.State "done"}}
+  <p role="status">{{.T "tfa_link_done"}}</p>
+  {{else}}
+  <p role="alert">{{.T "tfa_link_invalid"}}</p>
+  {{end}}
+</section>
+{{end}}

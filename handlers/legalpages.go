@@ -396,6 +396,6 @@ func (a *App) apiAdminPages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.reloadPages()
-	logger.Info("ADMIN uid=%d pages action=%s", admin.ID, strOf(in, "action"))
+	a.audit(r, "ADMIN pages_edit uid=%d page_action=%s", admin.ID, strOf(in, "action"))
 	a.okJSON(w, nil)
 }
