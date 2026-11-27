@@ -381,6 +381,7 @@
     "faq_enabled": "在机器人中显示",
     "faq_delete": "删除此问题",
     "faq_none": "还没有问题。",
+    "audit": "审计日志",
     "user_protected": "你不能在这里封禁、停用或删除自己或其他管理员的账户。你自己的账户在设置中管理。",
     "pages_language": "语言",
     "pages_same_as": "与另一页面相同",

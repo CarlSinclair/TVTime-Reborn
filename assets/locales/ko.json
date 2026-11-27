@@ -381,6 +381,7 @@
     "faq_enabled": "봇에 표시",
     "faq_delete": "이 질문 삭제",
     "faq_none": "아직 질문이 없습니다.",
+    "audit": "감사 로그",
     "user_protected": "여기서는 본인 또는 다른 관리자의 계정을 차단, 비활성화, 삭제할 수 없습니다. 내 계정은 설정에서 관리합니다.",
     "pages_language": "언어",
     "pages_same_as": "다른 페이지와 동일",

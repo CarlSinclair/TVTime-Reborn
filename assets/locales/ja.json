@@ -381,6 +381,7 @@
     "faq_enabled": "ボットに表示",
     "faq_delete": "この質問を削除",
     "faq_none": "質問はまだありません。",
+    "audit": "監査ログ",
     "user_protected": "ここでは自分や他の管理者のアカウントをBAN・無効化・削除できません。自分のアカウントは設定で管理します。",
     "pages_language": "言語",
     "pages_same_as": "別のページと同じ",

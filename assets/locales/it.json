@@ -381,6 +381,7 @@
     "faq_enabled": "Mostrata nel bot",
     "faq_delete": "Elimina questa domanda",
     "faq_none": "Ancora nessuna domanda.",
+    "audit": "Registro di controllo",
     "user_protected": "Qui non puoi bannare, disattivare o eliminare il tuo account né quello di un altro admin. Il tuo account si gestisce nelle Impostazioni.",
     "pages_language": "Lingua",
     "pages_same_as": "Uguale a un'altra pagina",

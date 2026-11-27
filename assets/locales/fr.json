@@ -381,6 +381,7 @@
     "faq_enabled": "Affichée dans le bot",
     "faq_delete": "Supprimer cette question",
     "faq_none": "Aucune question pour le moment.",
+    "audit": "Journal d'audit",
     "user_protected": "Vous ne pouvez pas bannir, désactiver ni supprimer ici votre propre compte ni celui d'un autre admin. Votre compte se gère dans les Réglages.",
     "pages_language": "Langue",
     "pages_same_as": "Identique à une autre page",

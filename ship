@@ -4,7 +4,7 @@
 #
 #   ./ship "what changed"     commit all changes and deploy them
 #   ./ship                    deploy commits already made locally
-#   ./ship --redeploy         rebuild and redeploy the current HEAD
+#   ./ship --redeploy         redeploy the latest released build, no rebuild, touches no files
 #   add -w / --watch          follow the run until it finishes
 set -euo pipefail
 
@@ -21,6 +21,12 @@ for arg in "$@"; do
     *) msg="${msg:+$msg }$arg" ;;
   esac
 done
+
+if [ "$redeploy" = 1 ]; then
+  gh workflow run deploy.yml --repo CarlSinclair/TVTime-Reborn --ref main -f release=latest
+  echo "ship: redeploying the latest released build, nothing is rebuilt. Follow it with: gh run watch --repo CarlSinclair/TVTime-Reborn"
+  exit $?
+fi
 
 tag_subject() {
   local m="$1" first rest

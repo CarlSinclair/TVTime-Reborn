@@ -381,6 +381,7 @@
     "faq_enabled": "Visible en el bot",
     "faq_delete": "Eliminar esta pregunta",
     "faq_none": "Aún no hay preguntas.",
+    "audit": "Registro de auditoría",
     "user_protected": "No puedes bloquear, desactivar ni eliminar aquí tu propia cuenta ni la de otro admin. Tu cuenta se gestiona en Ajustes.",
     "pages_language": "Idioma",
     "pages_same_as": "Igual que otra página",

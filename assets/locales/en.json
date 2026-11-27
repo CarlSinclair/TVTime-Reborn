@@ -381,6 +381,7 @@
     "faq_enabled": "Shown in the bot",
     "faq_delete": "Delete this question",
     "faq_none": "No questions yet.",
+    "audit": "Audit log",
     "user_protected": "You cannot ban, deactivate or delete your own account or another admin's here. Your own account is managed in Settings.",
     "pages_language": "Language",
     "pages_same_as": "Same as another page",
